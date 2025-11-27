@@ -2,18 +2,23 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-export default function LocaleLayout({
-  children,
-  params,
-}: {
+type LocaleParams = {
+  locale: string;
+};
+
+type LocaleLayoutProps = {
   children: ReactNode;
-  params: { locale: string };
-}) {
-  const { locale } = params;
+  // In Next 16, params is typed as a Promise in the route config
+  params: Promise<LocaleParams>;
+};
+
+export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
+  // Wait for the params promise to resolve
+  const { locale } = await params;
 
   const navLinks = [
     { href: `/${locale}`, label: "Home" },
-    { href: `/${locale}/reader`, label: "Reader" },
+    { href: `/${locale}/reader`, label: "Reader`" },
     { href: `/${locale}/publisher`, label: "Publisher" },
     { href: `/${locale}/head`, label: "Head Page" },
   ];
@@ -32,7 +37,7 @@ export default function LocaleLayout({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-full px-3 py-1 hover:bg-slate-800 transition"
+                  className="rounded-full px-3 py-1 transition hover:bg-slate-800"
                 >
                   {link.label}
                 </Link>
