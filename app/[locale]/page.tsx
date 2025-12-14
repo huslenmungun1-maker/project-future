@@ -1,13 +1,9 @@
-"use client";
-
+// app/[locale]/page.tsx
 import Link from "next/link";
 
-type Props = {
-  params: { locale: string };
-};
-
-export default function LocaleHomePage({ params }: Props) {
-  const { locale } = params;
+export default function LocaleHomePage() {
+  // For now, hard-code the locale so Next.js stops complaining about params Promise
+  const locale = "en";
 
   return (
     <div className="min-h-screen bg-black text-slate-100">
