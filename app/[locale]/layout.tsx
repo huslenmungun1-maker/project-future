@@ -1,15 +1,13 @@
 import type { ReactNode } from "react";
 
-type LocaleParams = { locale: string };
-
 export default async function LocaleLayout({
   children,
   params,
 }: {
   children: ReactNode;
-  params: LocaleParams | Promise<LocaleParams>;
+  params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await Promise.resolve(params);
+  const { locale } = await params;
 
   return (
     <div className="min-h-screen bg-black text-white" data-locale={locale}>
