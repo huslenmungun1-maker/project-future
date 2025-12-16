@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-type Props = {
-  params: { locale: string };
-};
-
-export default function ProfilePage({ params }: Props) {
-  const { locale } = params;
+export default async function ProfilePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
 
   return (
     <div className="min-h-screen bg-black text-slate-100">

@@ -1,0 +1,23 @@
+[1mdiff --git a/app/[locale]/layout.tsx b/app/[locale]/layout.tsx[m
+[1mindex 84d6aaa..1c59fe2 100644[m
+[1m--- a/app/[locale]/layout.tsx[m
+[1m+++ b/app/[locale]/layout.tsx[m
+[36m@@ -1,16 +1,12 @@[m
+ import type { ReactNode } from "react";[m
+ [m
+[31m-export default async function LocaleLayout({[m
+[32m+[m[32mexport default function LocaleLayout({[m
+   children,[m
+[31m-  params,[m
+ }: {[m
+   children: ReactNode;[m
+[31m-  params: Promise<{ locale: string }>;[m
+ }) {[m
+[31m-  const { locale } = await params;[m
+[31m-[m
+   return ([m
+[31m-    <div className="min-h-screen bg-black text-white" data-locale={locale}>[m
+[32m+[m[32m    <div className="min-h-screen bg-black text-white">[m
+       {children}[m
+     </div>[m
+   );[m

@@ -1,11 +1,11 @@
 import Link from "next/link";
 
 type Props = {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
-export default function AIPage({ params }: Props) {
-  const { locale } = params;
+export default async function AIPage({ params }: Props) {
+  const { locale } = await params;
 
   return (
     <div className="min-h-screen bg-black text-slate-100">

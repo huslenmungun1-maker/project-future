@@ -1,7 +1,8 @@
-// app/page.tsx
-import { redirect } from "next/navigation";
-
-export default function RootPage() {
-  // Default language = English
-  redirect("/en");
+export default function HomePage() {
+  return (
+    <div style={{ padding: 40 }}>
+      <h1>Project Future is live.</h1>
+      <p>If you see this, the deployment works.</p>
+    </div>
+  );
 }
