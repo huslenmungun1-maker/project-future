@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import BookCoverUploader from "@/components/studio/BookCoverUploader";
+import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
 type BookRow = {
   id: string;
@@ -416,7 +416,7 @@ export default function BookDetailPage() {
             <h2 className="mb-2 text-sm font-semibold text-slate-100">
               {t.cover}
             </h2>
-            <BookCoverUploader bookId={book.id} initialUrl={book.cover_image_url} />
+            <CoverImageUploader bookId={book.id} initialUrl={book.cover_image_url} />
           </div>
           <div className="self-center text-xs text-slate-400">
             <p>{t.coverHelp}</p>
