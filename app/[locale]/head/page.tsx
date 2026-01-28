@@ -1,52 +1,57 @@
-"use client";
-
 import Link from "next/link";
-import { useParams } from "next/navigation";
 
-export default function PublisherPage() {
-  const params = useParams();
-  const locale = (params?.locale as string) || "en";
+type Params = { locale: string };
+
+export default async function HeadPage({
+  params,
+}: {
+  params: Params | Promise<Params>;
+}) {
+  const { locale } = await Promise.resolve(params);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-12">
-        <header className="space-y-3">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            Publisher • Project Future
-          </span>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Creator studio
-          </h1>
-          <p className="max-w-xl text-sm text-slate-300">
-            This is where creators manage their work: series, chapters, images,
-            and AI tools. For now it&apos;s a simple placeholder page while we
-            wire Supabase + UI.
-          </p>
-
+    <main className="min-h-screen bg-black text-slate-100">
+      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Head Page</h1>
           <Link
             href={`/${locale}`}
-            className="inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 hover:border-amber-400 hover:text-amber-200"
+            className="text-xs text-emerald-300 hover:underline"
           >
-            ← Back to main studio
+            ← Back to home
           </Link>
-        </header>
+        </div>
 
-        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
-          <h2 className="text-sm font-semibold text-slate-100">
-            What this page will do later
-          </h2>
-          <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
-            <li>Create new series (title, genres, language, tags).</li>
-            <li>Upload chapter images or pages.</li>
-            <li>Use AI assistant to help with story &amp; panel ideas.</li>
-            <li>Manage visibility (draft / public / private).</li>
+        <p className="text-sm text-slate-400">
+          Owner-only dashboard. Stats, revenue, system switches (we’ll build this
+          step by step).
+        </p>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+            <p className="text-xs text-slate-400">Total series</p>
+            <p className="mt-2 text-2xl font-bold">—</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+            <p className="text-xs text-slate-400">Total chapters</p>
+            <p className="mt-2 text-2xl font-bold">—</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+            <p className="text-xs text-slate-400">Revenue</p>
+            <p className="mt-2 text-2xl font-bold">—</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6 space-y-3">
+          <h2 className="text-lg font-semibold">System switches (coming)</h2>
+          <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
+            <li>Maintenance mode</li>
+            <li>Freeze publishing</li>
+            <li>Feature flags</li>
           </ul>
-          <p className="text-xs text-slate-400">
-            Next steps: connect this to Supabase (series &amp; chapters tables)
-            and require login.
-          </p>
-        </section>
+        </div>
       </div>
     </main>
   );

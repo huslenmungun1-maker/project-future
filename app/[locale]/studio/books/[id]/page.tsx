@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-
-type LoadStatus = "loading" | "ok" | "error";
-type SaveStatus = "idle" | "saving" | "deleting";
+import BookCoverUploader from "@/components/studio/BookCoverUploader";
 
 type BookRow = {
   id: string;
   title: string;
   description: string | null;
-  status: string | null;
   created_at: string;
-  content: string | null;
+  cover_image_url: string | null;
+  language: string | null;
 };
 
 type ChapterRow = {
@@ -22,564 +20,498 @@ type ChapterRow = {
   book_id: string;
   title: string;
   chapter_number: number;
-  is_published: boolean;
   created_at: string;
+  content: string | null;
 };
+
+const UI_TEXT = {
+  en: {
+    backToAll: "Back to all books",
+    detail: "Book detail",
+    edit: "Edit book",
+    editInfo: "Edit book info",
+    idLabel: "ID",
+    createdAt: "Created at",
+    cover: "Book cover",
+    coverHelp:
+      "Upload a cover image for this book. It will be used on listings and reader pages.",
+    addChapter: "Add a new chapter",
+    chapterTitle: "Chapter title",
+    chapterNumber: "Chapter number",
+    contentScript: "Content / script",
+    chaptersTitle: "Chapters",
+    noChapters: "No chapters yet. Create your first chapter on the left.",
+    saving: "Saving…",
+    save: "Save",
+    cancel: "Cancel",
+    creating: "Creating…",
+    createChapter: "Create chapter",
+  },
+  mn: {
+    backToAll: "Бүх номууд руу буцах",
+    detail: "Номын дэлгэрэнгүй",
+    edit: "Ном засах",
+    editInfo: "Номын мэдээлэл засах",
+    idLabel: "ID",
+    createdAt: "Үүсгэсэн",
+    cover: "Номын нүүр",
+    coverHelp:
+      "Энэ номын нүүр зургийг байршуулна уу. Жагсаалт болон уншигч дээр ашиглагдана.",
+    addChapter: "Шинэ бүлэг нэмэх",
+    chapterTitle: "Бүлгийн гарчиг",
+    chapterNumber: "Бүлгийн дугаар",
+    contentScript: "Агуулга / скрипт",
+    chaptersTitle: "Бүлгүүд",
+    noChapters: "Одоогоор бүлэг алга. Зүүн талаас анхны бүлгээ үүсгээрэй.",
+    saving: "Хадгалж байна…",
+    save: "Хадгалах",
+    cancel: "Цуцлах",
+    creating: "Үүсгэж байна…",
+    createChapter: "Бүлэг үүсгэх",
+  },
+  ko: {
+    backToAll: "모든 책으로 돌아가기",
+    detail: "책 상세",
+    edit: "책 편집",
+    editInfo: "책 정보 편집",
+    idLabel: "ID",
+    createdAt: "생성일",
+    cover: "표지 이미지",
+    coverHelp:
+      "이 책의 표지 이미지를 업로드하세요. 목록과 리더 페이지에서 사용됩니다.",
+    addChapter: "새 챕터 추가",
+    chapterTitle: "챕터 제목",
+    chapterNumber: "챕터 번호",
+    contentScript: "내용 / 스크립트",
+    chaptersTitle: "챕터",
+    noChapters: "아직 챕터가 없습니다. 왼쪽에서 첫 챕터를 만들어 보세요.",
+    saving: "저장 중…",
+    save: "저장",
+    cancel: "취소",
+    creating: "생성 중…",
+    createChapter: "챕터 생성",
+  },
+  ja: {
+    backToAll: "すべての本に戻る",
+    detail: "本の詳細",
+    edit: "本を編集",
+    editInfo: "本の情報を編集",
+    idLabel: "ID",
+    createdAt: "作成日時",
+    cover: "表紙画像",
+    coverHelp:
+      "この本の表紙画像をアップロードしてください。 一覧やリーダーページで使われます。",
+    addChapter: "新しいチャプターを追加",
+    chapterTitle: "チャプタータイトル",
+    chapterNumber: "チャプター番号",
+    contentScript: "内容 / スクリプト",
+    chaptersTitle: "チャプター",
+    noChapters: "まだチャプターがありません。左側で最初のチャプターを作成してください。",
+    saving: "保存中…",
+    save: "保存",
+    cancel: "キャンセル",
+    creating: "作成中…",
+    createChapter: "チャプター作成",
+  },
+} as const;
+
+type SupportedLang = keyof typeof UI_TEXT;
 
 export default function BookDetailPage() {
   const params = useParams();
-  const router = useRouter();
-
   const locale = (params?.locale as string) || "en";
-  const bookId = params?.id as string;
-
-  const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const bookId = (params as any)?.id as string;
 
   const [book, setBook] = useState<BookRow | null>(null);
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState<string>("");
-  const [status, setStatus] = useState<string>("draft");
-  const [bookContent, setBookContent] = useState<string>("");
-
-  // Chapters (optional, for other creators)
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
-  const [chaptersStatus, setChaptersStatus] = useState<LoadStatus>("loading");
-  const [chapterError, setChapterError] = useState<string | null>(null);
-  const [newChapterTitle, setNewChapterTitle] = useState("");
-  const [creatingChapter, setCreatingChapter] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function getStatusLabel(s: string | null) {
-    if (!s) return "Unknown";
-    switch (s) {
-      case "draft":
-        return "Draft";
-      case "published":
-        return "Published";
-      case "archived":
-        return "Archived";
-      default:
-        return s;
-    }
-  }
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
+  const [savingMeta, setSavingMeta] = useState(false);
 
-  function getStatusBadgeClass(s: string | null) {
-    switch (s) {
-      case "draft":
-        return "inline-flex items-center rounded-full border border-yellow-400/50 bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-300";
-      case "published":
-        return "inline-flex items-center rounded-full border border-emerald-400/50 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-300";
-      case "archived":
-        return "inline-flex items-center rounded-full border border-slate-500/60 bg-slate-800/60 px-2.5 py-0.5 text-xs font-medium text-slate-300";
-      default:
-        return "inline-flex items-center rounded-full border border-slate-500/40 bg-slate-800/40 px-2.5 py-0.5 text-xs font-medium text-slate-300";
-    }
-  }
+  const [chapterTitle, setChapterTitle] = useState("");
+  const [chapterNumber, setChapterNumber] = useState("");
+  const [chapterContent, setChapterContent] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  function formatDate(stamp: string | undefined) {
-    if (!stamp) return "";
-    try {
-      const d = new Date(stamp);
-      return d.toLocaleString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return stamp;
-    }
-  }
+  const fetchData = async () => {
+    if (!bookId) return;
+    setLoading(true);
+    setError(null);
 
-  const baseLocale = locale ? `/${locale}` : "";
-  const backHref = `${baseLocale}/studio/books`;
-
-  // -------- Load book --------
-  useEffect(() => {
-    async function loadBook() {
-      if (!bookId) return;
-      setLoadStatus("loading");
-      setErrorMessage(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        setLoadStatus("error");
-        setErrorMessage(
-          userError?.message || "You must be logged in to view this book."
-        );
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("books")
-        .select("id, title, description, status, created_at, content")
-        .eq("id", bookId)
-        .single();
-
-      if (error || !data) {
-        console.error("Error loading book:", error);
-        setLoadStatus("error");
-        setErrorMessage(
-          error?.message || "Book not found or you don’t have permission."
-        );
-        return;
-      }
-
-      setBook(data);
-      setTitle(data.title || "");
-      setDescription(data.description || "");
-      setStatus(data.status || "draft");
-      setBookContent(data.content || "");
-      setLoadStatus("ok");
-    }
-
-    loadBook();
-  }, [bookId]);
-
-  // -------- Load chapters (optional) --------
-  useEffect(() => {
-    async function loadChapters() {
-      if (!bookId) return;
-      setChaptersStatus("loading");
-      setChapterError(null);
-
-      const { data, error } = await supabase
-        .from("book_chapters")
-        .select(
-          "id, book_id, title, chapter_number, is_published, created_at"
-        )
+    const [
+      { data: bookData, error: bookError },
+      { data: chaptersData, error: chaptersError },
+    ] = await Promise.all([
+      supabase.from("books").select("*").eq("id", bookId).single(),
+      supabase
+        .from("chapters")
+        .select("*")
         .eq("book_id", bookId)
-        .order("chapter_number", { ascending: true });
+        .order("chapter_number", { ascending: true }),
+    ]);
 
-      if (error) {
-        console.error("Error loading chapters:", error);
-        setChaptersStatus("error");
-        setChapterError(error.message);
-        return;
-      }
-
-      setChapters(data || []);
-      setChaptersStatus("ok");
+    if (bookError) {
+      setError(bookError.message);
+      setBook(null);
+    } else {
+      setBook(bookData as BookRow);
     }
 
-    loadChapters();
+    if (chaptersError) {
+      setError(chaptersError.message);
+      setChapters([]);
+    } else {
+      setChapters((chaptersData as ChapterRow[]) || []);
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId]);
 
-  // -------- Save / delete book --------
-  async function handleSave() {
-    if (!book) return;
-    setSaveStatus("saving");
-    setErrorMessage(null);
+  useEffect(() => {
+    if (book) {
+      setDraftTitle(book.title);
+      setDraftDescription(book.description ?? "");
+    }
+  }, [book]);
 
-    const { error } = await supabase
-      .from("books")
-      .update({
-        title: title.trim() || "Untitled book",
-        description: description.trim() || null,
-        status: status || "draft",
-        content: bookContent.trim() || null,
-      })
-      .eq("id", book.id);
+  const handleSaveMeta = async () => {
+    if (!book || savingMeta) return;
 
-    if (error) {
-      console.error("Error updating book:", error);
-      setErrorMessage(error.message);
-      setSaveStatus("idle");
+    const trimmedTitle = draftTitle.trim();
+    const trimmedDesc = draftDescription.trim();
+
+    if (!trimmedTitle) {
+      alert("Title cannot be empty.");
       return;
     }
 
-    setSaveStatus("idle");
-  }
-
-  async function handleDelete() {
-    if (!book) return;
-    const ok = window.confirm(
-      "Delete this book? This cannot be undone and all its chapters will be deleted."
-    );
-    if (!ok) return;
-
-    setSaveStatus("deleting");
-    setErrorMessage(null);
-
-    const { error } = await supabase.from("books").delete().eq("id", book.id);
-
-    if (error) {
-      console.error("Error deleting book:", error);
-      setErrorMessage(error.message);
-      setSaveStatus("idle");
-      return;
-    }
-
-    router.push(backHref);
-  }
-
-  // -------- Chapters actions (for others / future) --------
-  async function handleCreateChapter() {
-    if (!book || !bookId) return;
-    const trimmed = newChapterTitle.trim();
-    if (!trimmed) {
-      setChapterError("Chapter title cannot be empty.");
-      return;
-    }
-
-    setCreatingChapter(true);
-    setChapterError(null);
-
-    const currentMax =
-      chapters.length > 0
-        ? Math.max(...chapters.map((c) => c.chapter_number || 0))
-        : 0;
-    const nextNumber = currentMax + 1;
+    setSavingMeta(true);
 
     const { data, error } = await supabase
-      .from("book_chapters")
-      .insert({
-        book_id: bookId,
-        title: trimmed,
-        chapter_number: nextNumber,
-        is_published: false,
+      .from("books")
+      .update({
+        title: trimmedTitle,
+        description: trimmedDesc || null,
       })
-      .select(
-        "id, book_id, title, chapter_number, is_published, created_at"
-      )
-      .single();
+      .eq("id", book.id)
+      .select("*");
 
     if (error) {
-      console.error("Error creating chapter:", error);
-      setChapterError(error.message);
-      setCreatingChapter(false);
+      alert("Failed to update book: " + error.message);
+      setSavingMeta(false);
       return;
     }
 
-    setChapters((prev) =>
-      [...prev, data].sort((a, b) => a.chapter_number - b.chapter_number)
-    );
-    setNewChapterTitle("");
-    setCreatingChapter(false);
-  }
+    setBook((data?.[0] as BookRow) ?? book);
+    setEditingMeta(false);
+    setSavingMeta(false);
+  };
 
-  async function toggleChapterPublished(chapter: ChapterRow) {
-    const { error, data } = await supabase
-      .from("book_chapters")
-      .update({ is_published: !chapter.is_published })
-      .eq("id", chapter.id)
-      .select(
-        "id, book_id, title, chapter_number, is_published, created_at"
-      )
-      .single();
+  const handleCreateChapter = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (error) {
-      console.error("Error updating chapter:", error);
-      setChapterError(error.message);
+    if (!chapterTitle.trim()) {
+      setCreateError("Chapter title is required.");
+      return;
+    }
+    if (!chapterNumber.trim()) {
+      setCreateError("Chapter number is required.");
       return;
     }
 
-    setChapters((prev) =>
-      prev.map((c) => (c.id === chapter.id ? data : c))
-    );
-  }
-
-  async function deleteChapter(chapter: ChapterRow) {
-    const ok = window.confirm(
-      `Delete chapter ${chapter.chapter_number}: "${chapter.title}"?`
-    );
-    if (!ok) return;
-
-    const { error } = await supabase
-      .from("book_chapters")
-      .delete()
-      .eq("id", chapter.id);
-
-    if (error) {
-      console.error("Error deleting chapter:", error);
-      setChapterError(error.message);
+    const numberValue = Number(chapterNumber);
+    if (Number.isNaN(numberValue) || numberValue <= 0) {
+      setCreateError("Chapter number must be a positive number.");
       return;
     }
 
-    setChapters((prev) => prev.filter((c) => c.id !== chapter.id));
+    setCreating(true);
+    setCreateError(null);
+
+    const { error } = await supabase.from("chapters").insert([
+      {
+        book_id: bookId,
+        title: chapterTitle.trim(),
+        chapter_number: numberValue,
+        content: chapterContent.trim() || null,
+      },
+    ]);
+
+    if (error) {
+      setCreateError(error.message);
+    } else {
+      setChapterTitle("");
+      setChapterNumber("");
+      setChapterContent("");
+      await fetchData();
+    }
+
+    setCreating(false);
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
+        <div className="mx-auto max-w-5xl px-6 py-10">
+          <p className="text-sm text-slate-300">Loading book…</p>
+        </div>
+      </main>
+    );
   }
 
-  // ----------------------------------------------------------------
+  if (error || !book) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 p-8">
+        <Link
+          href={`/${locale}/studio/books`}
+          className="mb-4 inline-block text-xs text-slate-400 hover:text-emerald-300"
+        >
+          ← Back
+        </Link>
+        <p className="text-sm text-rose-300">
+          Book not found{error ? `: ${error}` : ""}.
+        </p>
+      </main>
+    );
+  }
+
+  const langCode: SupportedLang =
+    (book.language as SupportedLang) && UI_TEXT[book.language as SupportedLang]
+      ? (book.language as SupportedLang)
+      : (["en", "mn", "ko", "ja"].includes(locale) ? (locale as SupportedLang) : "en");
+
+  const t = UI_TEXT[langCode];
+
+  const localeForDate =
+    langCode === "mn"
+      ? "mn-MN"
+      : langCode === "ko"
+      ? "ko-KR"
+      : langCode === "ja"
+      ? "ja-JP"
+      : "en-GB";
 
   return (
-    <div className="min-h-screen bg-[#050614] text-slate-50">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
-        {/* Top nav */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link
-              href={backHref}
-              className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-            >
-              ◂ Back to books
-            </Link>
-            <span className="text-xs text-slate-500">
-              Book ID:{" "}
-              <code className="rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px]">
-                {bookId}
-              </code>
-            </span>
-          </div>
-
-          {book && (
-            <span className={getStatusBadgeClass(status)}>
-              {getStatusLabel(status)}
-            </span>
-          )}
+    <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
+        <div className="flex items-center justify-between text-xs text-slate-400">
+          <Link
+            href={`/${locale}/studio/books`}
+            className="inline-flex items-center gap-1 hover:text-slate-100"
+          >
+            <span className="text-lg">←</span>
+            {t.backToAll}
+          </Link>
         </div>
 
-        {/* Main content */}
-        {loadStatus === "loading" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-6 py-8 text-sm text-slate-300">
-            Loading book…
-          </div>
-        )}
+        {/* HEADER + EDIT META */}
+        <section className="space-y-3">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            {t.detail}
+          </span>
 
-        {loadStatus === "error" && (
-          <div className="rounded-2xl border border-red-500/40 bg-red-900/30 px-6 py-8 text-sm text-red-200">
-            <div className="text-base font-semibold">Couldn&apos;t load book</div>
-            <p className="mt-2 text-xs opacity-80">
-              {errorMessage || "Unknown error."}
-            </p>
-          </div>
-        )}
-
-        {loadStatus === "ok" && book && (
-          <div className="grid gap-6 md:grid-cols-[minmax(0,3fr),minmax(0,2fr)]">
-            {/* Left: Book details form */}
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 sm:p-6">
-              <header className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <div>
-                  <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                    {book.title || "Untitled book"}
-                  </h1>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Created {formatDate(book.created_at)}
+          {!editingMeta ? (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                  {book.title}
+                </h1>
+                {book.description && (
+                  <p className="max-w-xl text-sm text-slate-300">
+                    {book.description}
                   </p>
-                </div>
-              </header>
+                )}
+              </div>
 
-              <div className="mt-5 space-y-5 text-sm">
-                {/* Title */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Title
-                  </label>
+              <button
+                type="button"
+                onClick={() => setEditingMeta(true)}
+                className="mt-1 text-[11px] px-3 py-1 rounded-md border border-slate-600
+                           text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
+              >
+                {t.edit}
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-100">
+                  {t.editInfo}
+                </h2>
+                <span className="text-[11px] text-slate-400">
+                  {t.idLabel}: {book.id.slice(0, 8)}…
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-300">Title</label>
                   <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="My cosmic apocalypse book"
+                    className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    placeholder="Book title"
                   />
                 </div>
 
-                {/* Description */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Description
-                  </label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-300">Description</label>
                   <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="Short pitch, world description, or whatever makes your readers curious."
+                    className="h-24 rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
+                    value={draftDescription}
+                    onChange={(e) => setDraftDescription(e.target.value)}
+                    placeholder="Short summary…"
                   />
                 </div>
 
-                {/* BOOK CONTENT – whole story */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Book content (full story, no chapters)
-                  </label>
-                  <textarea
-                    value={bookContent}
-                    onChange={(e) => setBookContent(e.target.value)}
-                    rows={14}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="Write the whole story here if you don't want chapters..."
-                  />
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    If this field is filled, the reader page will show this as a
-                    single continuous book. Chapters are optional.
-                  </p>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Status
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {["draft", "published", "archived"].map((s) => {
-                      const active = status === s;
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setStatus(s)}
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                            active
-                              ? "border-indigo-400 bg-indigo-600/80 text-white shadow shadow-indigo-500/50"
-                              : "border-slate-700 bg-slate-900/80 text-slate-300 hover:border-indigo-400/60 hover:text-indigo-200"
-                          }`}
-                        >
-                          {getStatusLabel(s)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Draft: private to you • Published: visible in reader pages •
-                    Archived: hidden but kept.
-                  </p>
-                </div>
-
-                {/* Save / Delete */}
-                <div className="mt-4 flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saveStatus === "saving" || saveStatus === "deleting"}
-                      className="inline-flex items-center justify-center rounded-xl border border-indigo-500/60 bg-indigo-600/90 px-4 py-2 text-xs font-medium shadow-sm transition hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {saveStatus === "saving" ? "Saving…" : "Save changes"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={saveStatus === "deleting" || saveStatus === "saving"}
-                      className="inline-flex items-center justify-center rounded-xl border border-red-500/50 bg-red-900/40 px-4 py-2 text-xs font-medium text-red-100 shadow-sm transition hover:bg-red-800/70 hover:shadow-lg hover:shadow-red-900/60 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {saveStatus === "deleting" ? "Deleting…" : "Delete book"}
-                    </button>
-                  </div>
-
-                  {errorMessage && (
-                    <p className="text-[11px] text-red-300">{errorMessage}</p>
-                  )}
+                <div className="flex items-center gap-2 justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSaveMeta}
+                    disabled={savingMeta}
+                    className="text-[11px] px-3 py-1 rounded-md bg-emerald-500 text-black
+                               hover:bg-emerald-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {savingMeta ? t.saving : t.save}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftTitle(book.title);
+                      setDraftDescription(book.description ?? "");
+                      setEditingMeta(false);
+                    }}
+                    className="text-[11px] px-3 py-1 rounded-md border border-slate-600 text-slate-300 hover:border-slate-400"
+                  >
+                    {t.cancel}
+                  </button>
                 </div>
               </div>
-            </section>
+            </div>
+          )}
 
-            {/* Right: Chapters & tools (optional) */}
-            <aside className="flex flex-col gap-4">
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Chapters & Content (optional)
-                </h2>
-                <p className="mt-1 text-xs text-slate-400">
-                  Use this only if you want to split the book into chapters.
-                  For simple books, you can ignore this section.
-                </p>
+          <p className="text-[11px] text-slate-500">
+            {t.createdAt}:{" "}
+            {new Date(book.created_at).toLocaleString(localeForDate, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </p>
+        </section>
 
-                {/* New chapter form */}
-                <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/90 p-3">
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    New chapter title
-                  </label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      value={newChapterTitle}
-                      onChange={(e) => setNewChapterTitle(e.target.value)}
-                      className="flex-1 rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-1.5 text-xs text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                      placeholder="Chapter 1: The world cracks open"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCreateChapter}
-                      disabled={creatingChapter}
-                      className="inline-flex items-center justify-center rounded-xl border border-indigo-500/60 bg-indigo-600/90 px-3 py-1.5 text-[11px] font-medium shadow-sm transition hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {creatingChapter ? "Creating…" : "Add chapter"}
-                    </button>
-                  </div>
-                  {chapterError && (
-                    <p className="mt-1 text-[11px] text-red-300">
-                      {chapterError}
-                    </p>
-                  )}
-                </div>
-
-                {/* Chapters list */}
-                <div className="mt-4">
-                  {chaptersStatus === "loading" && (
-                    <p className="text-xs text-slate-400">Loading chapters…</p>
-                  )}
-
-                  {chaptersStatus === "error" && (
-                    <p className="text-xs text-red-300">
-                      {chapterError || "Error loading chapters."}
-                    </p>
-                  )}
-
-                  {chaptersStatus === "ok" && chapters.length === 0 && (
-                    <p className="text-xs text-slate-500">
-                      No chapters yet. For simple books, you don&apos;t need any.
-                    </p>
-                  )}
-
-                  {chaptersStatus === "ok" && chapters.length > 0 && (
-                    <ul className="mt-1 space-y-2">
-                      {chapters.map((ch) => (
-                        <li
-                          key={ch.id}
-                          className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs"
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-50">
-                              {ch.chapter_number}. {ch.title}
-                            </span>
-                            <span className="mt-0.5 text-[11px] text-slate-500">
-                              Created {formatDate(ch.created_at)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => toggleChapterPublished(ch)}
-                              className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${
-                                ch.is_published
-                                  ? "border-emerald-400 bg-emerald-500/15 text-emerald-200"
-                                  : "border-slate-600 bg-slate-900/80 text-slate-300"
-                              }`}
-                            >
-                              {ch.is_published ? "Published" : "Draft"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteChapter(ch)}
-                              className="rounded-full border border-red-500/60 bg-red-900/40 px-2.5 py-1 text-[10px] font-medium text-red-100 hover:bg-red-800/70"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-950/80 via-slate-950/40 to-indigo-900/40 p-4 sm:p-5">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Studio notes
-                </h2>
-                <ul className="mt-2 space-y-1.5 text-xs text-slate-300">
-                  <li>• For your style, just write everything in “Book content”.</li>
-                  <li>• Set status to <b>Published</b> when ready.</li>
-                  <li>• Reader pages will show only published books.</li>
-                </ul>
-              </section>
-            </aside>
+        {/* COVER */}
+        <section className="grid gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+            <h2 className="mb-2 text-sm font-semibold text-slate-100">
+              {t.cover}
+            </h2>
+            <BookCoverUploader bookId={book.id} initialUrl={book.cover_image_url} />
           </div>
-        )}
+          <div className="self-center text-xs text-slate-400">
+            <p>{t.coverHelp}</p>
+          </div>
+        </section>
+
+        {/* CREATE CHAPTER + LIST */}
+        <section className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)]">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+            <h2 className="mb-3 text-sm font-semibold text-slate-100">
+              {t.addChapter}
+            </h2>
+            <form className="flex flex-col gap-3" onSubmit={handleCreateChapter}>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-300">{t.chapterTitle}</label>
+                <input
+                  className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
+                  placeholder="e.g. Episode 1"
+                  value={chapterTitle}
+                  onChange={(e) => setChapterTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-300">{t.chapterNumber}</label>
+                <input
+                  className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
+                  placeholder="e.g. 1"
+                  value={chapterNumber}
+                  onChange={(e) => setChapterNumber(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-300">{t.contentScript}</label>
+                <textarea
+                  className="h-32 rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
+                  placeholder="Write the script or notes…"
+                  value={chapterContent}
+                  onChange={(e) => setChapterContent(e.target.value)}
+                />
+              </div>
+
+              {createError && <p className="text-xs text-rose-300">⚠️ {createError}</p>}
+
+              <button
+                type="submit"
+                disabled={creating}
+                className="mt-1 inline-flex items-center justify-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {creating ? t.creating : t.createChapter}
+              </button>
+            </form>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+            <h2 className="mb-3 text-sm font-semibold text-slate-100">
+              {t.chaptersTitle}
+            </h2>
+
+            {chapters.length === 0 && (
+              <p className="text-xs text-slate-400">{t.noChapters}</p>
+            )}
+
+            {chapters.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {chapters.map((c) => (
+                  <li
+                    key={c.id}
+                    className="rounded-xl border border-slate-800 bg-black/40 px-0 py-0 hover:border-emerald-400/70"
+                  >
+                    <Link href={`/${locale}/publisher/books`} className="block px-4 py-3">
+                      <p className="font-semibold text-slate-50 text-sm">
+                        #{c.chapter_number} · {c.title}
+                      </p>
+                      {c.content && (
+                        <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
+                          {c.content}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        {t.createdAt}:{" "}
+                        {new Date(c.created_at).toLocaleString(localeForDate, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

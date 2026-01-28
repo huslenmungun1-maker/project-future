@@ -1,44 +1,59 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
-  const locale = (params?.locale as string) ?? "en";
+  const search = useSearchParams();
+
+  const locale = (params?.locale as string) || "en";
+  const redirectTo = search.get("redirect") || `/${locale}/studio`;
+
+  const supabase = createClientComponentClient(); // ✅ cookie-based session for middleware
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
-    setError(null);
+    setErrorMsg(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    if (error) {
-      setError("Login error: " + error.message);
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!data?.session) {
+        setErrorMsg("Login succeeded but no session returned.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
-    }
 
-    if (!data.user) {
-      setError("Login success but Supabase returned no user.");
+      // ✅ replace + refresh so middleware sees cookies immediately
+      router.replace(redirectTo);
+      router.refresh();
+    } catch (err: any) {
+      setErrorMsg(typeof err?.message === "string" ? err.message : "Login failed.");
       setLoading(false);
-      return;
     }
-
-    // ✅ On success, go straight to HEAD MASTER page
-    router.push(`/${locale}/head`);
   }
 
   return (
@@ -62,7 +77,6 @@ export default function LoginPage() {
               className="w-full rounded-md border border-slate-700 bg-black/40 px-3 py-2 text-sm outline-none focus:border-emerald-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
               required
             />
           </div>
@@ -74,16 +88,11 @@ export default function LoginPage() {
               className="w-full rounded-md border border-slate-700 bg-black/40 px-3 py-2 text-sm outline-none focus:border-emerald-400"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               required
             />
           </div>
 
-          {error && (
-            <p className="text-xs text-rose-300">
-              {error}
-            </p>
-          )}
+          {errorMsg && <p className="text-xs text-rose-300">{errorMsg}</p>}
 
           <button
             type="submit"
@@ -92,6 +101,10 @@ export default function LoginPage() {
           >
             {loading ? "Logging in…" : "Login"}
           </button>
+
+          <p className="text-[11px] text-slate-500">
+            After login → <span className="text-slate-300">{redirectTo}</span>
+          </p>
         </form>
       </main>
     </div>

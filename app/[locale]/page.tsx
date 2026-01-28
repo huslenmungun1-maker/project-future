@@ -1,9 +1,14 @@
 // app/[locale]/page.tsx
 import Link from "next/link";
 
-export default function LocaleHomePage() {
-  // For now, hard-code the locale so Next.js stops complaining about params Promise
-  const locale = "en";
+type Params = { locale: string };
+
+export default async function LocaleHomePage({
+  params,
+}: {
+  params: Params | Promise<Params>;
+}) {
+  const { locale } = await Promise.resolve(params);
 
   return (
     <div className="min-h-screen bg-black text-slate-100">
@@ -11,12 +16,11 @@ export default function LocaleHomePage() {
         {/* Title */}
         <section>
           <h1 className="mb-2 text-3xl font-bold">
-            Welcome to{" "}
-            <span className="text-fuchsia-400">Project Future</span>
+            Welcome to <span className="text-fuchsia-400">Project Future</span>
           </h1>
           <p className="max-w-2xl text-sm text-slate-300">
-            Read, create, and manage manga / comics in one place.
-            This is the early build – functional first, pretty and advanced later.
+            Read, create, and manage manga / comics in one place. This is the
+            early build – functional first, pretty and advanced later.
           </p>
         </section>
 
@@ -27,8 +31,8 @@ export default function LocaleHomePage() {
             <div>
               <h2 className="mb-1 text-xl font-semibold">Reader</h2>
               <p className="text-sm text-slate-300">
-                Browse public series and start reading.
-                No login required (for now).
+                Browse public series and start reading. No login required (for
+                now).
               </p>
             </div>
             <Link
@@ -42,9 +46,7 @@ export default function LocaleHomePage() {
           {/* Publisher card */}
           <div className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
             <div>
-              <h2 className="mb-1 text-xl font-semibold">
-                Publisher Studio
-              </h2>
+              <h2 className="mb-1 text-xl font-semibold">Publisher Studio</h2>
               <p className="text-sm text-slate-300">
                 Create series, upload chapters, and manage your projects.
               </p>
@@ -121,8 +123,8 @@ export default function LocaleHomePage() {
           </ul>
 
           <p className="mt-3 text-[11px] text-slate-500">
-            If some links give 404 now, it&apos;s okay.
-            We&apos;ll create those pages one by one.
+            If some links give 404 now, it&apos;s okay. We&apos;ll create those
+            pages one by one.
           </p>
         </section>
       </main>

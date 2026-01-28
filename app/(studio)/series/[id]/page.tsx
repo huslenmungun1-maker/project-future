@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -12,23 +12,22 @@ type SeriesRow = {
   description: string | null;
   created_at: string;
   cover_image_url: string | null;
-  language: string | null;      // 👈 important
+  language: string | null;
+
+  // ✅ publish fields (make sure columns exist in Supabase)
+  published: boolean;
+  published_at: string | null;
 };
 
 type ChapterRow = {
   id: string;
-  series_id: string;
+  series_id: string | null;
   title: string;
   chapter_number: number;
   created_at: string;
   content: string | null;
 };
 
-/**
- * Simple UI translation dictionary.
- * Keys = language code stored in `series.language`
- * Fallback will be EN.
- */
 const UI_TEXT = {
   en: {
     backToAllSeries: "Back to all projects",
@@ -50,6 +49,14 @@ const UI_TEXT = {
     saving: "Saving…",
     save: "Save",
     cancel: "Cancel",
+    delete: "Delete",
+    confirmDelete: "Delete this chapter? This cannot be undone.",
+    retry: "Retry",
+    publish: "Publish",
+    unpublish: "Unpublish",
+    published: "Published",
+    draft: "Draft",
+    confirmUnpublish: "Unpublish this project? Readers will no longer see it.",
   },
   mn: {
     backToAllSeries: "Бүх төслүүд рүү буцах",
@@ -67,11 +74,18 @@ const UI_TEXT = {
     chapterNumber: "Бүлгийн дугаар",
     contentScript: "Агуулга / скрипт",
     chaptersTitle: "Бүлгүүд",
-    noChapters:
-      "Одоогоор бүлэг алга. Зүүн талаас анхны бүлгээ үүсгээрэй.",
+    noChapters: "Одоогоор бүлэг алга. Зүүн талаас анхны бүлгээ үүсгээрэй.",
     saving: "Хадгалж байна…",
     save: "Хадгалах",
     cancel: "Цуцлах",
+    delete: "Устгах",
+    confirmDelete: "Энэ бүлгийг устгах уу? Буцаах боломжгүй.",
+    retry: "Дахин ачаалах",
+    publish: "Нийтлэх",
+    unpublish: "Нийтлэл болиулах",
+    published: "Нийтлэгдсэн",
+    draft: "Ноорог",
+    confirmUnpublish: "Нийтлэлийг болих уу? Уншигчид харахгүй болно.",
   },
   ko: {
     backToAllSeries: "모든 프로젝트로 돌아가기",
@@ -89,11 +103,18 @@ const UI_TEXT = {
     chapterNumber: "챕터 번호",
     contentScript: "내용 / 스크립트",
     chaptersTitle: "챕터",
-    noChapters:
-      "아직 챕터가 없습니다. 왼쪽에서 첫 챕터를 만들어 보세요.",
+    noChapters: "아직 챕터가 없습니다. 왼쪽에서 첫 챕터를 만들어 보세요.",
     saving: "저장 중…",
     save: "저장",
     cancel: "취소",
+    delete: "삭제",
+    confirmDelete: "이 챕터를 삭제할까요? 되돌릴 수 없습니다.",
+    retry: "다시 시도",
+    publish: "게시",
+    unpublish: "게시 취소",
+    published: "게시됨",
+    draft: "초안",
+    confirmUnpublish: "게시를 취소할까요? 리더에서 보이지 않게 됩니다.",
   },
   ja: {
     backToAllSeries: "すべてのプロジェクトに戻る",
@@ -116,6 +137,14 @@ const UI_TEXT = {
     saving: "保存中…",
     save: "保存",
     cancel: "キャンセル",
+    delete: "削除",
+    confirmDelete: "このチャプターを削除しますか？元に戻せません。",
+    retry: "再試行",
+    publish: "公開",
+    unpublish: "非公開",
+    published: "公開中",
+    draft: "下書き",
+    confirmUnpublish: "非公開にしますか？読者に表示されなくなります。",
   },
 } as const;
 
@@ -130,11 +159,14 @@ export default function SeriesDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ---- SERIES EDIT STATE (title + description) ----
+  // ---- SERIES EDIT STATE ----
   const [editingMeta, setEditingMeta] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
+
+  // ---- PUBLISH STATE ----
+  const [togglingPublish, setTogglingPublish] = useState(false);
 
   // ---- CHAPTER CREATE STATE ----
   const [chapterTitle, setChapterTitle] = useState("");
@@ -142,6 +174,22 @@ export default function SeriesDetailPage() {
   const [chapterContent, setChapterContent] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const t = useMemo(() => {
+    const lang = (series?.language as SupportedLang) || "en";
+    return UI_TEXT[lang] ? UI_TEXT[lang] : UI_TEXT.en;
+  }, [series?.language]);
+
+  const localeForDate = useMemo(() => {
+    const lang = (series?.language as SupportedLang) || "en";
+    return lang === "mn"
+      ? "mn-MN"
+      : lang === "ko"
+      ? "ko-KR"
+      : lang === "ja"
+      ? "ja-JP"
+      : "en-GB";
+  }, [series?.language]);
 
   const fetchData = async () => {
     if (!seriesId) return;
@@ -182,7 +230,6 @@ export default function SeriesDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesId]);
 
-  // keep draft title/description in sync when series changes
   useEffect(() => {
     if (series) {
       setDraftTitle(series.title);
@@ -190,7 +237,7 @@ export default function SeriesDetailPage() {
     }
   }, [series]);
 
-  // ---- SAVE SERIES META (TITLE + DESCRIPTION) ----
+  // ---- SAVE SERIES META ----
   const handleSaveMeta = async () => {
     if (!series || savingMeta) return;
 
@@ -199,7 +246,7 @@ export default function SeriesDetailPage() {
 
     if (!trimmedTitle) {
       alert("Title cannot be empty.");
-      return; // (this alert is fine to stay EN for now)
+      return;
     }
 
     setSavingMeta(true);
@@ -231,21 +278,65 @@ export default function SeriesDetailPage() {
     setSavingMeta(false);
   };
 
+  // ---- PUBLISH / UNPUBLISH ----
+  const handleTogglePublish = async () => {
+    if (!series || togglingPublish) return;
+
+    const next = !series.published;
+
+    if (!next) {
+      const ok = confirm(t.confirmUnpublish);
+      if (!ok) return;
+    }
+
+    setTogglingPublish(true);
+
+    const { data, error } = await supabase
+      .from("series")
+      .update({
+        published: next,
+        published_at: next ? new Date().toISOString() : null,
+      })
+      .eq("id", series.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      alert("Publish update failed: " + error.message);
+      setTogglingPublish(false);
+      return;
+    }
+
+    setSeries(data as SeriesRow);
+    setTogglingPublish(false);
+  };
+
   // ---- CREATE CHAPTER ----
   const handleCreateChapter = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chapterTitle.trim()) {
+
+    if (!seriesId || typeof seriesId !== "string") {
+      setCreateError("Series ID is missing. Refresh the page and try again.");
+      return;
+    }
+
+    const title = chapterTitle.trim();
+    const numberRaw = chapterNumber.trim();
+    const content = chapterContent.trim();
+
+    if (!title) {
       setCreateError("Chapter title is required.");
       return;
     }
-    if (!chapterNumber.trim()) {
+
+    if (!numberRaw) {
       setCreateError("Chapter number is required.");
       return;
     }
 
-    const numberValue = Number(chapterNumber);
-    if (Number.isNaN(numberValue) || numberValue <= 0) {
-      setCreateError("Chapter number must be a positive number.");
+    const numberValue = Number(numberRaw);
+    if (!Number.isInteger(numberValue) || numberValue <= 0) {
+      setCreateError("Chapter number must be a positive whole number.");
       return;
     }
 
@@ -255,22 +346,38 @@ export default function SeriesDetailPage() {
     const { error } = await supabase.from("chapters").insert([
       {
         series_id: seriesId,
-        title: chapterTitle.trim(),
+        title,
         chapter_number: numberValue,
-        content: chapterContent.trim() || null,
+        content: content || "", // never null
       },
     ]);
 
     if (error) {
       setCreateError(error.message);
-    } else {
-      setChapterTitle("");
-      setChapterNumber("");
-      setChapterContent("");
-      await fetchData();
+      setCreating(false);
+      return;
     }
 
+    setChapterTitle("");
+    setChapterNumber("");
+    setChapterContent("");
+    await fetchData();
     setCreating(false);
+  };
+
+  // ---- DELETE CHAPTER ----
+  const handleDeleteChapter = async (chapterId: string) => {
+    const ok = confirm(t.confirmDelete);
+    if (!ok) return;
+
+    const { error } = await supabase.from("chapters").delete().eq("id", chapterId);
+
+    if (error) {
+      alert("Failed to delete chapter: " + error.message);
+      return;
+    }
+
+    await fetchData();
   };
 
   // ---- EARLY RENDERS ----
@@ -300,31 +407,11 @@ export default function SeriesDetailPage() {
     );
   }
 
-  // ---- LANGUAGE / TEXT SELECTION ----
-  const langCode: SupportedLang =
-    (series.language as SupportedLang) && UI_TEXT[series.language as SupportedLang]
-      ? (series.language as SupportedLang)
-      : "en";
-
-  const t = UI_TEXT[langCode];
-
-  const localeForDate =
-    langCode === "mn"
-      ? "mn-MN"
-      : langCode === "ko"
-      ? "ko-KR"
-      : langCode === "ja"
-      ? "ja-JP"
-      : "en-GB";
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 hover:text-slate-100"
-          >
+          <Link href="/" className="inline-flex items-center gap-1 hover:text-slate-100">
             <span className="text-lg">←</span>
             {t.backToAllSeries}
           </Link>
@@ -338,11 +425,23 @@ export default function SeriesDetailPage() {
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
             {t.seriesDetail}
+
             {series.language && (
               <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-[10px] text-slate-300">
                 {series.language.toUpperCase()}
               </span>
             )}
+
+            <span
+              className={`ml-2 rounded-full border px-2 py-0.5 text-[10px] ${
+                series.published
+                  ? "border-emerald-500/60 text-emerald-300"
+                  : "border-slate-600 text-slate-300"
+              }`}
+              title={series.published ? t.published : t.draft}
+            >
+              {series.published ? t.published : t.draft}
+            </span>
           </span>
 
           {!editingMeta ? (
@@ -359,14 +458,34 @@ export default function SeriesDetailPage() {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setEditingMeta(true)}
-                  className="mt-1 text-[11px] px-3 py-1 rounded-md border border-slate-600
-                             text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
-                >
-                  {t.editSeries}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMeta(true)}
+                    className="mt-1 text-[11px] px-3 py-1 rounded-md border border-slate-600
+                               text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
+                  >
+                    {t.editSeries}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTogglePublish}
+                    disabled={togglingPublish}
+                    className={`mt-1 text-[11px] px-3 py-1 rounded-md border transition disabled:opacity-60 disabled:cursor-not-allowed ${
+                      series.published
+                        ? "border-slate-600 text-slate-200 hover:border-slate-400"
+                        : "border-emerald-600 text-emerald-300 hover:bg-emerald-500 hover:text-black"
+                    }`}
+                    title={series.published ? t.unpublish : t.publish}
+                  >
+                    {togglingPublish
+                      ? "…"
+                      : series.published
+                      ? t.unpublish
+                      : t.publish}
+                  </button>
+                </div>
               </div>
             </>
           ) : (
@@ -434,6 +553,16 @@ export default function SeriesDetailPage() {
               timeStyle: "short",
             })}
           </p>
+
+          {series.published_at && (
+            <p className="text-[11px] text-slate-500">
+              {t.published}:{" "}
+              {new Date(series.published_at).toLocaleString(localeForDate, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+          )}
         </section>
 
         {/* COVER IMAGE SECTION */}
@@ -459,14 +588,10 @@ export default function SeriesDetailPage() {
             <h2 className="mb-3 text-sm font-semibold text-slate-100">
               {t.addChapter}
             </h2>
-            <form
-              className="flex flex-col gap-3"
-              onSubmit={handleCreateChapter}
-            >
+
+            <form className="flex flex-col gap-3" onSubmit={handleCreateChapter}>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-300">
-                  {t.chapterTitle}
-                </label>
+                <label className="text-xs text-slate-300">{t.chapterTitle}</label>
                 <input
                   className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
                   placeholder="e.g. Episode 1"
@@ -476,9 +601,7 @@ export default function SeriesDetailPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-300">
-                  {t.chapterNumber}
-                </label>
+                <label className="text-xs text-slate-300">{t.chapterNumber}</label>
                 <input
                   className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
                   placeholder="e.g. 1"
@@ -488,9 +611,7 @@ export default function SeriesDetailPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-300">
-                  {t.contentScript}
-                </label>
+                <label className="text-xs text-slate-300">{t.contentScript}</label>
                 <textarea
                   className="h-32 rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
                   placeholder="Write the script or notes for this chapter..."
@@ -515,38 +636,60 @@ export default function SeriesDetailPage() {
 
           {/* Chapter list */}
           <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
-            <h2 className="mb-3 text-sm font-semibold text-slate-100">
-              {t.chaptersTitle}
-            </h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-100">
+                {t.chaptersTitle}
+              </h2>
 
-            {chapters.length === 0 && (
+              <button
+                type="button"
+                onClick={fetchData}
+                className="text-[11px] px-3 py-1 rounded-md border border-slate-600 text-slate-300 hover:border-slate-400"
+              >
+                {t.retry}
+              </button>
+            </div>
+
+            {chapters.length === 0 ? (
               <p className="text-xs text-slate-400">{t.noChapters}</p>
-            )}
-
-            {chapters.length > 0 && (
+            ) : (
               <ul className="flex flex-col gap-3">
                 {chapters.map((c) => (
                   <li
                     key={c.id}
-                    className="rounded-xl border border-slate-800 bg-black/40 px-0 py-0 hover:border-emerald-400/70"
+                    className="rounded-xl border border-slate-800 bg-black/40 hover:border-emerald-400/70"
                   >
-                    <Link href={`/chapters/${c.id}`} className="block px-4 py-3">
-                      <p className="font-semibold text-slate-50 text-sm">
-                        #{c.chapter_number} · {c.title}
-                      </p>
-                      {c.content && (
-                        <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
-                          {c.content}
+                    <div className="flex items-start justify-between gap-3 px-4 py-3">
+                      <Link href={`/chapters/${c.id}`} className="block flex-1">
+                        <p className="font-semibold text-slate-50 text-sm">
+                          #{c.chapter_number} · {c.title}
                         </p>
-                      )}
-                      <p className="mt-1 text-[10px] text-slate-500">
-                        {t.createdAt}:{" "}
-                        {new Date(c.created_at).toLocaleString(localeForDate, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                    </Link>
+
+                        {c.content && (
+                          <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
+                            {c.content}
+                          </p>
+                        )}
+
+                        <p className="mt-1 text-[10px] text-slate-500">
+                          {t.createdAt}:{" "}
+                          {new Date(c.created_at).toLocaleString(localeForDate, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </p>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteChapter(c.id)}
+                        className="ml-3 text-[11px] text-rose-400 hover:text-rose-300"
+                        title={t.delete}
+                        aria-label={`${t.delete} ${c.chapter_number}`}
+                      >
+                        {t.delete}
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

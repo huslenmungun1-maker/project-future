@@ -2,45 +2,95 @@ import { NextResponse } from "next/server";
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import type { NextRequest } from "next/server";
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const path = req.nextUrl.pathname;
+const LOCALES = ["en", "mn", "ko", "ja"] as const;
+type Locale = (typeof LOCALES)[number];
 
-  // PUBLIC pages
-  if (path.startsWith("/reader") || path === "/") {
-    return res;
+function isLocale(x: string): x is Locale {
+  return (LOCALES as readonly string[]).includes(x);
+}
+
+const OWNER_EMAIL = "huslen.mungun1@gmail.com";
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Ignore Next internals + files
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
   }
 
-  // Create a Supabase middleware client
+  // ---- Locale handling ----
+  const parts = pathname.split("/");
+  const first = parts[1]; // "" | "en" | "studio" ...
+
+  // If no locale in URL, force /en + keep path
+  if (!isLocale(first)) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/en${pathname === "/" ? "" : pathname}`;
+    return NextResponse.redirect(url);
+  }
+
+  const locale = first;
+  const restPath = "/" + parts.slice(2).join("/"); // "/studio/..", "/reader", "" -> "/"
+
+  // Public pages (no login required)
+  if (
+    restPath === "/" ||
+    restPath.startsWith("/reader") ||
+    restPath.startsWith("/login") ||
+    restPath.startsWith("/auth")
+  ) {
+    return NextResponse.next();
+  }
+
+  // ---- Auth check (for protected pages) ----
+  const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
 
-  // Get session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // If no login → redirect to login page
+  // If not logged in -> send to locale login page
   if (!session) {
-    return NextResponse.redirect(new URL("/auth/login", req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = `/${locale}/login`;
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
   }
 
-  const userEmail = session.user.email;
+  const userEmail = session.user.email || "";
 
-  // HEAD ADMIN — only your email allowed
-  if (path.startsWith("/head")) {
-    if (userEmail !== "huslen.mungun1@gmail.com") {
-      return NextResponse.redirect(new URL("/reader", req.url));
+  // OPTIONAL: if owner tries to go to /publisher, send them to /head instead
+  // (remove this block if you want owner to access publisher too)
+  if (userEmail === OWNER_EMAIL && restPath.startsWith("/publisher")) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/${locale}/head`;
+    return NextResponse.redirect(url);
+  }
+
+  // HEAD admin: only your email allowed
+  if (restPath.startsWith("/head")) {
+    if (userEmail !== OWNER_EMAIL) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${locale}/reader`;
+      return NextResponse.redirect(url);
     }
   }
 
-  // STUDIO — any logged-in user allowed
-  if (path.startsWith("/studio")) {
+  // STUDIO + PUBLISHER: any logged-in user allowed
+  if (restPath.startsWith("/studio") || restPath.startsWith("/publisher")) {
     return res;
   }
 
+  // Default allow
   return res;
 }
 
 export const config = {
-  matcher: ["/", "/reader/:path*", "/studio/:path*", "/head/:path*"],
+  matcher: ["/((?!_next|api|.*\\..*).*)"],
 };

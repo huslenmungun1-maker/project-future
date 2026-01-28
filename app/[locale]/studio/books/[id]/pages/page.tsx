@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -17,16 +17,13 @@ type PageRow = {
   id: string;
   book_id: string;
   page_number: number;
-  title: string | null;
-  subtitle: string | null;
-  content: string | null;
+  page_name: string | null;
   image_url: string | null;
   created_at: string;
 };
 
 export default function BookPagesManagerPage() {
   const params = useParams();
-  const router = useRouter();
 
   const locale = (params?.locale as string) || "en";
   const bookId = params?.id as string;
@@ -37,11 +34,8 @@ export default function BookPagesManagerPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pages, setPages] = useState<PageRow[]>([]);
 
-  // new page form state
-  const [newTitle, setNewTitle] = useState("");
-  const [newSubtitle, setNewSubtitle] = useState("");
+  const [newPageName, setNewPageName] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
-  const [newContent, setNewContent] = useState("");
 
   const baseLocale = locale ? `/${locale}` : "";
   const backHref = `${baseLocale}/studio/books/${bookId}`;
@@ -49,8 +43,7 @@ export default function BookPagesManagerPage() {
   function formatDate(stamp?: string) {
     if (!stamp) return "";
     try {
-      const d = new Date(stamp);
-      return d.toLocaleString();
+      return new Date(stamp).toLocaleString();
     } catch {
       return stamp || "";
     }
@@ -63,13 +56,10 @@ export default function BookPagesManagerPage() {
       setStatus("loading");
       setErrorMessage(null);
 
-      // auth check
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
         setStatus("error");
-        setErrorMessage(
-          userError?.message || "You must be logged in to manage pages."
-        );
+        setErrorMessage("You must be logged in.");
         return;
       }
 
@@ -81,17 +71,13 @@ export default function BookPagesManagerPage() {
 
       if (bookError || !bookData) {
         setStatus("error");
-        setErrorMessage(
-          bookError?.message || "Book not found or you don't have permission."
-        );
+        setErrorMessage("Book not found.");
         return;
       }
 
       const { data: pagesData, error: pagesError } = await supabase
-        .from("book_pages")
-        .select(
-          "id, book_id, page_number, title, subtitle, content, image_url, created_at"
-        )
+        .from("pages")
+        .select("id, book_id, page_number, page_name, image_url, created_at")
         .eq("book_id", bookId)
         .order("page_number", { ascending: true });
 
@@ -112,251 +98,135 @@ export default function BookPagesManagerPage() {
   async function handleCreatePage() {
     if (!bookId) return;
 
-    const trimmedContent = newContent.trim();
-    const trimmedTitle = newTitle.trim();
-    const trimmedSubtitle = newSubtitle.trim();
-    const trimmedImage = newImageUrl.trim();
+    const name = newPageName.trim();
+    const image = newImageUrl.trim();
 
-    if (!trimmedTitle && !trimmedContent && !trimmedImage) {
-      setErrorMessage("Please fill at least title, content, or image.");
+    if (!name && !image) {
+      setErrorMessage("Enter page name or image URL.");
       return;
     }
 
     setSaveStatus("saving");
     setErrorMessage(null);
 
-    const currentMax =
+    const nextNumber =
       pages.length > 0
-        ? Math.max(...pages.map((p) => p.page_number || 0))
-        : 0;
-    const nextNumber = currentMax + 1;
+        ? Math.max(...pages.map((p) => p.page_number)) + 1
+        : 1;
 
-    const { data, error } = await supabase
-      .from("book_pages")
-      .insert({
-        book_id: bookId,
-        page_number: nextNumber,
-        title: trimmedTitle || null,
-        subtitle: trimmedSubtitle || null,
-        content: trimmedContent || null,
-        image_url: trimmedImage || null,
-      })
-      .select(
-        "id, book_id, page_number, title, subtitle, content, image_url, created_at"
-      )
-      .single();
+    const { error } = await supabase.from("pages").insert({
+      book_id: bookId,
+      page_number: nextNumber,
+      page_name: name || null,
+      image_url: image || null,
+      visible: true,
+      is_published: true,
+      published_at: new Date().toISOString(),
+    });
 
     if (error) {
-      console.error("Error creating page:", error);
       setErrorMessage(error.message);
       setSaveStatus("idle");
       return;
     }
 
-    setPages((prev) =>
-      [...prev, data].sort((a, b) => a.page_number - b.page_number)
-    );
-    setNewTitle("");
-    setNewSubtitle("");
+    setNewPageName("");
     setNewImageUrl("");
-    setNewContent("");
     setSaveStatus("idle");
+
+    const { data } = await supabase
+      .from("pages")
+      .select("id, book_id, page_number, page_name, image_url, created_at")
+      .eq("book_id", bookId)
+      .order("page_number", { ascending: true });
+
+    setPages(data || []);
   }
 
   async function handleDeletePage(page: PageRow) {
-    const ok = window.confirm(
-      `Delete page ${page.page_number}? This cannot be undone.`
-    );
-    if (!ok) return;
+    if (!confirm(`Delete page ${page.page_number}?`)) return;
 
-    const { error } = await supabase
-      .from("book_pages")
-      .delete()
-      .eq("id", page.id);
-
+    const { error } = await supabase.from("pages").delete().eq("id", page.id);
     if (error) {
-      console.error("Error deleting page:", error);
       setErrorMessage(error.message);
       return;
     }
 
-    setPages((prev) => prev.filter((p) => p.id !== page.id));
+    setPages((prev) => prev.filter((p) =>i => p.id !== page.id));
   }
 
   return (
     <div className="min-h-screen bg-[#050614] text-slate-50">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
-        {/* Top bar */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link
-              href={backHref}
-              className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-            >
-              ◂ Back to book
-            </Link>
-            {book && (
-              <div className="text-xs text-slate-400">
-                Pages for:{" "}
-                <span className="font-semibold text-slate-100">
-                  {book.title || "Untitled book"}
-                </span>
-              </div>
-            )}
-          </div>
+      <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+        <div className="flex items-center gap-3">
+          <Link
+            href={backHref}
+            className="rounded-full border border-slate-700 px-3 py-1.5 text-xs"
+          >
+            ◂ Back to book
+          </Link>
+          {book && <span className="text-xs text-slate-300">Pages for: <b>{book.title}</b></span>}
         </div>
 
-        {status === "loading" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-6 py-8 text-sm text-slate-300">
-            Loading pages…
-          </div>
-        )}
-
-        {status === "error" && (
-          <div className="rounded-2xl border border-red-500/40 bg-red-900/30 px-6 py-8 text-sm text-red-200">
-            <div className="text-base font-semibold">Couldn&apos;t load pages</div>
-            <p className="mt-2 text-xs opacity-80">
-              {errorMessage || "Unknown error."}
-            </p>
-          </div>
-        )}
+        {status === "loading" && <p>Loading…</p>}
+        {status === "error" && <p className="text-red-400">{errorMessage}</p>}
 
         {status === "ok" && (
-          <div className="grid gap-6 md:grid-cols-[minmax(0,3fr),minmax(0,2fr)]">
-            {/* Left: existing pages */}
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 sm:p-6">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Existing pages
-              </h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Each page is like a flexible canvas: title, subtitle, image, and
-                body text. Readers see them one by one.
-              </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="border border-slate-800 rounded-xl p-4">
+              <h2 className="text-sm font-semibold">Existing pages</h2>
 
-              <div className="mt-4 space-y-2 text-xs">
-                {pages.length === 0 && (
-                  <p className="text-slate-500">
-                    No pages yet. Create the first one on the right.
-                  </p>
-                )}
+              {pages.length === 0 && (
+                <p className="text-xs text-slate-500 mt-2">No pages yet.</p>
+              )}
 
-                {pages.length > 0 && (
-                  <ul className="space-y-2">
-                    {pages.map((p) => {
-                      const readerHref = `${baseLocale}/reader/books/${bookId}/pages/${p.page_number}`;
-                      return (
-                        <li
-                          key={p.id}
-                          className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/90 px-3 py-2"
-                        >
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-medium text-slate-50">
-                              Page {p.page_number}
-                              {p.title ? ` — ${p.title}` : ""}
-                            </span>
-                            <span className="text-[11px] text-slate-500">
-                              {formatDate(p.created_at)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={readerHref}
-                              className="rounded-full border border-indigo-400/70 bg-indigo-600/80 px-2.5 py-1 text-[10px] font-medium text-slate-50 hover:bg-indigo-500"
-                            >
-                              View as reader
-                            </Link>
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePage(p)}
-                              className="rounded-full border border-red-500/60 bg-red-900/40 px-2.5 py-1 text-[10px] font-medium text-red-100 hover:bg-red-800/70"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </section>
+              <ul className="mt-3 space-y-2">
+                {pages.map((p) => (
+                  <li key={p.id} className="flex justify-between text-xs">
+                    <span>
+                      Page {p.page_number}
+                      {p.page_name ? ` — ${p.page_name}` : ""}
+                    </span>
+                    <button
+                      onClick={() => handleDeletePage(p)}
+                      className="text-red-400"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-            {/* Right: create new page */}
-            <aside className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 sm:p-6 text-xs">
-              <h2 className="text-sm font-semibold text-slate-50">
-                Add a new page
-              </h2>
-              <p className="mt-1 text-xs text-slate-400">
-                This will automatically become the next page (1, 2, 3, …).
-              </p>
+            <div className="border border-slate-800 rounded-xl p-4 text-xs space-y-3">
+              <h2 className="font-semibold">Add page</h2>
 
-              <div className="mt-3 space-y-3">
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Page title (optional)
-                  </label>
-                  <input
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-1.5 text-xs text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="For example: A lesson I learned too late"
-                  />
-                </div>
+              <input
+                value={newPageName}
+                onChange={(e) => setNewPageName(e.target.value)}
+                placeholder="Page name"
+                className="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1"
+              />
 
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Subtitle (optional)
-                  </label>
-                  <input
-                    value={newSubtitle}
-                    onChange={(e) => setNewSubtitle(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-1.5 text-xs text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="Short description or mood line"
-                  />
-                </div>
+              <input
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="Image URL"
+                className="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1"
+              />
 
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Image URL (optional)
-                  </label>
-                  <input
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-1.5 text-xs text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="https://…"
-                  />
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    Later we can replace this with a real uploader.
-                  </p>
-                </div>
+              {errorMessage && (
+                <p className="text-red-400">{errorMessage}</p>
+              )}
 
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Body content
-                  </label>
-                  <textarea
-                    value={newContent}
-                    onChange={(e) => setNewContent(e.target.value)}
-                    rows={10}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    placeholder="Write the main text of this page here…"
-                  />
-                </div>
-
-                {errorMessage && (
-                  <p className="text-[11px] text-red-300">{errorMessage}</p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleCreatePage}
-                  disabled={saveStatus === "saving"}
-                  className="mt-2 inline-flex items-center justify-center rounded-xl border border-indigo-500/60 bg-indigo-600/90 px-4 py-2 text-xs font-medium shadow-sm transition hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saveStatus === "saving" ? "Creating…" : "Add page"}
-                </button>
-              </div>
-            </aside>
+              <button
+                onClick={handleCreatePage}
+                disabled={saveStatus === "saving"}
+                className="w-full bg-indigo-600 rounded py-1.5"
+              >
+                {saveStatus === "saving" ? "Creating…" : "Add page"}
+              </button>
+            </div>
           </div>
         )}
       </div>
