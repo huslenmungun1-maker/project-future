@@ -152,7 +152,9 @@ export default function BookPagesManagerPage() {
       return;
     }
 
-    setPages((prev) => prev.filter((p) =>i => p.id !== page.id));
+   setPages((prev: PageRow[]) => prev.filter((p: PageRow) => p.id !== page.id));
+
+
   }
 
   return (

@@ -69,8 +69,7 @@ const UI_TEXT = {
     createdAt: "Үүсгэсэн",
     publishedAt: "Нийтэлсэн",
     howItWorksTitle: "Яаж ажилладаг вэ",
-    howItWorksBody:
-      "Төсөл: /reader/series/[seriesId]/1, Ном: /reader/[bookId]/1",
+    howItWorksBody: "Төсөл: /reader/series/[seriesId]/1, Ном: /reader/[bookId]/1",
     studio: "Студи",
     publisherBooks: "Нийтлэгч номууд",
   },
@@ -87,8 +86,7 @@ const UI_TEXT = {
     createdAt: "생성일",
     publishedAt: "게시일",
     howItWorksTitle: "작동 방식",
-    howItWorksBody:
-      "프로젝트: /reader/series/[seriesId]/1, 책: /reader/[bookId]/1",
+    howItWorksBody: "프로젝트: /reader/series/[seriesId]/1, 책: /reader/[bookId]/1",
     studio: "스튜디오",
     publisherBooks: "퍼블리셔 책",
   },
@@ -176,35 +174,31 @@ export default function ReaderHomePage() {
       let translatedSeries = seriesData;
 
       try {
-        const translationQueries: Promise<any>[] = [];
+        const [bookTrRes, seriesTrRes] = await Promise.all([
+          bookIds.length > 0
+            ? (async () =>
+                await supabase
+                  .from("content_translations")
+                  .select(
+                    "content_type, content_id, locale, title, description, body"
+                  )
+                  .eq("content_type", "book")
+                  .eq("locale", locale)
+                  .in("content_id", bookIds))()
+            : Promise.resolve({ data: [], error: null }),
 
-        if (bookIds.length > 0) {
-          translationQueries.push(
-            supabase
-              .from("content_translations")
-              .select("content_type, content_id, locale, title, description, body")
-              .eq("content_type", "book")
-              .eq("locale", locale)
-              .in("content_id", bookIds)
-          );
-        } else {
-          translationQueries.push(Promise.resolve({ data: [], error: null }));
-        }
-
-        if (seriesIds.length > 0) {
-          translationQueries.push(
-            supabase
-              .from("content_translations")
-              .select("content_type, content_id, locale, title, description, body")
-              .eq("content_type", "series")
-              .eq("locale", locale)
-              .in("content_id", seriesIds)
-          );
-        } else {
-          translationQueries.push(Promise.resolve({ data: [], error: null }));
-        }
-
-        const [bookTrRes, seriesTrRes] = await Promise.all(translationQueries);
+          seriesIds.length > 0
+            ? (async () =>
+                await supabase
+                  .from("content_translations")
+                  .select(
+                    "content_type, content_id, locale, title, description, body"
+                  )
+                  .eq("content_type", "series")
+                  .eq("locale", locale)
+                  .in("content_id", seriesIds))()
+            : Promise.resolve({ data: [], error: null }),
+        ]);
 
         if (!bookTrRes?.error) {
           const rows = ((bookTrRes.data as TranslationRow[]) || []).filter(
