@@ -470,12 +470,13 @@ async function createChapter() {
   try {
     const scriptTrim = chapterContent.trim();
 
-    // 1) Create chapter base (NO title, NO content here)
     const { data: ch, error: chErr } = await supabase
       .from("chapters")
       .insert({
         series_id: seriesId,
         chapter_number: num,
+        title: titleTrim,          // REQUIRED (fix)
+        content: scriptTrim || null,
       })
       .select("id")
       .single();
@@ -485,13 +486,12 @@ async function createChapter() {
       return;
     }
 
-    // 2) Save language-specific text
     const { error: trErr } = await supabase
       .from("chapter_translations")
       .upsert(
         {
           chapter_id: ch.id,
-          locale: currentLang, // en / mn / ko / ja
+          locale: currentLang,
           title: titleTrim,
           script: scriptTrim || null,
         },
@@ -515,6 +515,7 @@ async function createChapter() {
     setCreating(false);
   }
 }
+
 
   async function deleteChapter(chapterId: string) {
     setActionMsg(null);

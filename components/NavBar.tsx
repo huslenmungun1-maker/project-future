@@ -31,10 +31,9 @@ const LABEL: Record<SupportedLocale, string> = {
 export default function NavBar({ locale }: { locale: string }) {
   const currentLocale = normalizeLocale(locale);
   const pathname = usePathname() || "/";
-  const restPath = stripLeadingLocale(pathname); // keep same page
+  const restPath = stripLeadingLocale(pathname);
 
   const mkHref = (l: SupportedLocale) => {
-    // handle root cleanly
     return restPath === "/" ? `/${l}` : `/${l}${restPath}`;
   };
 
@@ -63,15 +62,16 @@ export default function NavBar({ locale }: { locale: string }) {
           Studio
         </Link>
 
+        {/* ✅ FIX: point to a real existing page: /publisher/books */}
         <Link
-          href={`/${currentLocale}/publisher`}
+          href={`/${currentLocale}/publisher/books`}
           className="text-slate-300 hover:text-white"
         >
           Publisher
         </Link>
       </div>
 
-      {/* Right: language switcher (appears on EVERY page) */}
+      {/* Right: language switcher */}
       <div className="flex items-center gap-2">
         {(["en", "ko", "mn", "ja"] as SupportedLocale[]).map((l) => {
           const active = l === currentLocale;

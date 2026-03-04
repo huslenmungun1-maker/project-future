@@ -65,7 +65,7 @@ export default async function ChaptersPage() {
             </form>
           </li>
         ))}
-      </ul>
+      </ul> 
     </div>
   );
 }

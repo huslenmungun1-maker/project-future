@@ -9,7 +9,7 @@ function isLocale(x: string): x is Locale {
   return (LOCALES as readonly string[]).includes(x);
 }
 
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
+const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
 
   // ---- Locale handling ----
   const parts = pathname.split("/");
-  const first = parts[1]; // "" | "en" | "studio" ...
+  const first = parts[1];
 
   // If no locale in URL, force /en + keep path
   if (!isLocale(first)) {
@@ -35,7 +35,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const locale = first;
-  const restPath = "/" + parts.slice(2).join("/"); // "/studio/..", "/reader", "" -> "/"
+  const restPath = "/" + parts.slice(2).join("/");
 
   // Public pages (no login required)
   if (
@@ -65,25 +65,31 @@ export async function middleware(req: NextRequest) {
 
   const userEmail = session.user.email || "";
 
-  // OPTIONAL: if owner tries to go to /publisher, send them to /head instead
-  // (remove this block if you want owner to access publisher too)
-  if (userEmail === OWNER_EMAIL && restPath.startsWith("/publisher")) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/${locale}/head`;
-    return NextResponse.redirect(url);
-  }
+  // ---- OWNER-ONLY routes ----
+  const isOwner = OWNER_EMAIL && userEmail === OWNER_EMAIL;
 
-  // HEAD admin: only your email allowed
+  // Head: owner only
   if (restPath.startsWith("/head")) {
-    if (userEmail !== OWNER_EMAIL) {
+    if (!isOwner) {
       const url = req.nextUrl.clone();
       url.pathname = `/${locale}/reader`;
       return NextResponse.redirect(url);
     }
+    return res;
   }
 
-  // STUDIO + PUBLISHER: any logged-in user allowed
-  if (restPath.startsWith("/studio") || restPath.startsWith("/publisher")) {
+  // Studio: owner only
+  if (restPath.startsWith("/studio")) {
+    if (!isOwner) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${locale}/reader`;
+      return NextResponse.redirect(url);
+    }
+    return res;
+  }
+
+  // Publisher: any logged-in user allowed
+  if (restPath.startsWith("/publisher")) {
     return res;
   }
 

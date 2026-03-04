@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
@@ -13,7 +13,9 @@ type SeriesBaseRow = {
   cover_image_url: string | null;
   published?: boolean | null;
   published_at?: string | null;
-  default_locale?: string | null; // optional (if you added it)
+  default_locale?: string | null;
+  title?: string | null; // fallback if no translations
+  description?: string | null; // fallback if no translations
 };
 
 type SeriesTranslationRow = {
@@ -28,7 +30,10 @@ type ChapterBaseRow = {
   series_id: string;
   chapter_number: number;
   created_at: string;
-  content: string | null; // legacy fallback if you still have it
+  title: string | null;
+  content: string | null;
+  is_published?: boolean | null;
+  published_at?: string | null;
 };
 
 type ChapterTranslationRow = {
@@ -100,60 +105,59 @@ function normalizeLocale(raw: string): SupportedLocale {
 }
 
 async function fetchSeriesTranslation(seriesId: string, locale: SupportedLocale) {
-  // try requested locale
-  const { data: tr1, error: e1 } = await supabase
+  const { data: tr1 } = await supabase
     .from("series_translations")
     .select("series_id, locale, title, description")
     .eq("series_id", seriesId)
     .eq("locale", locale)
     .maybeSingle();
 
-  if (!e1 && tr1) return tr1 as SeriesTranslationRow;
+  if (tr1) return tr1 as SeriesTranslationRow;
 
-  // fallback to English
-  const { data: tr2, error: e2 } = await supabase
+  const { data: tr2 } = await supabase
     .from("series_translations")
     .select("series_id, locale, title, description")
     .eq("series_id", seriesId)
     .eq("locale", "en")
     .maybeSingle();
 
-  if (!e2 && tr2) return tr2 as SeriesTranslationRow;
+  if (tr2) return tr2 as SeriesTranslationRow;
 
   return null;
 }
 
 async function fetchChapterTranslation(chapterId: string, locale: SupportedLocale) {
-  // try requested locale
-  const { data: tr1, error: e1 } = await supabase
+  const { data: tr1 } = await supabase
     .from("chapter_translations")
     .select("chapter_id, locale, title, script")
     .eq("chapter_id", chapterId)
     .eq("locale", locale)
     .maybeSingle();
 
-  if (!e1 && tr1) return tr1 as ChapterTranslationRow;
+  if (tr1) return tr1 as ChapterTranslationRow;
 
-  // fallback to English
-  const { data: tr2, error: e2 } = await supabase
+  const { data: tr2 } = await supabase
     .from("chapter_translations")
     .select("chapter_id, locale, title, script")
     .eq("chapter_id", chapterId)
     .eq("locale", "en")
     .maybeSingle();
 
-  if (!e2 && tr2) return tr2 as ChapterTranslationRow;
+  if (tr2) return tr2 as ChapterTranslationRow;
 
   return null;
 }
 
 export default function ReaderSeriesChapterPage() {
-  const params = useParams();
+  // IMPORTANT:
+  // This file lives under /reader/... NOT under /[locale]/...
+  // So locale does NOT exist in params. We parse it from the URL prefix.
+  const params = useParams() as Record<string, string>;
+  const pathname = usePathname();
 
-  const locale = normalizeLocale((params?.locale as string) || "en");
-  const seriesId = (params?.seriesId as string) || "";
-  const chapterParam = (params?.chapterNumber as string) || "1";
-  const chapterNumber = Number(chapterParam) || 1;
+  const locale = normalizeLocale((pathname.split("/")[1] || "en") as string);
+  const seriesId = params.seriesId || "";
+  const chapterNumber = Number(params.chapterNumber || "1") || 1;
 
   const t = UI_TEXT[locale];
 
@@ -191,10 +195,12 @@ export default function ReaderSeriesChapterPage() {
         return;
       }
 
-      // 1) Load series base (publishing gate)
+      // 1) series (must be published)
       const { data: s, error: sErr } = await supabase
         .from("series")
-        .select("id, created_at, cover_image_url, published, published_at, default_locale")
+        .select(
+          "id, created_at, cover_image_url, published, published_at, default_locale, title, description"
+        )
         .eq("id", seriesId)
         .maybeSingle();
 
@@ -204,9 +210,8 @@ export default function ReaderSeriesChapterPage() {
         return;
       }
 
-      // Gate: only allow published projects in reader
-      const isPublished = Boolean(s.published) || Boolean(s.published_at);
-      if (!isPublished) {
+      const isSeriesPublished = Boolean(s.published) || Boolean(s.published_at);
+      if (!isSeriesPublished) {
         setStatus("error");
         setMessage(t.notFound);
         return;
@@ -214,19 +219,14 @@ export default function ReaderSeriesChapterPage() {
 
       setSeriesBase(s as SeriesBaseRow);
 
-      // 2) Load series translation (locale -> fallback en)
+      // 2) series translation (optional)
       const sTr = await fetchSeriesTranslation(seriesId, locale);
-      if (!sTr) {
-        setStatus("error");
-        setMessage(t.notFound);
-        return;
-      }
       setSeriesTr(sTr);
 
-      // 3) Load chapter base (by series + chapter number)
+      // 3) chapter (must be published)
       const { data: c, error: cErr } = await supabase
         .from("chapters")
-        .select("id, series_id, chapter_number, created_at, content")
+        .select("id, series_id, chapter_number, created_at, title, content, is_published, published_at")
         .eq("series_id", seriesId)
         .eq("chapter_number", chapterNumber)
         .maybeSingle();
@@ -237,16 +237,18 @@ export default function ReaderSeriesChapterPage() {
         return;
       }
 
-      const cBase = c as ChapterBaseRow;
-      setChapterBase(cBase);
-
-      // 4) Load chapter translation (locale -> fallback en)
-      const cTr = await fetchChapterTranslation(cBase.id, locale);
-      if (!cTr) {
+      const isChapterPublished = Boolean(c.is_published) || Boolean(c.published_at);
+      if (!isChapterPublished) {
         setStatus("error");
         setMessage(t.notFound);
         return;
       }
+
+      const cBase = c as ChapterBaseRow;
+      setChapterBase(cBase);
+
+      // 4) chapter translation (optional)
+      const cTr = await fetchChapterTranslation(cBase.id, locale);
       setChapterTr(cTr);
 
       setStatus("ok");
@@ -269,7 +271,7 @@ export default function ReaderSeriesChapterPage() {
     );
   }
 
-  if (status === "error" || !seriesBase || !seriesTr || !chapterBase || !chapterTr) {
+  if (status === "error" || !seriesBase || !chapterBase) {
     return (
       <main className="min-h-screen bg-black text-slate-100">
         <div className="mx-auto max-w-4xl px-6 py-12 space-y-4">
@@ -282,8 +284,14 @@ export default function ReaderSeriesChapterPage() {
     );
   }
 
+  const seriesTitle = seriesTr?.title || seriesBase.title || "Untitled series";
+  const seriesDesc = seriesTr?.description || seriesBase.description || null;
+
+  const chapterTitle =
+    chapterTr?.title || chapterBase.title || `${t.chapter} ${chapterBase.chapter_number}`;
+
   const chapterText =
-    (chapterTr.script && chapterTr.script.trim()) ||
+    (chapterTr?.script && chapterTr.script.trim()) ||
     (chapterBase.content && chapterBase.content.trim()) ||
     "";
 
@@ -291,10 +299,7 @@ export default function ReaderSeriesChapterPage() {
     <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
       <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <Link
-            href={`/${locale}/reader`}
-            className="inline-flex items-center gap-1 hover:text-slate-100"
-          >
+          <Link href={`/${locale}/reader`} className="inline-flex items-center gap-1 hover:text-slate-100">
             <span className="text-lg">←</span>
             {t.backToReader}
           </Link>
@@ -310,18 +315,16 @@ export default function ReaderSeriesChapterPage() {
             {t.chip}
           </span>
 
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{seriesTr.title}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{seriesTitle}</h1>
 
-          {seriesTr.description && (
-            <p className="text-sm text-slate-300 max-w-2xl">{seriesTr.description}</p>
-          )}
+          {seriesDesc && <p className="text-sm text-slate-300 max-w-2xl">{seriesDesc}</p>}
         </header>
 
         <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-slate-50">
-                {t.chapter} {chapterBase.chapter_number}: {chapterTr.title}
+                {t.chapter} {chapterBase.chapter_number}: {chapterTitle}
               </h2>
               <p className="text-[11px] text-slate-500">
                 {t.createdAt}:{" "}
