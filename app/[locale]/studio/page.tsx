@@ -21,6 +21,7 @@ export default function StudioHomePage() {
   const [loading, setLoading] = useState(true);
   const [seriesList, setSeriesList] = useState<SeriesRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadSeries = useCallback(async () => {
     setLoading(true);
@@ -33,8 +34,11 @@ export default function StudioHomePage() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        // This is usually RLS / not logged in / JWT expired
-        setError(`${error.message}${(error as any)?.hint ? ` — ${(error as any).hint}` : ""}`);
+        setError(
+          `${error.message}${
+            (error as any)?.hint ? ` — ${(error as any).hint}` : ""
+          }`
+        );
         setSeriesList([]);
         setLoading(false);
         return;
@@ -49,42 +53,53 @@ export default function StudioHomePage() {
     }
   }, []);
 
+  const deleteSeries = useCallback(async (seriesId: string, title?: string) => {
+    const ok = confirm(
+      `Fresh start delete?\n\nThis will delete:\n- Series\n- Books\n- Chapters\n- Translations\n\n${
+        title ? `"${title}"\n\n` : ""
+      }This cannot be undone.`
+    );
+    if (!ok) return;
+
+    setDeletingId(seriesId);
+    setError(null);
+
+    try {
+      const { error } = await supabase.rpc("delete_series_cascade", {
+        p_series_id: seriesId,
+      });
+
+      if (error) {
+        setError(
+          `Delete failed: ${error.message}${
+            (error as any)?.hint ? ` — ${(error as any).hint}` : ""
+          }`
+        );
+        setDeletingId(null);
+        return;
+      }
+
+      // Fast UI update
+      setSeriesList((prev) => prev.filter((s) => s.id !== seriesId));
+      setDeletingId(null);
+    } catch (e: any) {
+      setError(e?.message || "Unknown error while deleting series.");
+      setDeletingId(null);
+    }
+  }, []);
+
   useEffect(() => {
     let alive = true;
 
     (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data, error } = await supabase
-          .from("series")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!alive) return;
-
-        if (error) {
-          setError(`${error.message}${(error as any)?.hint ? ` — ${(error as any).hint}` : ""}`);
-          setSeriesList([]);
-          setLoading(false);
-          return;
-        }
-
-        setSeriesList((data as SeriesRow[]) || []);
-        setLoading(false);
-      } catch (e: any) {
-        if (!alive) return;
-        setError(e?.message || "Unknown error while loading series.");
-        setSeriesList([]);
-        setLoading(false);
-      }
+      if (!alive) return;
+      await loadSeries();
     })();
 
     return () => {
       alive = false;
     };
-  }, [locale]); // ✅ reload if locale changes
+  }, [locale, loadSeries]);
 
   return (
     <main className="min-h-screen bg-black text-slate-100">
@@ -117,7 +132,7 @@ export default function StudioHomePage() {
 
         {error && (
           <div className="rounded border border-rose-800 bg-rose-950/40 p-4 text-sm text-rose-200">
-            <div className="font-semibold mb-1">Error loading series</div>
+            <div className="font-semibold mb-1">Error</div>
             <div className="text-xs opacity-90">{error}</div>
             <div className="mt-2 text-xs text-rose-300">
               If this says “permission denied” → it’s **RLS policy / not logged in**.
@@ -142,9 +157,9 @@ export default function StudioHomePage() {
                 href={`/${locale}/studio/series/${s.id}`}
                 className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 hover:border-slate-600 transition"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <h2 className="font-semibold line-clamp-1">{s.title}</h2>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-slate-500 shrink-0">
                     {s.language || locale}
                   </span>
                 </div>
@@ -158,6 +173,24 @@ export default function StudioHomePage() {
                 <p className="mt-3 text-[11px] text-slate-500">
                   {new Date(s.created_at).toLocaleString()}
                 </p>
+
+                <div className="mt-4 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault(); // stop link navigation
+                      e.stopPropagation();
+                      if (deletingId) return;
+                      deleteSeries(s.id, s.title);
+                    }}
+                    className="text-xs text-rose-300 hover:text-rose-200 border border-rose-900/60 hover:border-rose-700 rounded px-3 py-1"
+                    disabled={!!deletingId}
+                    aria-disabled={!!deletingId}
+                    title="Delete series (cascade)"
+                  >
+                    {deletingId === s.id ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
               </Link>
             ))}
           </div>
