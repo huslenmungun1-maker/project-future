@@ -107,51 +107,43 @@ export default function StudioHomePage() {
   }, [locale, loadSeries]);
 
   return (
-    <main className="min-h-screen bg-black text-slate-100">
+    <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Studio</h1>
-            <p className="text-sm text-slate-400">
+            <h1 className="text-3xl font-semibold tracking-tight">Studio</h1>
+            <p className="text-sm text-[color:var(--muted)]">
               Manage your series, chapters, covers, and languages.
             </p>
           </div>
 
           <div className="flex gap-2">
-            <button
-              onClick={loadSeries}
-              className="rounded border border-slate-700 bg-black/40 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
-              type="button"
-            >
+            <button onClick={loadSeries} className="btn-ios-secondary text-sm" type="button">
               Retry
             </button>
 
-            <Link
-              href={`/${locale}/studio/series/new`}
-              className="rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-black"
-            >
+            <Link href={`/${locale}/studio/series/new`} className="btn-ios text-sm font-semibold">
               + Create new series
             </Link>
           </div>
         </div>
 
         {error && (
-          <div className="rounded border border-rose-800 bg-rose-950/40 p-4 text-sm text-rose-200">
-            <div className="font-semibold mb-1">Error</div>
-            <div className="text-xs opacity-90">{error}</div>
-            <div className="mt-2 text-xs text-rose-300">
-              If this says “permission denied” → it’s **RLS policy / not logged
-              in**.
+          <div className="soft-card p-4">
+            <div className="font-semibold mb-1 text-[color:var(--text)]">Error</div>
+            <div className="text-xs text-[color:var(--muted)]">{error}</div>
+            <div className="mt-2 text-xs text-[color:var(--muted)]">
+              If this says “permission denied” → it’s <b>RLS policy / not logged in</b>.
             </div>
           </div>
         )}
 
         {loading ? (
-          <p className="text-sm text-slate-400">Loading…</p>
+          <p className="text-sm text-[color:var(--muted)]">Loading…</p>
         ) : seriesList.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-            <p className="text-sm text-slate-300">No series yet.</p>
-            <p className="mt-1 text-xs text-slate-500">
+          <div className="soft-card p-6">
+            <p className="text-sm text-[color:var(--text)]">No series yet.</p>
+            <p className="mt-1 text-xs text-[color:var(--muted)]">
               Click “Create new series” to start.
             </p>
           </div>
@@ -161,22 +153,24 @@ export default function StudioHomePage() {
               <Link
                 key={s.id}
                 href={`/${locale}/studio/series/${s.id}`}
-                className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 hover:border-slate-600 transition"
+                className="soft-card p-5 hover:opacity-95 transition"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-semibold line-clamp-1">{s.title}</h2>
-                  <span className="text-[11px] text-slate-500 shrink-0">
+                  <h2 className="font-semibold line-clamp-1 text-[color:var(--text)]">
+                    {s.title}
+                  </h2>
+                  <span className="text-[11px] text-[color:var(--muted)] shrink-0">
                     {s.language || locale}
                   </span>
                 </div>
 
                 {s.description && (
-                  <p className="mt-2 text-xs text-slate-300 line-clamp-2">
+                  <p className="mt-2 text-xs text-[color:var(--muted)] line-clamp-2">
                     {s.description}
                   </p>
                 )}
 
-                <p className="mt-3 text-[11px] text-slate-500">
+                <p className="mt-3 text-[11px] text-[color:var(--muted)]">
                   {new Date(s.created_at).toLocaleString()}
                 </p>
 
@@ -189,7 +183,7 @@ export default function StudioHomePage() {
                       if (deletingId) return;
                       deleteSeries(s.id, s.title);
                     }}
-                    className="text-xs text-rose-300 hover:text-rose-200 border border-rose-900/60 hover:border-rose-700 rounded px-3 py-1"
+                    className="btn-ios-danger text-xs"
                     disabled={!!deletingId}
                     aria-disabled={!!deletingId}
                     title="Delete series (cascade)"
