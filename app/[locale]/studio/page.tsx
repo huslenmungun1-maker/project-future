@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type SeriesRow = {
   id: string;
@@ -17,6 +17,9 @@ type SeriesRow = {
 export default function StudioHomePage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+
+  // ✅ cookie-aware client (fixes "Not authenticated")
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [seriesList, setSeriesList] = useState<SeriesRow[]>([]);
@@ -51,42 +54,44 @@ export default function StudioHomePage() {
       setSeriesList([]);
       setLoading(false);
     }
-  }, []);
+  }, [supabase]);
 
-  const deleteSeries = useCallback(async (seriesId: string, title?: string) => {
-    const ok = confirm(
-      `Fresh start delete?\n\nThis will delete:\n- Series\n- Books\n- Chapters\n- Translations\n\n${
-        title ? `"${title}"\n\n` : ""
-      }This cannot be undone.`
-    );
-    if (!ok) return;
+  const deleteSeries = useCallback(
+    async (seriesId: string, title?: string) => {
+      const ok = confirm(
+        `Fresh start delete?\n\nThis will delete:\n- Series\n- Books\n- Chapters\n- Translations\n\n${
+          title ? `"${title}"\n\n` : ""
+        }This cannot be undone.`
+      );
+      if (!ok) return;
 
-    setDeletingId(seriesId);
-    setError(null);
+      setDeletingId(seriesId);
+      setError(null);
 
-    try {
-      const { error } = await supabase.rpc("delete_series_cascade", {
-        p_series_id: seriesId,
-      });
+      try {
+        const { error } = await supabase.rpc("delete_series_cascade", {
+          p_series_id: seriesId,
+        });
 
-      if (error) {
-        setError(
-          `Delete failed: ${error.message}${
-            (error as any)?.hint ? ` — ${(error as any).hint}` : ""
-          }`
-        );
+        if (error) {
+          setError(
+            `Delete failed: ${error.message}${
+              (error as any)?.hint ? ` — ${(error as any).hint}` : ""
+            }`
+          );
+          setDeletingId(null);
+          return;
+        }
+
+        setSeriesList((prev) => prev.filter((s) => s.id !== seriesId));
         setDeletingId(null);
-        return;
+      } catch (e: any) {
+        setError(e?.message || "Unknown error while deleting series.");
+        setDeletingId(null);
       }
-
-      // Fast UI update
-      setSeriesList((prev) => prev.filter((s) => s.id !== seriesId));
-      setDeletingId(null);
-    } catch (e: any) {
-      setError(e?.message || "Unknown error while deleting series.");
-      setDeletingId(null);
-    }
-  }, []);
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     let alive = true;
@@ -135,7 +140,8 @@ export default function StudioHomePage() {
             <div className="font-semibold mb-1">Error</div>
             <div className="text-xs opacity-90">{error}</div>
             <div className="mt-2 text-xs text-rose-300">
-              If this says “permission denied” → it’s **RLS policy / not logged in**.
+              If this says “permission denied” → it’s **RLS policy / not logged
+              in**.
             </div>
           </div>
         )}
@@ -178,7 +184,7 @@ export default function StudioHomePage() {
                   <button
                     type="button"
                     onClick={(e) => {
-                      e.preventDefault(); // stop link navigation
+                      e.preventDefault();
                       e.stopPropagation();
                       if (deletingId) return;
                       deleteSeries(s.id, s.title);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type SeriesRow = {
   id: string;
@@ -19,6 +19,9 @@ export default function AdminHomePage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
 
+  // ✅ cookie-aware client (required for admin RPC)
+  const supabase = useMemo(() => createClientComponentClient(), []);
+
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<SeriesRow[]>([]);
@@ -31,12 +34,16 @@ export default function AdminHomePage() {
 
     const base = supabase
       .from("series")
-      .select("id,title,description,created_at,language,archived,featured,published")
+      .select(
+        "id,title,description,created_at,language,archived,featured,published"
+      )
       .order("created_at", { ascending: false })
       .limit(100);
 
     const { data, error } =
-      q.trim().length > 0 ? await base.ilike("title", `%${q.trim()}%`) : await base;
+      q.trim().length > 0
+        ? await base.ilike("title", `%${q.trim()}%`)
+        : await base;
 
     if (error) {
       setError(error.message);
