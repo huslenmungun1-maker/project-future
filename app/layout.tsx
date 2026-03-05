@@ -23,10 +23,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // ✅ This prevents Next/React from throwing when <html> gets extra attrs
-    // like data-theme/style from theme libs or browser extensions.
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased theme-soft`}
+      >
         {children}
       </body>
     </html>
