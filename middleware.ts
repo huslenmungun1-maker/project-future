@@ -79,14 +79,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Studio: owner only
-  if (restPath.startsWith("/studio")) {
-    if (!isOwner) {
-      const url = req.nextUrl.clone();
-      url.pathname = `/${locale}/reader`;
-      return NextResponse.redirect(url);
-    }
-    return res;
-  }
+ if (restPath.startsWith("/studio")) {
+  return res;
+}
 
   // Publisher: any logged-in user allowed
   if (restPath.startsWith("/publisher")) {
