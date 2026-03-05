@@ -9,17 +9,13 @@ export async function supabaseServer() {
 
   return createServerClient(url, anon, {
     cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);
           });
-        } catch {
-          // ignore in server components
-        }
+        } catch {}
       },
     },
   });
