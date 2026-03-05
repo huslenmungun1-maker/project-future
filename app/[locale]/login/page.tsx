@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -13,7 +13,8 @@ export default function LoginPage() {
   const locale = (params?.locale as string) || "en";
   const redirectTo = search.get("redirect") || `/${locale}/studio`;
 
-  const supabase = createClientComponentClient(); // ✅ cookie-based session for middleware
+  // ✅ create once (stable client)
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
