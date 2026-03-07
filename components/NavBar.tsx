@@ -10,13 +10,12 @@ function normalizeLocale(raw: string): SupportedLocale {
 }
 
 function stripLeadingLocale(pathname: string) {
-  // "/en/reader/series/..." -> "/reader/series/..."
   const parts = pathname.split("/").filter(Boolean);
   if (parts.length === 0) return "/";
   const first = parts[0];
   if (["en", "ko", "mn", "ja"].includes(first)) {
     const rest = parts.slice(1).join("/");
-    return "/" + rest; // may become "/"
+    return "/" + rest;
   }
   return pathname;
 }
@@ -39,13 +38,14 @@ export default function NavBar({ locale }: { locale: string }) {
 
   return (
     <nav className="flex items-center justify-between gap-4">
-      {/* Left: site links */}
+      {/* Left */}
       <div className="flex items-center gap-3 text-sm">
+
         <Link
           href={`/${currentLocale}`}
           className="font-semibold tracking-tight hover:text-slate-200"
         >
-          Project Future
+          Enkhverse
         </Link>
 
         <Link
@@ -62,19 +62,20 @@ export default function NavBar({ locale }: { locale: string }) {
           Studio
         </Link>
 
-        {/* ✅ FIX: point to a real existing page: /publisher/books */}
         <Link
           href={`/${currentLocale}/publisher/books`}
           className="text-slate-300 hover:text-white"
         >
           Publisher
         </Link>
+
       </div>
 
-      {/* Right: language switcher */}
+      {/* Right language switcher */}
       <div className="flex items-center gap-2">
         {(["en", "ko", "mn", "ja"] as SupportedLocale[]).map((l) => {
           const active = l === currentLocale;
+
           return (
             <Link
               key={l}
