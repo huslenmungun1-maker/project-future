@@ -39,6 +39,17 @@ export default async function LocaleHomePage({
           </div>
         </section>
 
+<footer className="mt-10 text-sm text-stone-600">
+  Contact:{" "}
+  <a
+    href="mailto:contact@enkhverse.com"
+    className="text-stone-900 hover:underline"
+  >
+    enkhverseglobal@gmail.com
+  </a>
+</footer>
+
+</main>
         {/* Main cards */}
         <section className="grid gap-5 md:grid-cols-3">
           <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
