@@ -25,11 +25,8 @@ export default async function LocaleHomePage({
           </div>
 
           <div className="space-y-3">
-           <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-5xl">
-  Don’t hide your creativity.{" "}
-  <span className="underline decoration-[rgba(94,99,87,0.45)] underline-offset-4">
-    Let the world see it.
-  </span>
+          <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+  Don’t hide your creativity. Let the world see it.
 </h1>
 
             <p
