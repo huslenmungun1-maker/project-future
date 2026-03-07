@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Enkhverse",
-  description: "Project Future",
+  description: "Where imagination becomes worlds and creators shape their universes.",
 };
 
 export default function RootLayout({
