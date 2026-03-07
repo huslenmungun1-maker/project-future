@@ -15,7 +15,8 @@ export default async function LocaleHomePage({
       <main className="mx-auto w-full max-w-5xl px-6 py-12 md:px-8 md:py-16">
         {/* Hero */}
         <section className="mb-10 space-y-4">
-          <div className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide text-stone-700"
+          <div
+            className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide text-stone-700"
             style={{
               borderColor: "rgba(47,47,47,0.12)",
               background: "rgba(233,230,223,0.72)",
@@ -25,9 +26,9 @@ export default async function LocaleHomePage({
           </div>
 
           <div className="space-y-3">
-          <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight md:text-4xl">
-  Don’t hide your creativity. Let the world see it.
-</h1>
+            <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+              Don’t hide your creativity. Let the world see it.
+            </h1>
 
             <p
               className="max-w-3xl text-base leading-7"
@@ -39,17 +40,6 @@ export default async function LocaleHomePage({
           </div>
         </section>
 
-<footer className="mt-10 text-sm text-stone-600">
-  Contact:{" "}
-  <a
-    href="mailto:contact@enkhverse.com"
-    className="text-stone-900 hover:underline"
-  >
-    enkhverseglobal@gmail.com
-  </a>
-</footer>
-
-</main>
         {/* Main cards */}
         <section className="grid gap-5 md:grid-cols-3">
           <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
@@ -193,6 +183,15 @@ export default async function LocaleHomePage({
             by one.
           </p>
         </section>
+
+        <footer className="mt-16 text-center text-sm text-stone-600">
+          <a
+            href="mailto:enkhverseglobal@gmail.com"
+            className="hover:underline"
+          >
+            enkhverseglobal@gmail.com
+          </a>
+        </footer>
       </main>
     </div>
   );
