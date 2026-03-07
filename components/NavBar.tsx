@@ -37,41 +37,44 @@ export default function NavBar({ locale }: { locale: string }) {
   };
 
   return (
-    <nav className="flex items-center justify-between gap-4">
-      {/* Left */}
-      <div className="flex items-center gap-3 text-sm">
-
+    <nav className="flex h-16 items-center justify-between">
+      <div className="flex items-center gap-8">
         <Link
           href={`/${currentLocale}`}
-          className="font-semibold tracking-tight hover:text-slate-200"
+          className="flex items-center gap-3 font-semibold tracking-tight text-stone-900 hover:opacity-80"
         >
-          Enkhverse
+         <img
+  src="/logo.png"
+  alt="Enkhverse"
+  className="h-18 w-auto object-contain mr-2"
+/>
+          <span className="text-base text-stone-900">Enkhverse</span>
         </Link>
 
-        <Link
-          href={`/${currentLocale}/reader`}
-          className="text-slate-300 hover:text-white"
-        >
-          Reader
-        </Link>
+        <div className="flex items-center gap-6 text-sm">
+          <Link
+            href={`/${currentLocale}/reader`}
+            className="text-stone-700 transition hover:text-stone-950"
+          >
+            Reader
+          </Link>
 
-        <Link
-          href={`/${currentLocale}/studio`}
-          className="text-slate-300 hover:text-white"
-        >
-          Studio
-        </Link>
+          <Link
+            href={`/${currentLocale}/studio`}
+            className="text-stone-700 transition hover:text-stone-950"
+          >
+            Studio
+          </Link>
 
-        <Link
-          href={`/${currentLocale}/publisher/books`}
-          className="text-slate-300 hover:text-white"
-        >
-          Publisher
-        </Link>
-
+          <Link
+            href={`/${currentLocale}/publisher/books`}
+            className="text-stone-700 transition hover:text-stone-950"
+          >
+            Publisher
+          </Link>
+        </div>
       </div>
 
-      {/* Right language switcher */}
       <div className="flex items-center gap-2">
         {(["en", "ko", "mn", "ja"] as SupportedLocale[]).map((l) => {
           const active = l === currentLocale;
@@ -82,11 +85,10 @@ export default function NavBar({ locale }: { locale: string }) {
               href={mkHref(l)}
               className={
                 active
-                  ? "rounded-lg border border-emerald-400 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-200"
-                  : "rounded-lg border border-slate-700 bg-black/40 px-2.5 py-1 text-xs text-slate-200 hover:border-slate-500"
+                  ? "rounded-full border border-stone-900 bg-stone-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+                  : "rounded-full border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
               }
               aria-current={active ? "page" : undefined}
-              title={`Switch to ${l.toUpperCase()}`}
             >
               {LABEL[l]}
             </Link>

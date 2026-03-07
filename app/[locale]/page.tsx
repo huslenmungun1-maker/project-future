@@ -12,67 +12,127 @@ export default async function LocaleHomePage({
 
   return (
     <div className="min-h-screen theme-soft">
-      <main className="mx-auto max-w-4xl px-4 py-10 space-y-8">
-        {/* Title */}
-        <section className="space-y-2">
-          <h1 className="text-3xl font-bold leading-tight">
-            Welcome to{" "}
-            <span className="underline decoration-[rgba(94,99,87,0.45)] underline-offset-4">
-              Project Future
-            </span>
-          </h1>
-          <p className="max-w-2xl text-sm" style={{ color: "var(--muted)" }}>
-            Read, create, and manage manga / comics in one place. This is the
-            early build — functional first, pretty and advanced later.
-          </p>
+      <main className="mx-auto w-full max-w-5xl px-6 py-12 md:px-8 md:py-16">
+        {/* Hero */}
+        <section className="mb-10 space-y-4">
+          <div className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide text-stone-700"
+            style={{
+              borderColor: "rgba(47,47,47,0.12)",
+              background: "rgba(233,230,223,0.72)",
+            }}
+          >
+            Enkhverse · Soft Editorial Build
+          </div>
+
+          <div className="space-y-3">
+            <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-5xl">
+              Welcome to{" "}
+              <span className="underline decoration-[rgba(94,99,87,0.45)] underline-offset-4">
+                Project Future
+              </span>
+            </h1>
+
+            <p
+              className="max-w-3xl text-base leading-7"
+              style={{ color: "var(--muted)" }}
+            >
+              Read, create, and manage manga / comics in one place. This is the
+              early build — functional first, elegant later.
+            </p>
+          </div>
         </section>
 
         {/* Main cards */}
-        <section className="grid gap-4 md:grid-cols-3">
-          {/* Reader card */}
-          <div className="soft-card flex flex-col justify-between p-5">
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">Reader</h2>
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                Browse public series and start reading. No login required (for
-                now).
-              </p>
+        <section className="grid gap-5 md:grid-cols-3">
+          <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
+            <div className="space-y-3">
+              <div
+                className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+                style={{
+                  background: "rgba(233,230,223,0.9)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                }}
+              >
+                Read
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold tracking-tight">Reader</h2>
+                <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
+                  Browse public series and start reading. No login required for
+                  now.
+                </p>
+              </div>
             </div>
 
-            <div className="mt-5">
-              <Link href={`/${locale}/reader`} className="btn-ios-secondary w-full">
+            <div className="mt-6">
+              <Link
+                href={`/${locale}/reader`}
+                className="btn-ios-secondary w-full"
+              >
                 Go to Reader
               </Link>
             </div>
           </div>
 
-          {/* Publisher card */}
-          <div className="soft-card flex flex-col justify-between p-5">
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">Publisher Studio</h2>
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                Create series, upload chapters, and manage your projects.
-              </p>
+          <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
+            <div className="space-y-3">
+              <div
+                className="inline-flex rounded-full px-3 py-1 text-xs font-medium text-white"
+                style={{
+                  background: "var(--accent)",
+                  border: "1px solid rgba(47,47,47,0.08)",
+                }}
+              >
+                Create
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Publisher Studio
+                </h2>
+                <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
+                  Create series, upload chapters, and manage your projects in one
+                  place.
+                </p>
+              </div>
             </div>
 
-            <div className="mt-5">
-              <Link href={`/${locale}/publisher`} className="btn-ios w-full">
+            <div className="mt-6">
+              <Link
+                href={`/${locale}/publisher`}
+                className="btn-ios w-full"
+              >
                 Go to Publisher
               </Link>
             </div>
           </div>
 
-          {/* Head / Owner card */}
-          <div className="soft-card flex flex-col justify-between p-5">
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">Head Page</h2>
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                Owner-only dashboard: stats, revenue, system switches.
-              </p>
+          <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
+            <div className="space-y-3">
+              <div
+                className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+                style={{
+                  background: "rgba(233,230,223,0.9)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                }}
+              >
+                Owner
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold tracking-tight">Head Page</h2>
+                <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
+                  Owner-only dashboard for stats, revenue, and system controls.
+                </p>
+              </div>
             </div>
 
-            <div className="mt-5">
-              <Link href={`/${locale}/head`} className="btn-ios-secondary w-full">
+            <div className="mt-6">
+              <Link
+                href={`/${locale}/head`}
+                className="btn-ios-secondary w-full"
+              >
                 Go to Head Page
               </Link>
             </div>
@@ -80,39 +140,49 @@ export default async function LocaleHomePage({
         </section>
 
         {/* Extra links */}
-        <section className="soft-card p-5 space-y-3">
-          <p className="font-semibold">More (future pages):</p>
+        <section className="soft-card mt-8 p-6">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold tracking-tight">
+              More (future pages)
+            </h3>
 
-          <ul className="space-y-1 text-sm">
+            <div
+              className="rounded-full px-3 py-1 text-xs font-medium"
+              style={{
+                background: "rgba(233,230,223,0.9)",
+                border: "1px solid rgba(47,47,47,0.12)",
+              }}
+            >
+              Early navigation
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
             {[
-              { href: `/${locale}/profile`, label: "➤ Profile" },
-              { href: `/${locale}/chat`, label: "➤ Chat (Core Assistant)" },
-              { href: `/${locale}/ai`, label: "➤ AI Tools" },
-              { href: `/${locale}/payments`, label: "➤ Payments" },
+              { href: `/${locale}/profile`, label: "Profile" },
+              { href: `/${locale}/chat`, label: "Chat (Core Assistant)" },
+              { href: `/${locale}/ai`, label: "AI Tools" },
+              { href: `/${locale}/payments`, label: "Payments" },
+              { href: `/${locale}/login`, label: "Login (for owner / creators)" },
             ].map((x) => (
-              <li key={x.href}>
-                <Link
-                  href={x.href}
-                  className="underline underline-offset-4 decoration-[rgba(47,47,47,0.22)] hover:decoration-[rgba(47,47,47,0.45)]"
-                >
-                  {x.label}
-                </Link>
-              </li>
-            ))}
-
-            <li className="pt-1">
               <Link
-                href={`/${locale}/login`}
-                className="underline underline-offset-4 decoration-[rgba(47,47,47,0.22)] hover:decoration-[rgba(47,47,47,0.45)]"
+                key={x.href}
+                href={x.href}
+                className="rounded-2xl border px-4 py-3 text-sm transition hover:opacity-90"
+                style={{
+                  borderColor: "rgba(47,47,47,0.12)",
+                  background: "rgba(255,255,255,0.28)",
+                  color: "var(--text)",
+                }}
               >
-                Login (for owner / creators)
+                {x.label}
               </Link>
-            </li>
-          </ul>
+            ))}
+          </div>
 
-          <p className="text-[11px]" style={{ color: "var(--muted)" }}>
-            If some links give 404 now, it&apos;s okay. We&apos;ll create those
-            pages one by one.
+          <p className="mt-4 text-[11px]" style={{ color: "var(--muted)" }}>
+            If some links give 404 now, that&apos;s fine. We&apos;ll build them one
+            by one.
           </p>
         </section>
       </main>
