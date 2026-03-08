@@ -68,6 +68,9 @@ const UI = {
     errSaveBook: "Error saving book: ",
     errDeleteBook: "Error deleting book: ",
     errCreateChapter: "Error creating chapter: ",
+    errDeleteChapter: "Error deleting chapter: ",
+    chapterTitlePlaceholder: "Chapter title",
+    chapterContentPlaceholder: "Write the chapter content here...",
   },
   ko: {
     pageTitle: "책 관리",
@@ -101,6 +104,9 @@ const UI = {
     errSaveBook: "책 저장 오류: ",
     errDeleteBook: "책 삭제 오류: ",
     errCreateChapter: "챕터 생성 오류: ",
+    errDeleteChapter: "챕터 삭제 오류: ",
+    chapterTitlePlaceholder: "챕터 제목",
+    chapterContentPlaceholder: "여기에 챕터 내용을 작성하세요...",
   },
   mn: {
     pageTitle: "Ном удирдах",
@@ -135,6 +141,9 @@ const UI = {
     errSaveBook: "Ном хадгалах алдаа: ",
     errDeleteBook: "Ном устгах алдаа: ",
     errCreateChapter: "Бүлэг үүсгэх алдаа: ",
+    errDeleteChapter: "Бүлэг устгах алдаа: ",
+    chapterTitlePlaceholder: "Бүлгийн гарчиг",
+    chapterContentPlaceholder: "Бүлгийн агуулгаа энд бичнэ үү...",
   },
   ja: {
     pageTitle: "本を管理",
@@ -168,6 +177,9 @@ const UI = {
     errSaveBook: "本の保存エラー: ",
     errDeleteBook: "本の削除エラー: ",
     errCreateChapter: "チャプター作成エラー: ",
+    errDeleteChapter: "チャプター削除エラー: ",
+    chapterTitlePlaceholder: "チャプタータイトル",
+    chapterContentPlaceholder: "ここにチャプター内容を書いてください...",
   },
 } as const;
 
@@ -188,41 +200,28 @@ export default function PublisherBookManagePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // Form state for book
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState<BookStatus>("draft");
 
-  // Form state for new chapter
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterNumber, setChapterNumber] = useState<number | "">("");
   const [chapterContent, setChapterContent] = useState("");
   const [chapterSaving, setChapterSaving] = useState(false);
 
-  // Content translations display mode (does NOT change DB, only preview)
-  // This solves your "language dropdown kinda works but not translating" problem:
-  // it will fetch translated text from content_translations and display it.
-  const [contentLocale, setContentLocale] = useState<Locale>(locale);
-
-  // A merged view of book/chapters (original + translation fallback)
   const [displayBook, setDisplayBook] = useState<Book | null>(null);
   const [displayChapters, setDisplayChapters] = useState<Chapter[]>([]);
 
-  useEffect(() => {
-    // keep contentLocale in sync with route locale by default
-    setContentLocale(locale);
+  const localeForDate = useMemo(() => {
+    return locale === "mn"
+      ? "mn-MN"
+      : locale === "ko"
+      ? "ko-KR"
+      : locale === "ja"
+      ? "ja-JP"
+      : "en-GB";
   }, [locale]);
-
-  const localeOptions = useMemo(
-    () => [
-      { value: "en" as const, label: "English" },
-      { value: "mn" as const, label: "Монгол" },
-      { value: "ko" as const, label: "한국어" },
-      { value: "ja" as const, label: "日本語" },
-    ],
-    []
-  );
 
   useEffect(() => {
     if (!bookId) return;
@@ -231,12 +230,11 @@ export default function PublisherBookManagePage() {
       setLoading(true);
       setMessage(null);
 
-      // Load book
       const { data: bookData, error: bookError } = await supabase
         .from("books")
         .select("*")
         .eq("id", bookId)
-        .single();
+        .maybeSingle();
 
       if (bookError || !bookData) {
         const msg =
@@ -255,7 +253,6 @@ export default function PublisherBookManagePage() {
       setContent(b.content ?? "");
       setStatus(b.status);
 
-      // Load chapters
       const { data: chapterData, error: chapterError } = await supabase
         .from("chapters")
         .select("*")
@@ -279,30 +276,22 @@ export default function PublisherBookManagePage() {
     loadData();
   }, [bookId, t.errLoadBook, t.errLoadChapters, t.notFound]);
 
-  // Load translations for preview display (book + chapters)
   useEffect(() => {
     if (!bookId) return;
 
     async function loadTranslations() {
-      // Default: show original
       setDisplayBook(book);
       setDisplayChapters(chapters);
 
-      if (!book || chapters.length === 0) {
-        // still try to translate book even if no chapters
-      }
-
       try {
-        // book translation
         const bookTrRes = await supabase
           .from("content_translations")
           .select("content_type, content_id, locale, title, description, body")
           .eq("content_type", "book")
           .eq("content_id", bookId)
-          .eq("locale", contentLocale)
+          .eq("locale", locale)
           .maybeSingle();
 
-        // chapter translations (map)
         const chapterIds = chapters.map((c) => c.id);
         const chTrRes =
           chapterIds.length > 0
@@ -310,16 +299,9 @@ export default function PublisherBookManagePage() {
                 .from("content_translations")
                 .select("content_type, content_id, locale, title, description, body")
                 .eq("content_type", "chapter")
-                .eq("locale", contentLocale)
+                .eq("locale", locale)
                 .in("content_id", chapterIds)
             : { data: [], error: null };
-
-        if (bookTrRes?.error) {
-          console.warn("Book translation load error:", bookTrRes.error);
-        }
-        if (chTrRes?.error) {
-          console.warn("Chapter translations load error:", chTrRes.error);
-        }
 
         const bookTr = (bookTrRes?.data as TranslationRow | null) ?? null;
 
@@ -345,23 +327,20 @@ export default function PublisherBookManagePage() {
           return {
             ...ch,
             title: tr?.title?.trim() ? tr.title : ch.title,
-            // chapters table uses `content` for body, map translation.body -> content
             content: tr?.body?.trim() ? tr.body : ch.content,
           };
         });
 
         setDisplayBook(mergedBook);
         setDisplayChapters(mergedChapters);
-      } catch (e) {
-        // table missing => fallback to originals
-        console.warn("Translation preview skipped (fallback).", e);
+      } catch {
         setDisplayBook(book);
         setDisplayChapters(chapters);
       }
     }
 
     loadTranslations();
-  }, [bookId, contentLocale, book, chapters]);
+  }, [bookId, locale, book, chapters]);
 
   async function handleSaveBook(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -382,7 +361,7 @@ export default function PublisherBookManagePage() {
       .update(payload)
       .eq("id", bookId)
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (error) {
       const msg =
@@ -390,7 +369,7 @@ export default function PublisherBookManagePage() {
           ? (error as any).message
           : "Unknown Supabase error";
       setMessage(t.errSaveBook + msg);
-    } else {
+    } else if (data) {
       setBook(data as Book);
       setMessage(t.updated);
     }
@@ -418,7 +397,6 @@ export default function PublisherBookManagePage() {
       return;
     }
 
-    // ✅ keep locale, do NOT force /en
     router.push(`/${locale}/publisher/books`);
   }
 
@@ -445,7 +423,7 @@ export default function PublisherBookManagePage() {
       .from("chapters")
       .insert(payload)
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (error) {
       const msg =
@@ -453,7 +431,7 @@ export default function PublisherBookManagePage() {
           ? (error as any).message
           : "Unknown Supabase error";
       setMessage(t.errCreateChapter + msg);
-    } else {
+    } else if (data) {
       setChapters((prev) =>
         [...prev, data as Chapter].sort(
           (a, b) => a.chapter_number - b.chapter_number
@@ -479,7 +457,7 @@ export default function PublisherBookManagePage() {
         typeof (error as any)?.message === "string"
           ? (error as any).message
           : "Unknown Supabase error";
-      setMessage("Error deleting chapter: " + msg);
+      setMessage(t.errDeleteChapter + msg);
       return;
     }
 
@@ -513,33 +491,21 @@ export default function PublisherBookManagePage() {
             <h1 className="text-2xl font-bold">{t.pageTitle}</h1>
             <p className="text-sm text-slate-300">{shownBook.title}</p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {t.createdAt}: {new Date(book.created_at).toLocaleString()}
+              {t.createdAt}:{" "}
+              {new Date(book.created_at).toLocaleString(localeForDate, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Content preview language dropdown */}
-            <select
-              className="rounded-full border border-slate-700 bg-black px-3 py-1 text-xs text-slate-200 outline-none focus:border-emerald-400"
-              value={contentLocale}
-              onChange={(e) => setContentLocale(e.target.value as Locale)}
-              title="Preview content language"
-            >
-              {localeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={handleDeleteBook}
-              className="text-xs rounded-full border border-red-500 px-3 py-1 text-red-300 hover:bg-red-500 hover:text-black disabled:opacity-60"
-              disabled={saving}
-            >
-              {t.deleteBook}
-            </button>
-          </div>
+          <button
+            onClick={handleDeleteBook}
+            className="text-xs rounded-full border border-red-500 px-3 py-1 text-red-300 hover:bg-red-500 hover:text-black disabled:opacity-60"
+            disabled={saving}
+          >
+            {t.deleteBook}
+          </button>
         </section>
 
         {message && (
@@ -548,7 +514,6 @@ export default function PublisherBookManagePage() {
           </p>
         )}
 
-        {/* Edit book form (edits ORIGINAL book text) */}
         <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
           <h2 className="text-lg font-semibold">{t.bookDetails}</h2>
 
@@ -605,11 +570,9 @@ export default function PublisherBookManagePage() {
           </form>
         </section>
 
-        {/* Chapters */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">{t.chapters}</h2>
 
-          {/* New chapter form (creates ORIGINAL chapter text) */}
           <form
             onSubmit={handleCreateChapter}
             className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 text-sm"
@@ -640,7 +603,7 @@ export default function PublisherBookManagePage() {
                   className="w-full rounded-lg border border-slate-700 bg-black px-3 py-2 text-sm outline-none focus:border-fuchsia-400"
                   value={chapterTitle}
                   onChange={(e) => setChapterTitle(e.target.value)}
-                  placeholder="Chapter title"
+                  placeholder={t.chapterTitlePlaceholder}
                 />
               </div>
             </div>
@@ -652,7 +615,7 @@ export default function PublisherBookManagePage() {
                 rows={6}
                 value={chapterContent}
                 onChange={(e) => setChapterContent(e.target.value)}
-                placeholder="Write the chapter content here..."
+                placeholder={t.chapterContentPlaceholder}
               />
             </div>
 
@@ -665,7 +628,6 @@ export default function PublisherBookManagePage() {
             </button>
           </form>
 
-          {/* Chapter list (PREVIEW translated titles/content snippet) */}
           <div className="space-y-2 text-sm">
             {shownChapters.length === 0 ? (
               <p className="text-slate-400">{t.noChapters}</p>
@@ -680,7 +642,11 @@ export default function PublisherBookManagePage() {
                       {ch.chapter_number}. {ch.title}
                     </p>
                     <p className="mt-1 text-[11px] text-slate-500">
-                      {t.createdAt}: {new Date(ch.created_at).toLocaleString()}
+                      {t.createdAt}:{" "}
+                      {new Date(ch.created_at).toLocaleString(localeForDate, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400 line-clamp-2">
                       {(ch.content || "").slice(0, 140)}…
