@@ -353,14 +353,14 @@ export default function SeriesDetailPage() {
 
     try {
       const { data, error } = await supabase
-        .from("series")
-        .update({
-          title: titleTrim,
-          description: descTrim || null,
-        })
-        .eq("id", series.id)
-        .select()
-        .single();
+  .from("series")
+  .update({
+    title: titleTrim,
+    description: descTrim || null,
+  })
+  .eq("id", series.id)
+  .select()
+  .maybeSingle();
 
       if (error) {
         setActionMsg(`Save failed: ${error.message}`);
