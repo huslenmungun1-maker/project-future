@@ -68,7 +68,6 @@ const UI_TEXT = {
     publish: "Publish",
     unpublish: "Unpublish",
     manage: "Manage",
-
     contentType: "Content type",
     mainGenre: "Main genre",
     audience: "Audience",
@@ -113,7 +112,6 @@ const UI_TEXT = {
     publish: "게시",
     unpublish: "게시 해제",
     manage: "관리",
-
     contentType: "콘텐츠 유형",
     mainGenre: "메인 장르",
     audience: "대상 독자",
@@ -158,7 +156,6 @@ const UI_TEXT = {
     publish: "Нийтлэх",
     unpublish: "Нууцлах",
     manage: "Удирдах",
-
     contentType: "Контентын төрөл",
     mainGenre: "Үндсэн жанр",
     audience: "Зорилтот уншигч",
@@ -203,7 +200,6 @@ const UI_TEXT = {
     publish: "公開",
     unpublish: "非公開",
     manage: "管理",
-
     contentType: "コンテンツタイプ",
     mainGenre: "メインジャンル",
     audience: "対象読者",
@@ -259,6 +255,15 @@ export default function PublisherBooksPage() {
       setMainGenre(recommendedGenres[0].value);
     }
   }, [recommendedGenres, mainGenre]);
+
+  function formatBookValue(
+    value: string | null | undefined,
+    options: typeof CONTENT_TYPES | typeof MAIN_GENRES | typeof AUDIENCES | typeof READING_FORMATS | typeof SUBGENRES
+  ) {
+    if (!value) return null;
+    const found = options.find((x) => x.value === value);
+    return found ? getLocalizedLabel(found, locale as Locale) : value;
+  }
 
   useEffect(() => {
     async function loadBooks() {
@@ -352,11 +357,17 @@ export default function PublisherBooksPage() {
     setTitle("");
     setDescription("");
     setStatus("draft");
+    setContentType("novel");
+    setMainGenre("");
+    setAudience("all_ages");
+    setReadingFormat("chapter_based");
+    setSubgenre("");
+
     setMessage(
       `${t.createdMessage} · ${getLocalizedLabel(
-        CONTENT_TYPES.find((x) => x.value === contentType)!,
+        CONTENT_TYPES.find((x) => x.value === (newBook.content_type || contentType))!,
         locale as Locale
-      )} / ${mainGenre || "-"} / ${readingFormat}`
+      )}`
     );
 
     setSaving(false);
@@ -502,33 +513,11 @@ export default function PublisherBooksPage() {
                 {t.selectedSummary}
               </p>
               <p className="text-xs text-slate-400">
-                {getLocalizedLabel(
-                  CONTENT_TYPES.find((x) => x.value === contentType)!,
-                  locale as Locale
-                )}{" "}
-                ·{" "}
-                {mainGenre
-                  ? getLocalizedLabel(
-                      MAIN_GENRES.find((x) => x.value === mainGenre)!,
-                      locale as Locale
-                    )
-                  : "-"}{" "}
-                ·{" "}
-                {getLocalizedLabel(
-                  AUDIENCES.find((x) => x.value === audience)!,
-                  locale as Locale
-                )}{" "}
-                ·{" "}
-                {getLocalizedLabel(
-                  READING_FORMATS.find((x) => x.value === readingFormat)!,
-                  locale as Locale
-                )}{" "}
-                {subgenre
-                  ? `· ${getLocalizedLabel(
-                      SUBGENRES.find((x) => x.value === subgenre)!,
-                      locale as Locale
-                    )}`
-                  : ""}
+                {formatBookValue(contentType, CONTENT_TYPES) ?? "-"} ·{" "}
+                {formatBookValue(mainGenre, MAIN_GENRES) ?? "-"} ·{" "}
+                {formatBookValue(audience, AUDIENCES) ?? "-"} ·{" "}
+                {formatBookValue(readingFormat, READING_FORMATS) ?? "-"}
+                {subgenre ? ` · ${formatBookValue(subgenre, SUBGENRES)}` : ""}
               </p>
             </div>
 
@@ -586,7 +575,35 @@ export default function PublisherBooksPage() {
                         </p>
                       )}
 
-                      <p className="mt-1 text-[11px] text-slate-500">
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {book.content_type && (
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                            {formatBookValue(book.content_type, CONTENT_TYPES)}
+                          </span>
+                        )}
+                        {book.main_genre && (
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                            {formatBookValue(book.main_genre, MAIN_GENRES)}
+                          </span>
+                        )}
+                        {book.audience && (
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                            {formatBookValue(book.audience, AUDIENCES)}
+                          </span>
+                        )}
+                        {book.reading_format && (
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                            {formatBookValue(book.reading_format, READING_FORMATS)}
+                          </span>
+                        )}
+                        {book.subgenre && (
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                            {formatBookValue(book.subgenre, SUBGENRES)}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-2 text-[11px] text-slate-500">
                         {t.createdAt}:{" "}
                         {new Date(book.created_at).toLocaleString(localeForDate, {
                           dateStyle: "medium",
