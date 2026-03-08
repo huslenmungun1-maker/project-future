@@ -4,6 +4,17 @@ import { useEffect, useState, FormEvent, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import OptionSearchSelect from "@/components/publisher/OptionSearchSelect";
+import {
+  CONTENT_TYPES,
+  MAIN_GENRES,
+  AUDIENCES,
+  READING_FORMATS,
+  SUBGENRES,
+  getLocalizedLabel,
+  getRecommendedGenresFromContentType,
+  type Locale,
+} from "@/lib/publisher-options";
 
 type BookStatus = "draft" | "published";
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
@@ -25,7 +36,7 @@ const UI_TEXT = {
     pageTitle: "Publisher Studio · Books",
     pageTitleAccent: "Books",
     pageBody:
-      "Create and manage your books. Books store metadata (title/description/status). Chapters store the actual writing. Click “Manage” to add chapters.",
+      "Create and manage your books. Books store metadata (title/description/status). Chapters store the actual writing.",
     createTitle: "Create a new book",
     labelTitle: "Title",
     placeholderTitle: "e.g. The Future City of Ashes",
@@ -52,12 +63,25 @@ const UI_TEXT = {
     publish: "Publish",
     unpublish: "Unpublish",
     manage: "Manage",
+
+    contentType: "Content type",
+    mainGenre: "Main genre",
+    audience: "Audience",
+    readingFormat: "Reading format",
+    subgenre: "Subgenre",
+    searchContentType: "Search content type...",
+    searchGenre: "Search genre...",
+    searchAudience: "Search audience...",
+    searchFormat: "Search format...",
+    searchSubgenre: "Search subgenre...",
+    recommendedGenres: "Recommended genres",
+    selectedSummary: "Selected project setup",
   },
   ko: {
     pageTitle: "퍼블리셔 스튜디오 · 책",
     pageTitleAccent: "책",
     pageBody:
-      "책을 만들고 관리하세요. 책은 메타데이터(제목/설명/상태)를 저장하고, 챕터는 실제 글을 저장합니다. 챕터를 추가하려면 “관리”를 누르세요.",
+      "책을 만들고 관리하세요. 책은 메타데이터(제목/설명/상태)를 저장하고, 챕터는 실제 글을 저장합니다.",
     createTitle: "새 책 만들기",
     labelTitle: "제목",
     placeholderTitle: "예: 재의 미래 도시",
@@ -84,12 +108,25 @@ const UI_TEXT = {
     publish: "게시",
     unpublish: "게시 해제",
     manage: "관리",
+
+    contentType: "콘텐츠 유형",
+    mainGenre: "메인 장르",
+    audience: "대상 독자",
+    readingFormat: "읽기 형식",
+    subgenre: "서브 장르",
+    searchContentType: "콘텐츠 유형 검색...",
+    searchGenre: "장르 검색...",
+    searchAudience: "대상 독자 검색...",
+    searchFormat: "형식 검색...",
+    searchSubgenre: "서브 장르 검색...",
+    recommendedGenres: "추천 장르",
+    selectedSummary: "선택된 프로젝트 설정",
   },
   mn: {
     pageTitle: "Нийтлэгч студи · Номууд",
     pageTitleAccent: "Номууд",
     pageBody:
-      "Номоо үүсгэж, удирдаарай. Ном нь мета мэдээлэл (гарчиг/тайлбар/төлөв) хадгална. Бүлгүүд нь жинхэнэ бичвэрийг хадгална. Бүлэг нэмэх бол “Удирдах” дээр дар.",
+      "Номоо үүсгэж, удирдаарай. Ном нь мета мэдээлэл (гарчиг/тайлбар/төлөв) хадгална. Бүлгүүд нь жинхэнэ бичвэрийг хадгална.",
     createTitle: "Шинэ ном үүсгэх",
     labelTitle: "Гарчиг",
     placeholderTitle: "ж. Ирээдүйн үнсний хот",
@@ -116,12 +153,25 @@ const UI_TEXT = {
     publish: "Нийтлэх",
     unpublish: "Нууцлах",
     manage: "Удирдах",
+
+    contentType: "Контентын төрөл",
+    mainGenre: "Үндсэн жанр",
+    audience: "Зорилтот уншигч",
+    readingFormat: "Унших хэлбэр",
+    subgenre: "Дэд жанр",
+    searchContentType: "Контентын төрөл хайх...",
+    searchGenre: "Жанр хайх...",
+    searchAudience: "Уншигчийн төрөл хайх...",
+    searchFormat: "Хэлбэр хайх...",
+    searchSubgenre: "Дэд жанр хайх...",
+    recommendedGenres: "Санал болгох жанрууд",
+    selectedSummary: "Сонгосон төслийн тохиргоо",
   },
   ja: {
     pageTitle: "パブリッシャースタジオ · 本",
     pageTitleAccent: "本",
     pageBody:
-      "本を作成して管理します。本はメタデータ（タイトル/説明/状態）を保存し、チャプターは実際の本文を保存します。チャプターを追加するには「管理」を押してください。",
+      "本を作成して管理します。本はメタデータ（タイトル/説明/状態）を保存し、チャプターは実際の本文を保存します。",
     createTitle: "新しい本を作成",
     labelTitle: "タイトル",
     placeholderTitle: "例: 灰の未来都市",
@@ -148,6 +198,19 @@ const UI_TEXT = {
     publish: "公開",
     unpublish: "非公開",
     manage: "管理",
+
+    contentType: "コンテンツタイプ",
+    mainGenre: "メインジャンル",
+    audience: "対象読者",
+    readingFormat: "閲覧形式",
+    subgenre: "サブジャンル",
+    searchContentType: "コンテンツタイプを検索...",
+    searchGenre: "ジャンルを検索...",
+    searchAudience: "対象読者を検索...",
+    searchFormat: "形式を検索...",
+    searchSubgenre: "サブジャンルを検索...",
+    recommendedGenres: "おすすめジャンル",
+    selectedSummary: "選択中のプロジェクト設定",
   },
 } as const;
 
@@ -159,6 +222,12 @@ export default function PublisherBooksPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<BookStatus>("draft");
+
+  const [contentType, setContentType] = useState("novel");
+  const [mainGenre, setMainGenre] = useState("");
+  const [audience, setAudience] = useState("all_ages");
+  const [readingFormat, setReadingFormat] = useState("chapter_based");
+  const [subgenre, setSubgenre] = useState("");
 
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,6 +243,17 @@ export default function PublisherBooksPage() {
       ? "ja-JP"
       : "en-GB";
   }, [locale]);
+
+  const recommendedGenres = useMemo(() => {
+    const values = getRecommendedGenresFromContentType(contentType);
+    return MAIN_GENRES.filter((g) => values.includes(g.value));
+  }, [contentType]);
+
+  useEffect(() => {
+    if (!mainGenre && recommendedGenres.length > 0) {
+      setMainGenre(recommendedGenres[0].value);
+    }
+  }, [recommendedGenres, mainGenre]);
 
   useEffect(() => {
     async function loadBooks() {
@@ -240,7 +320,12 @@ export default function PublisherBooksPage() {
     setTitle("");
     setDescription("");
     setStatus("draft");
-    setMessage(t.createdMessage);
+    setMessage(
+      `${t.createdMessage} · ${getLocalizedLabel(
+        CONTENT_TYPES.find((x) => x.value === contentType)!,
+        locale as Locale
+      )} / ${mainGenre || "-"} / ${readingFormat}`
+    );
 
     setSaving(false);
   }
@@ -286,7 +371,7 @@ export default function PublisherBooksPage() {
         <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
           <h2 className="text-lg font-semibold">{t.createTitle}</h2>
 
-          <form onSubmit={handleCreateBook} className="space-y-3 text-sm">
+          <form onSubmit={handleCreateBook} className="space-y-4 text-sm">
             <div className="space-y-1">
               <label className="block text-slate-200">{t.labelTitle}</label>
               <input
@@ -308,6 +393,106 @@ export default function PublisherBooksPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t.placeholderDescription}
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <OptionSearchSelect
+                label={t.contentType}
+                locale={locale as Locale}
+                options={CONTENT_TYPES}
+                value={contentType}
+                onChange={setContentType}
+                placeholder={t.searchContentType}
+              />
+
+              <OptionSearchSelect
+                label={t.mainGenre}
+                locale={locale as Locale}
+                options={MAIN_GENRES}
+                value={mainGenre}
+                onChange={setMainGenre}
+                placeholder={t.searchGenre}
+              />
+
+              <OptionSearchSelect
+                label={t.audience}
+                locale={locale as Locale}
+                options={AUDIENCES}
+                value={audience}
+                onChange={setAudience}
+                placeholder={t.searchAudience}
+              />
+
+              <OptionSearchSelect
+                label={t.readingFormat}
+                locale={locale as Locale}
+                options={READING_FORMATS}
+                value={readingFormat}
+                onChange={setReadingFormat}
+                placeholder={t.searchFormat}
+              />
+            </div>
+
+            <OptionSearchSelect
+              label={t.subgenre}
+              locale={locale as Locale}
+              options={SUBGENRES}
+              value={subgenre}
+              onChange={setSubgenre}
+              placeholder={t.searchSubgenre}
+            />
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-200">{t.recommendedGenres}</p>
+              <div className="flex flex-wrap gap-2">
+                {recommendedGenres.map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => setMainGenre(g.value)}
+                    className={`rounded-full border px-3 py-1 text-xs ${
+                      mainGenre === g.value
+                        ? "border-fuchsia-400 bg-fuchsia-500/20 text-fuchsia-300"
+                        : "border-slate-700 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    {getLocalizedLabel(g, locale as Locale)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-black/40 p-3 space-y-1">
+              <p className="text-xs font-semibold text-slate-200">{t.selectedSummary}</p>
+              <p className="text-xs text-slate-400">
+                {getLocalizedLabel(
+                  CONTENT_TYPES.find((x) => x.value === contentType)!,
+                  locale as Locale
+                )}{" "}
+                ·{" "}
+                {mainGenre
+                  ? getLocalizedLabel(
+                      MAIN_GENRES.find((x) => x.value === mainGenre)!,
+                      locale as Locale
+                    )
+                  : "-"}{" "}
+                ·{" "}
+                {getLocalizedLabel(
+                  AUDIENCES.find((x) => x.value === audience)!,
+                  locale as Locale
+                )}{" "}
+                ·{" "}
+                {getLocalizedLabel(
+                  READING_FORMATS.find((x) => x.value === readingFormat)!,
+                  locale as Locale
+                )}{" "}
+                {subgenre
+                  ? `· ${getLocalizedLabel(
+                      SUBGENRES.find((x) => x.value === subgenre)!,
+                      locale as Locale
+                    )}`
+                  : ""}
+              </p>
             </div>
 
             <div className="space-y-1">
