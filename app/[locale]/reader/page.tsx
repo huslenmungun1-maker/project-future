@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { safeLocale } from "@/lib/i18n"; // ✅ shared locale helper
+import { safeLocale } from "@/lib/i18n";
 
 type Status = "loading" | "ok" | "error";
 type BookStatus = "draft" | "published";
@@ -53,8 +53,7 @@ const UI_TEXT = {
     howItWorksTitle: "How it works",
     howItWorksBody:
       "Projects go to /reader/series/[seriesId]/1 and books go to /reader/[bookId]/1.",
-    studio: "Studio",
-    publisherBooks: "Publisher Books",
+    backHome: "Back to home",
   },
   mn: {
     chip: "Уншигч",
@@ -70,8 +69,7 @@ const UI_TEXT = {
     publishedAt: "Нийтэлсэн",
     howItWorksTitle: "Яаж ажилладаг вэ",
     howItWorksBody: "Төсөл: /reader/series/[seriesId]/1, Ном: /reader/[bookId]/1",
-    studio: "Студи",
-    publisherBooks: "Нийтлэгч номууд",
+    backHome: "Нүүр рүү буцах",
   },
   ko: {
     chip: "리더",
@@ -87,14 +85,12 @@ const UI_TEXT = {
     publishedAt: "게시일",
     howItWorksTitle: "작동 방식",
     howItWorksBody: "프로젝트: /reader/series/[seriesId]/1, 책: /reader/[bookId]/1",
-    studio: "스튜디오",
-    publisherBooks: "퍼블리셔 책",
+    backHome: "홈으로",
   },
   ja: {
     chip: "リーダー",
     heroTitle: "公開されたコンテンツを読む",
-    heroBody:
-      "公開されたプロジェクトまたは本を選んで、第1章から始めましょう。",
+    heroBody: "公開されたプロジェクトまたは本を選んで、第1章から始めましょう。",
     supabaseOk: "Supabase から公開コンテンツを読み込みました。",
     supabaseEmpty: "公開されたコンテンツがありません。",
     supabaseError: "リーダーコンテンツを読み込めません。",
@@ -106,8 +102,7 @@ const UI_TEXT = {
     howItWorksTitle: "使い方",
     howItWorksBody:
       "プロジェクト: /reader/series/[seriesId]/1、 本: /reader/[bookId]/1",
-    studio: "スタジオ",
-    publisherBooks: "出版社の本",
+    backHome: "ホームへ戻る",
   },
 } as const;
 
@@ -115,18 +110,13 @@ type SupportedLocale = keyof typeof UI_TEXT;
 
 export default function ReaderHomePage() {
   const params = useParams();
-
-  // ✅ single source of truth for locale parsing
   const locale = safeLocale(params?.locale) as SupportedLocale;
   const t = UI_TEXT[locale];
 
   const [status, setStatus] = useState<Status>("loading");
-
-  // ✅ MUST be declared before useMemo uses them
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
 
-  // ✅ derived message (no setState needed)
   const statusMessage = useMemo(() => {
     if (status === "loading") return "";
     if (status === "error") return t.supabaseError;
@@ -135,7 +125,9 @@ export default function ReaderHomePage() {
   }, [status, books.length, series.length, t]);
 
   useEffect(() => {
-    const load = async () => {
+    let cancelled = false;
+
+    async function load() {
       setStatus("loading");
 
       const [booksRes, seriesRes] = await Promise.all([
@@ -157,16 +149,17 @@ export default function ReaderHomePage() {
 
       if (booksRes.error || seriesRes.error) {
         console.error("Reader load error:", booksRes.error || seriesRes.error);
-        setStatus("error");
-        setBooks([]);
-        setSeries([]);
+        if (!cancelled) {
+          setStatus("error");
+          setBooks([]);
+          setSeries([]);
+        }
         return;
       }
 
       const booksData = (booksRes.data as BookRow[]) || [];
       const seriesData = (seriesRes.data as SeriesRow[]) || [];
 
-      // --- Translation layer (titles/descriptions) ---
       const bookIds = booksData.map((b) => b.id);
       const seriesIds = seriesData.map((s) => s.id);
 
@@ -176,31 +169,29 @@ export default function ReaderHomePage() {
       try {
         const [bookTrRes, seriesTrRes] = await Promise.all([
           bookIds.length > 0
-            ? (async () =>
-                await supabase
-                  .from("content_translations")
-                  .select(
-                    "content_type, content_id, locale, title, description, body"
-                  )
-                  .eq("content_type", "book")
-                  .eq("locale", locale)
-                  .in("content_id", bookIds))()
+            ? supabase
+                .from("content_translations")
+                .select(
+                  "content_type, content_id, locale, title, description, body"
+                )
+                .eq("content_type", "book")
+                .eq("locale", locale)
+                .in("content_id", bookIds)
             : Promise.resolve({ data: [], error: null }),
 
           seriesIds.length > 0
-            ? (async () =>
-                await supabase
-                  .from("content_translations")
-                  .select(
-                    "content_type, content_id, locale, title, description, body"
-                  )
-                  .eq("content_type", "series")
-                  .eq("locale", locale)
-                  .in("content_id", seriesIds))()
+            ? supabase
+                .from("content_translations")
+                .select(
+                  "content_type, content_id, locale, title, description, body"
+                )
+                .eq("content_type", "series")
+                .eq("locale", locale)
+                .in("content_id", seriesIds)
             : Promise.resolve({ data: [], error: null }),
         ]);
 
-        if (!bookTrRes?.error) {
+        if (!bookTrRes.error) {
           const rows = ((bookTrRes.data as TranslationRow[]) || []).filter(
             (r) => r && r.content_id
           );
@@ -217,11 +208,9 @@ export default function ReaderHomePage() {
                 : b.description,
             };
           });
-        } else {
-          console.warn("Book translations not loaded:", bookTrRes.error);
         }
 
-        if (!seriesTrRes?.error) {
+        if (!seriesTrRes.error) {
           const rows = ((seriesTrRes.data as TranslationRow[]) || []).filter(
             (r) => r && r.content_id
           );
@@ -238,20 +227,23 @@ export default function ReaderHomePage() {
                 : s.description,
             };
           });
-        } else {
-          console.warn("Series translations not loaded:", seriesTrRes.error);
         }
       } catch (e) {
-        console.warn("Translation lookup skipped (fallback to originals).", e);
+        console.warn("Translation lookup skipped.", e);
       }
 
-      setBooks(translatedBooks);
-      setSeries(translatedSeries);
-      setStatus("ok");
-    };
+      if (!cancelled) {
+        setBooks(translatedBooks);
+        setSeries(translatedSeries);
+        setStatus("ok");
+      }
+    }
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => {
+      cancelled = true;
+    };
   }, [locale]);
 
   const formatDate = (iso: string) =>
@@ -275,20 +267,12 @@ export default function ReaderHomePage() {
             <p className="max-w-xl text-sm text-slate-300">{t.heroBody}</p>
           </div>
 
-          <div className="flex gap-2">
-            <Link
-              href={`/${locale}/studio`}
-              className="mt-2 inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 hover:border-emerald-400 hover:text-emerald-200 sm:mt-0"
-            >
-              {t.studio}
-            </Link>
-            <Link
-              href={`/${locale}/publisher/books`}
-              className="mt-2 inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 hover:border-emerald-400 hover:text-emerald-200 sm:mt-0"
-            >
-              {t.publisherBooks}
-            </Link>
-          </div>
+          <Link
+            href={`/${locale}`}
+            className="mt-2 inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 hover:border-emerald-400 hover:text-emerald-200 sm:mt-0"
+          >
+            ← {t.backHome}
+          </Link>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
@@ -307,7 +291,6 @@ export default function ReaderHomePage() {
           </div>
         </section>
 
-        {/* PUBLISHED PROJECTS */}
         <section>
           <h2 className="mb-3 text-sm font-semibold text-slate-100">
             {t.publishedProjects}
@@ -363,7 +346,6 @@ export default function ReaderHomePage() {
           )}
         </section>
 
-        {/* PUBLISHED BOOKS */}
         <section>
           <h2 className="mb-3 text-sm font-semibold text-slate-100">
             {t.publishedBooks}
