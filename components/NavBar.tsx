@@ -11,12 +11,15 @@ function normalizeLocale(raw: string): SupportedLocale {
 
 function stripLeadingLocale(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
+
   if (parts.length === 0) return "/";
+
   const first = parts[0];
   if (["en", "ko", "mn", "ja"].includes(first)) {
     const rest = parts.slice(1).join("/");
-    return "/" + rest;
+    return rest ? `/${rest}` : "/";
   }
+
   return pathname;
 }
 
@@ -27,13 +30,37 @@ const LABEL: Record<SupportedLocale, string> = {
   ja: "JA",
 };
 
+const UI_TEXT = {
+  en: {
+    reader: "Reader",
+    studio: "Studio",
+    publisher: "Publisher",
+  },
+  ko: {
+    reader: "리더",
+    studio: "스튜디오",
+    publisher: "퍼블리셔",
+  },
+  mn: {
+    reader: "Уншигч",
+    studio: "Студи",
+    publisher: "Нийтлэгч",
+  },
+  ja: {
+    reader: "リーダー",
+    studio: "スタジオ",
+    publisher: "パブリッシャー",
+  },
+} as const;
+
 export default function NavBar({ locale }: { locale: string }) {
-  const currentLocale = normalizeLocale(locale);
   const pathname = usePathname() || "/";
+  const currentLocale = normalizeLocale(locale);
+  const t = UI_TEXT[currentLocale];
   const restPath = stripLeadingLocale(pathname);
 
-  const mkHref = (l: SupportedLocale) => {
-    return restPath === "/" ? `/${l}` : `/${l}${restPath}`;
+  const mkHref = (nextLocale: SupportedLocale) => {
+    return restPath === "/" ? `/${nextLocale}` : `/${nextLocale}${restPath}`;
   };
 
   return (
@@ -43,11 +70,11 @@ export default function NavBar({ locale }: { locale: string }) {
           href={`/${currentLocale}`}
           className="flex items-center gap-3 font-semibold tracking-tight text-stone-900 hover:opacity-80"
         >
-         <img
-  src="/logo.png"
-  alt="Enkhverse"
-  className="h-18 w-auto object-contain mr-2"
-/>
+          <img
+            src="/logo.png"
+            alt="Enkhverse"
+            className="h-18 w-auto object-contain mr-2"
+          />
           <span className="text-base text-stone-900">Enkhverse</span>
         </Link>
 
@@ -56,21 +83,21 @@ export default function NavBar({ locale }: { locale: string }) {
             href={`/${currentLocale}/reader`}
             className="text-stone-700 transition hover:text-stone-950"
           >
-            Reader
+            {t.reader}
           </Link>
 
           <Link
             href={`/${currentLocale}/studio`}
             className="text-stone-700 transition hover:text-stone-950"
           >
-            Studio
+            {t.studio}
           </Link>
 
           <Link
             href={`/${currentLocale}/publisher/books`}
             className="text-stone-700 transition hover:text-stone-950"
           >
-            Publisher
+            {t.publisher}
           </Link>
         </div>
       </div>
