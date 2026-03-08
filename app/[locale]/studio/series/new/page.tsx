@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabaseClient";
 
 type InsertedSeries = { id: string };
 
+const OWNER_EMAIL = "huslen.mungun1@gmail.com";
+
 export default function NewSeriesPage() {
   const router = useRouter();
   const params = useParams();
@@ -14,28 +16,56 @@ export default function NewSeriesPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function create() {
       setError(null);
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        if (!cancelled) setError(sessionError.message);
+        return;
+      }
+
+      const user = session?.user;
+
+      if (!user) {
+        router.replace(`/${locale}`);
+        return;
+      }
+
+      const userEmail = user.email?.toLowerCase() ?? "";
+      if (userEmail !== OWNER_EMAIL.toLowerCase()) {
+        router.replace(`/${locale}`);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("series")
         .insert({
           title: "Untitled series",
           description: null,
-          language: locale, // default language = current locale
+          language: locale,
           cover_image_url: null,
+          project_type: "manga",
+          user_id: user.id,
         })
         .select("id")
         .single();
 
       if (error) {
-        setError(error.message);
+        if (!cancelled) setError(error.message);
         return;
       }
 
       const created = data as InsertedSeries | null;
+
       if (!created?.id) {
-        setError("Created series but no id returned.");
+        if (!cancelled) setError("Created series but no id returned.");
         return;
       }
 
@@ -43,6 +73,10 @@ export default function NewSeriesPage() {
     }
 
     create();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router, locale]);
 
   return (
