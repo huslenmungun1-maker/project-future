@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type InsertedSeries = { id: string };
 
@@ -12,6 +12,8 @@ export default function NewSeriesPage() {
   const router = useRouter();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -34,12 +36,13 @@ export default function NewSeriesPage() {
       const user = session?.user;
 
       if (!user) {
-        router.replace(`/${locale}`);
+        router.replace(`/${locale}/login`);
         return;
       }
 
-      const userEmail = user.email?.toLowerCase() ?? "";
-      if (userEmail !== OWNER_EMAIL.toLowerCase()) {
+      const email = user.email?.toLowerCase() ?? "";
+
+      if (email !== OWNER_EMAIL.toLowerCase()) {
         router.replace(`/${locale}`);
         return;
       }
@@ -77,7 +80,7 @@ export default function NewSeriesPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, locale]);
+  }, [router, locale, supabase]);
 
   return (
     <main className="min-h-screen bg-black text-slate-100">
