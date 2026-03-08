@@ -25,6 +25,11 @@ type Book = {
   description: string | null;
   status: BookStatus;
   created_at: string;
+  content_type?: string | null;
+  main_genre?: string | null;
+  subgenre?: string | null;
+  audience?: string | null;
+  reading_format?: string | null;
 };
 
 function normalizeLocale(raw: string): SupportedLocale {
@@ -262,7 +267,18 @@ export default function PublisherBooksPage() {
 
       const { data, error } = await supabase
         .from("books")
-        .select("id, title, description, status, created_at")
+        .select(`
+          id,
+          title,
+          description,
+          status,
+          created_at,
+          content_type,
+          main_genre,
+          subgenre,
+          audience,
+          reading_format
+        `)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -296,12 +312,28 @@ export default function PublisherBooksPage() {
       title: title.trim(),
       description: description.trim() || null,
       status,
+      content_type: contentType,
+      main_genre: mainGenre || null,
+      subgenre: subgenre || null,
+      audience,
+      reading_format: readingFormat,
     };
 
     const { data, error } = await supabase
       .from("books")
       .insert(payload)
-      .select("id, title, description, status, created_at")
+      .select(`
+        id,
+        title,
+        description,
+        status,
+        created_at,
+        content_type,
+        main_genre,
+        subgenre,
+        audience,
+        reading_format
+      `)
       .single();
 
     if (error) {
@@ -359,7 +391,8 @@ export default function PublisherBooksPage() {
           <h1 className="mb-2 text-3xl font-bold">
             {locale === "en" ? (
               <>
-                Publisher Studio · <span className="text-fuchsia-400">{t.pageTitleAccent}</span>
+                Publisher Studio ·{" "}
+                <span className="text-fuchsia-400">{t.pageTitleAccent}</span>
               </>
             ) : (
               t.pageTitle
@@ -443,7 +476,9 @@ export default function PublisherBooksPage() {
             />
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-200">{t.recommendedGenres}</p>
+              <p className="text-sm font-medium text-slate-200">
+                {t.recommendedGenres}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {recommendedGenres.map((g) => (
                   <button
@@ -463,7 +498,9 @@ export default function PublisherBooksPage() {
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-black/40 p-3 space-y-1">
-              <p className="text-xs font-semibold text-slate-200">{t.selectedSummary}</p>
+              <p className="text-xs font-semibold text-slate-200">
+                {t.selectedSummary}
+              </p>
               <p className="text-xs text-slate-400">
                 {getLocalizedLabel(
                   CONTENT_TYPES.find((x) => x.value === contentType)!,
@@ -570,7 +607,9 @@ export default function PublisherBooksPage() {
                             : "bg-slate-700/40 text-slate-200 border border-slate-600/60"
                         }`}
                       >
-                        {book.status === "published" ? t.statusPublished : t.statusDraft}
+                        {book.status === "published"
+                          ? t.statusPublished
+                          : t.statusDraft}
                       </span>
 
                       <div className="flex items-center gap-2">
