@@ -2,27 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
 
 type SeriesRow = {
   id: string;
+  user_id: string | null;
   created_at: string;
   title: string | null;
   description: string | null;
   cover_image_url: string | null;
-
-  // publish flags (your schema seems to have these)
   published: boolean | null;
   published_at: string | null;
 };
 
+const OWNER_EMAIL = "huslen.mungun1@gmail.com";
+
 const UI_TEXT = {
   en: {
     title: "Publisher",
-    subtitle: "Owner tools (keep this minimal). Studio is for creating. Publisher is for controlling published content.",
+    subtitle:
+      "Publisher is for logged-in creators. Owner can see all published series.",
     backHome: "Back to home",
     loading: "Loading…",
     error: "Could not load series.",
@@ -33,10 +35,12 @@ const UI_TEXT = {
     openReader: "Open in Reader",
     created: "Created",
     publishedAt: "Published",
+    login: "Go to login",
   },
   mn: {
     title: "Publisher",
-    subtitle: "Эзэмшигчийн хэрэгсэл. Studio — бүтээхэд, Publisher — нийтлэгдсэнийг удирдахад.",
+    subtitle:
+      "Publisher нь нэвтэрсэн бүтээгчдэд зориулагдсан. Эзэмшигч бүх нийтлэгдсэн цувралыг харна.",
     backHome: "Нүүр рүү буцах",
     loading: "Ачаалж байна…",
     error: "Цувралыг ачаалж чадсангүй.",
@@ -47,10 +51,12 @@ const UI_TEXT = {
     openReader: "Reader-д нээх",
     created: "Үүсгэсэн",
     publishedAt: "Нийтэлсэн",
+    login: "Нэвтрэх",
   },
   ko: {
     title: "Publisher",
-    subtitle: "오너 전용 도구. Studio는 생성, Publisher는 발행된 콘텐츠 관리.",
+    subtitle:
+      "Publisher는 로그인한 크리에이터 전용입니다. 오너는 모든 공개 시리즈를 볼 수 있습니다.",
     backHome: "홈으로",
     loading: "불러오는 중…",
     error: "시리즈를 불러올 수 없습니다.",
@@ -61,10 +67,12 @@ const UI_TEXT = {
     openReader: "Reader에서 열기",
     created: "생성일",
     publishedAt: "발행일",
+    login: "로그인",
   },
   ja: {
     title: "Publisher",
-    subtitle: "オーナー用ツール。Studioは作成、Publisherは公開済みの管理。",
+    subtitle:
+      "Publisher はログイン済みのクリエイター専用です。オーナーは公開済みシリーズをすべて見られます。",
     backHome: "ホームへ戻る",
     loading: "読み込み中…",
     error: "シリーズを読み込めません。",
@@ -75,6 +83,7 @@ const UI_TEXT = {
     openReader: "Readerで開く",
     created: "作成日",
     publishedAt: "公開日",
+    login: "ログインへ",
   },
 } as const;
 
@@ -86,13 +95,14 @@ function normalizeLocale(raw: string): SupportedLocale {
 
 export default function PublisherPage() {
   const params = useParams();
+  const router = useRouter();
   const locale = normalizeLocale((params?.locale as string) || "en");
   const t = UI_TEXT[locale];
 
   const [status, setStatus] = useState<Status>("loading");
-  const [message, setMessage] = useState<string>("");
+  const [message, setMessage] = useState("");
   const [items, setItems] = useState<SeriesRow[]>([]);
-  const [isAuthed, setIsAuthed] = useState<boolean>(false);
+  const [isAuthed, setIsAuthed] = useState(false);
 
   const localeForDate = useMemo(() => {
     return locale === "mn"
@@ -105,42 +115,78 @@ export default function PublisherPage() {
   }, [locale]);
 
   useEffect(() => {
-    const load = async () => {
+    let cancelled = false;
+
+    async function load() {
       setStatus("loading");
       setMessage("");
       setItems([]);
 
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth?.user) {
-        setIsAuthed(false);
-        setStatus("error");
-        setMessage(t.notLoggedIn);
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        if (!cancelled) {
+          setStatus("error");
+          setMessage(sessionError.message);
+        }
         return;
       }
 
-      setIsAuthed(true);
+      const user = session?.user;
 
-      const { data, error } = await supabase
+      if (!user) {
+        if (!cancelled) {
+          setIsAuthed(false);
+          setStatus("error");
+          setMessage(t.notLoggedIn);
+        }
+        return;
+      }
+
+      const isOwner =
+        (user.email?.toLowerCase() ?? "") === OWNER_EMAIL.toLowerCase();
+
+      if (!cancelled) {
+        setIsAuthed(true);
+      }
+
+      let query = supabase
         .from("series")
-        .select("id, created_at, title, description, cover_image_url, published, published_at")
+        .select(
+          "id, user_id, created_at, title, description, cover_image_url, published, published_at"
+        )
+        .or("published.eq.true,published_at.not.is.null")
         .order("created_at", { ascending: false });
 
+      if (!isOwner) {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
-        setStatus("error");
-        setMessage(`${t.error} (${error.message})`);
+        if (!cancelled) {
+          setStatus("error");
+          setMessage(`${t.error} (${error.message})`);
+        }
         return;
       }
 
-      const list = (data as SeriesRow[]) || [];
-      // keep publisher focused: only published items
-      const published = list.filter((s) => Boolean(s.published) || Boolean(s.published_at));
-      setItems(published);
-      setStatus("ok");
-    };
+      if (!cancelled) {
+        setItems((data as SeriesRow[]) || []);
+        setStatus("ok");
+      }
+    }
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locale]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, t.error, t.notLoggedIn]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
@@ -172,7 +218,7 @@ export default function PublisherPage() {
                   href={`/${locale}/login`}
                   className="inline-flex rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400 hover:text-emerald-200"
                 >
-                  Go to login
+                  {t.login}
                 </Link>
               </div>
             )}
@@ -182,7 +228,9 @@ export default function PublisherPage() {
         {status === "ok" && (
           <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-100">{t.publishedOnly}</h2>
+              <h2 className="text-sm font-semibold text-slate-100">
+                {t.publishedOnly}
+              </h2>
               <span className="text-xs text-slate-400">{items.length} items</span>
             </div>
 
@@ -191,10 +239,13 @@ export default function PublisherPage() {
             ) : (
               <ul className="space-y-3">
                 {items.map((s) => {
-                  const created = new Date(s.created_at).toLocaleString(localeForDate, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  });
+                  const created = new Date(s.created_at).toLocaleString(
+                    localeForDate,
+                    {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }
+                  );
 
                   const publishedAt = s.published_at
                     ? new Date(s.published_at).toLocaleString(localeForDate, {
@@ -213,11 +264,13 @@ export default function PublisherPage() {
                           <h3 className="text-base font-bold text-slate-50 truncate">
                             {s.title || "Untitled series"}
                           </h3>
+
                           {s.description && (
                             <p className="text-sm text-slate-300 line-clamp-2">
                               {s.description}
                             </p>
                           )}
+
                           <p className="mt-2 text-[11px] text-slate-500">
                             {t.created}: {created}
                             {publishedAt ? ` · ${t.publishedAt}: ${publishedAt}` : ""}
@@ -231,6 +284,7 @@ export default function PublisherPage() {
                           >
                             {t.openStudio}
                           </Link>
+
                           <Link
                             href={`/${locale}/reader/series/${s.id}/1`}
                             className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400 hover:text-emerald-200 text-center"
