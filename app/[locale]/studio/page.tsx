@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type SeriesRow = {
@@ -12,14 +12,21 @@ type SeriesRow = {
   created_at: string;
   cover_image_url: string | null;
   language: string | null;
+  user_id?: string | null;
 };
+
+const OWNER_EMAIL = "huslen.mungun1@gmail.com";
 
 export default function StudioHomePage() {
   const params = useParams();
+  const router = useRouter();
   const locale = (params?.locale as string) || "en";
 
-  // ✅ cookie-aware client (fixes "Not authenticated")
   const supabase = useMemo(() => createClientComponentClient(), []);
+
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [allowed, setAllowed] = useState(false);
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [seriesList, setSeriesList] = useState<SeriesRow[]>([]);
@@ -27,13 +34,16 @@ export default function StudioHomePage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadSeries = useCallback(async () => {
+    if (!ownerUserId) return;
+
     setLoading(true);
     setError(null);
 
     try {
       const { data, error } = await supabase
         .from("series")
-        .select("*")
+        .select("id, title, description, created_at, cover_image_url, language, user_id")
+        .eq("user_id", ownerUserId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -54,7 +64,7 @@ export default function StudioHomePage() {
       setSeriesList([]);
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, ownerUserId]);
 
   const deleteSeries = useCallback(
     async (seriesId: string, title?: string) => {
@@ -96,6 +106,59 @@ export default function StudioHomePage() {
   useEffect(() => {
     let alive = true;
 
+    async function checkAccess() {
+      setCheckingAccess(true);
+      setAllowed(false);
+      setOwnerUserId(null);
+      setError(null);
+
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (!alive) return;
+
+      if (error) {
+        setError(error.message);
+        setCheckingAccess(false);
+        router.replace(`/${locale}/login`);
+        return;
+      }
+
+      const user = session?.user;
+
+      if (!user) {
+        setCheckingAccess(false);
+        router.replace(`/${locale}/login`);
+        return;
+      }
+
+      const email = user.email?.toLowerCase() ?? "";
+
+      if (email !== OWNER_EMAIL.toLowerCase()) {
+        setCheckingAccess(false);
+        router.replace(`/${locale}`);
+        return;
+      }
+
+      setOwnerUserId(user.id);
+      setAllowed(true);
+      setCheckingAccess(false);
+    }
+
+    checkAccess();
+
+    return () => {
+      alive = false;
+    };
+  }, [locale, router, supabase]);
+
+  useEffect(() => {
+    if (!allowed || !ownerUserId) return;
+
+    let alive = true;
+
     (async () => {
       if (!alive) return;
       await loadSeries();
@@ -104,7 +167,21 @@ export default function StudioHomePage() {
     return () => {
       alive = false;
     };
-  }, [locale, loadSeries]);
+  }, [locale, allowed, ownerUserId, loadSeries]);
+
+  if (checkingAccess) {
+    return (
+      <main className="min-h-screen theme-soft">
+        <div className="mx-auto max-w-5xl px-6 py-10">
+          <p className="text-sm text-[color:var(--muted)]">Checking access…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!allowed) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen theme-soft">
@@ -113,16 +190,23 @@ export default function StudioHomePage() {
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">Studio</h1>
             <p className="text-sm text-[color:var(--muted)]">
-              Manage your series, chapters, covers, and languages.
+              Owner-only studio. Manage your series, chapters, covers, and languages.
             </p>
           </div>
 
           <div className="flex gap-2">
-            <button onClick={loadSeries} className="btn-ios-secondary text-sm" type="button">
+            <button
+              onClick={loadSeries}
+              className="btn-ios-secondary text-sm"
+              type="button"
+            >
               Retry
             </button>
 
-            <Link href={`/${locale}/studio/series/new`} className="btn-ios text-sm font-semibold">
+            <Link
+              href={`/${locale}/studio/series/new`}
+              className="btn-ios text-sm font-semibold"
+            >
               + Create new series
             </Link>
           </div>
@@ -133,7 +217,7 @@ export default function StudioHomePage() {
             <div className="font-semibold mb-1 text-[color:var(--text)]">Error</div>
             <div className="text-xs text-[color:var(--muted)]">{error}</div>
             <div className="mt-2 text-xs text-[color:var(--muted)]">
-              If this says “permission denied” → it’s <b>RLS policy / not logged in</b>.
+              If this says “permission denied” → session or RLS still needs fixing.
             </div>
           </div>
         )}
@@ -157,7 +241,7 @@ export default function StudioHomePage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-semibold line-clamp-1 text-[color:var(--text)]">
-                    {s.title}
+                    {s.title || "Untitled series"}
                   </h2>
                   <span className="text-[11px] text-[color:var(--muted)] shrink-0">
                     {s.language || locale}
