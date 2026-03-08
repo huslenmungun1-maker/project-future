@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { useParams, useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
 /* ================= TYPES ================= */
 
 type SeriesRow = {
   id: string;
+  user_id?: string | null;
   title: string;
   description: string | null;
   created_at: string;
   cover_image_url: string | null;
   language: string | null;
-
-  // publish fields
   published: boolean;
   published_at: string | null;
 };
@@ -57,6 +56,7 @@ const UI_TEXT = {
     delete: "Delete",
     confirmDelete: "Delete this chapter? This cannot be undone.",
     loading: "Loading project…",
+    checkingAccess: "Checking access…",
     projectNotFound: "Project not found",
     titleEmpty: "Title cannot be empty.",
     chapterTitleRequired: "Chapter title is required.",
@@ -67,8 +67,12 @@ const UI_TEXT = {
     added: "Chapter added ✅",
     deleted: "Chapter deleted ✅",
     deleteFailed: "Failed to delete chapter: ",
-
-    // publish
+    notLoggedIn: "You must be logged in.",
+    ownerOnly: "Owner access only.",
+    saveFailed: "Save failed: ",
+    languageUpdateFailed: "Language update failed: ",
+    chapterCreateFailed: "Chapter create failed",
+    insertFailed: "Insert failed",
     publish: "Publish",
     unpublish: "Unpublish",
     draft: "Draft",
@@ -101,6 +105,7 @@ const UI_TEXT = {
     delete: "Устгах",
     confirmDelete: "Энэ бүлгийг устгах уу? Буцаах боломжгүй.",
     loading: "Төслийг ачаалж байна…",
+    checkingAccess: "Хандалтыг шалгаж байна…",
     projectNotFound: "Төсөл олдсонгүй",
     titleEmpty: "Гарчиг хоосон байж болохгүй.",
     chapterTitleRequired: "Бүлгийн гарчиг шаардлагатай.",
@@ -113,7 +118,12 @@ const UI_TEXT = {
     added: "Бүлэг нэмэгдлээ ✅",
     deleted: "Бүлэг устгагдлаа ✅",
     deleteFailed: "Устгаж чадсангүй: ",
-
+    notLoggedIn: "Нэвтрэх шаардлагатай.",
+    ownerOnly: "Зөвхөн эзэмшигч хандах боломжтой.",
+    saveFailed: "Хадгалж чадсангүй: ",
+    languageUpdateFailed: "Хэл шинэчлэлт амжилтгүй: ",
+    chapterCreateFailed: "Бүлэг үүсгэж чадсангүй",
+    insertFailed: "Оруулахад алдаа гарлаа",
     publish: "Нийтлэх",
     unpublish: "Буцааж нуух",
     draft: "Ноорог",
@@ -146,6 +156,7 @@ const UI_TEXT = {
     delete: "삭제",
     confirmDelete: "이 챕터를 삭제할까요? 되돌릴 수 없습니다.",
     loading: "프로젝트 불러오는 중…",
+    checkingAccess: "접근 권한 확인 중…",
     projectNotFound: "프로젝트를 찾을 수 없습니다",
     titleEmpty: "제목은 비울 수 없습니다.",
     chapterTitleRequired: "챕터 제목이 필요합니다.",
@@ -157,7 +168,12 @@ const UI_TEXT = {
     added: "챕터 추가 완료 ✅",
     deleted: "챕터 삭제 완료 ✅",
     deleteFailed: "삭제 실패: ",
-
+    notLoggedIn: "로그인이 필요합니다.",
+    ownerOnly: "오너만 접근할 수 있습니다.",
+    saveFailed: "저장 실패: ",
+    languageUpdateFailed: "언어 변경 실패: ",
+    chapterCreateFailed: "챕터 생성 실패",
+    insertFailed: "삽입 실패",
     publish: "게시",
     unpublish: "게시 해제",
     draft: "초안",
@@ -190,6 +206,7 @@ const UI_TEXT = {
     delete: "削除",
     confirmDelete: "このチャプターを削除しますか？元に戻せません。",
     loading: "読み込み中…",
+    checkingAccess: "アクセス確認中…",
     projectNotFound: "プロジェクトが見つかりません",
     titleEmpty: "タイトルは空にできません。",
     chapterTitleRequired: "チャプタータイトルが必要です。",
@@ -201,7 +218,12 @@ const UI_TEXT = {
     added: "チャプター追加 ✅",
     deleted: "チャプター削除 ✅",
     deleteFailed: "削除に失敗しました: ",
-
+    notLoggedIn: "ログインが必要です。",
+    ownerOnly: "オーナーのみアクセスできます。",
+    saveFailed: "保存に失敗: ",
+    languageUpdateFailed: "言語更新に失敗: ",
+    chapterCreateFailed: "チャプター作成に失敗",
+    insertFailed: "挿入に失敗しました",
     publish: "公開",
     unpublish: "非公開",
     draft: "下書き",
@@ -213,12 +235,15 @@ const UI_TEXT = {
 
 type Lang = keyof typeof UI_TEXT;
 
+const OWNER_EMAIL = "huslen.mungun1@gmail.com";
+
 /* ================= PAGE ================= */
 
 export default function SeriesDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
-  // Support both [id] and [seriesId] folder names
   const seriesId =
     (params?.id as string) ||
     (params?.seriesId as string) ||
@@ -228,27 +253,26 @@ export default function SeriesDetailPage() {
   const localeRaw = (params?.locale as string) || "en";
   const locale = (["en", "mn", "ko", "ja"].includes(localeRaw) ? localeRaw : "en") as Lang;
 
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+
   const [series, setSeries] = useState<SeriesRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // editable meta
   const [editingMeta, setEditingMeta] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
 
-  // create chapter
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterNumber, setChapterNumber] = useState("");
   const [chapterContent, setChapterContent] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  // publish
   const [togglingPublish, setTogglingPublish] = useState(false);
 
-  // messages you will ACTUALLY see on screen
   const [pageError, setPageError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
@@ -271,7 +295,46 @@ export default function SeriesDetailPage() {
       : "en-GB";
   }, [currentLang]);
 
-  async function reloadAll() {
+  const checkAccess = useCallback(async () => {
+    setAccessChecked(false);
+    setAllowed(false);
+    setPageError(null);
+
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      setPageError(error.message);
+      setAccessChecked(true);
+      router.replace(`/${locale}/login`);
+      return null;
+    }
+
+    const user = session?.user;
+
+    if (!user) {
+      setPageError(t.notLoggedIn);
+      setAccessChecked(true);
+      router.replace(`/${locale}/login`);
+      return null;
+    }
+
+    const email = user.email?.toLowerCase() ?? "";
+    if (email !== OWNER_EMAIL.toLowerCase()) {
+      setPageError(t.ownerOnly);
+      setAccessChecked(true);
+      router.replace(`/${locale}`);
+      return null;
+    }
+
+    setAllowed(true);
+    setAccessChecked(true);
+    return user;
+  }, [locale, router, supabase, t.notLoggedIn, t.ownerOnly]);
+
+  const reloadAll = useCallback(async () => {
     setLoading(true);
     setPageError(null);
     setActionMsg(null);
@@ -284,15 +347,32 @@ export default function SeriesDetailPage() {
       return;
     }
 
+    const user = await checkAccess();
+    if (!user) {
+      setSeries(null);
+      setChapters([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data: s, error: sErr } = await supabase
         .from("series")
         .select("*")
         .eq("id", seriesId)
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (sErr) {
         setPageError(`Series load failed: ${sErr.message}`);
+        setSeries(null);
+        setChapters([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!s) {
+        setPageError(t.projectNotFound);
         setSeries(null);
         setChapters([]);
         setLoading(false);
@@ -322,14 +402,12 @@ export default function SeriesDetailPage() {
       setPageError(e?.message || "Unknown load error.");
       setLoading(false);
     }
-  }
+  }, [checkAccess, seriesId, supabase, t.projectNotFound, t.seriesIdMissing]);
 
   useEffect(() => {
     reloadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seriesId]);
+  }, [reloadAll]);
 
-  // keep draft meta in sync
   useEffect(() => {
     if (series) {
       setDraftTitle(series.title);
@@ -353,28 +431,30 @@ export default function SeriesDetailPage() {
 
     try {
       const { data, error } = await supabase
-  .from("series")
-  .update({
-    title: titleTrim,
-    description: descTrim || null,
-  })
-  .eq("id", series.id)
-  .select()
-  .maybeSingle();
+        .from("series")
+        .update({
+          title: titleTrim,
+          description: descTrim || null,
+        })
+        .eq("id", series.id)
+        .select()
+        .maybeSingle();
 
       if (error) {
-        setActionMsg(`Save failed: ${error.message}`);
-        setSavingMeta(false);
+        setActionMsg(`${t.saveFailed}${error.message}`);
         return;
       }
 
-      if (data) {
-        setSeries(data as SeriesRow);
-        setActionMsg("Saved ✅");
-        setEditingMeta(false);
+      if (!data) {
+        setActionMsg(t.projectNotFound);
+        return;
       }
+
+      setSeries(data as SeriesRow);
+      setActionMsg("Saved ✅");
+      setEditingMeta(false);
     } catch (e: any) {
-      setActionMsg(e?.message || "Save failed: unknown error.");
+      setActionMsg(e?.message || `${t.saveFailed}unknown error.`);
     } finally {
       setSavingMeta(false);
     }
@@ -392,15 +472,21 @@ export default function SeriesDetailPage() {
       .update({ language: nextLang })
       .eq("id", series.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       setSeries(prev);
-      setActionMsg(`Language update failed: ${error.message}`);
+      setActionMsg(`${t.languageUpdateFailed}${error.message}`);
       return;
     }
 
-    if (data) setSeries(data as SeriesRow);
+    if (!data) {
+      setSeries(prev);
+      setActionMsg(t.projectNotFound);
+      return;
+    }
+
+    setSeries(data as SeriesRow);
   }
 
   async function togglePublish() {
@@ -424,10 +510,16 @@ export default function SeriesDetailPage() {
       })
       .eq("id", series.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       setActionMsg(t.publishUpdateFailed + error.message);
+      setTogglingPublish(false);
+      return;
+    }
+
+    if (!data) {
+      setActionMsg(t.projectNotFound);
       setTogglingPublish(false);
       return;
     }
@@ -437,85 +529,84 @@ export default function SeriesDetailPage() {
     setTogglingPublish(false);
   }
 
-async function createChapter() {
-  setActionMsg(null);
-  setCreateError(null);
+  async function createChapter() {
+    setActionMsg(null);
+    setCreateError(null);
 
-  const titleTrim = chapterTitle.trim();
-  const numRaw = chapterNumber.trim();
+    const titleTrim = chapterTitle.trim();
+    const numRaw = chapterNumber.trim();
 
-  if (!seriesId) {
-    setCreateError(t.seriesIdMissing);
-    return;
-  }
-
-  if (!titleTrim) {
-    setCreateError(t.chapterTitleRequired);
-    return;
-  }
-
-  if (!numRaw) {
-    setCreateError(t.chapterNumberRequired);
-    return;
-  }
-
-  const num = Number(numRaw);
-  if (!Number.isInteger(num) || num <= 0) {
-    setCreateError(t.chapterNumberInvalid);
-    return;
-  }
-
-  setCreating(true);
-
-  try {
-    const scriptTrim = chapterContent.trim();
-
-    const { data: ch, error: chErr } = await supabase
-      .from("chapters")
-      .insert({
-        series_id: seriesId,
-        chapter_number: num,
-        title: titleTrim,          // REQUIRED (fix)
-        content: scriptTrim || null,
-      })
-      .select("id")
-      .single();
-
-    if (chErr || !ch) {
-      setCreateError(chErr?.message || "Chapter create failed");
+    if (!seriesId) {
+      setCreateError(t.seriesIdMissing);
       return;
     }
 
-    const { error: trErr } = await supabase
-      .from("chapter_translations")
-      .upsert(
-        {
-          chapter_id: ch.id,
-          locale: currentLang,
+    if (!titleTrim) {
+      setCreateError(t.chapterTitleRequired);
+      return;
+    }
+
+    if (!numRaw) {
+      setCreateError(t.chapterNumberRequired);
+      return;
+    }
+
+    const num = Number(numRaw);
+    if (!Number.isInteger(num) || num <= 0) {
+      setCreateError(t.chapterNumberInvalid);
+      return;
+    }
+
+    setCreating(true);
+
+    try {
+      const scriptTrim = chapterContent.trim();
+
+      const { data: ch, error: chErr } = await supabase
+        .from("chapters")
+        .insert({
+          series_id: seriesId,
+          chapter_number: num,
           title: titleTrim,
-          script: scriptTrim || null,
-        },
-        { onConflict: "chapter_id,locale" }
-      );
+          content: scriptTrim || null,
+        })
+        .select("id")
+        .maybeSingle();
 
-    if (trErr) {
-      setCreateError(trErr.message);
-      return;
+      if (chErr || !ch) {
+        setCreateError(chErr?.message || t.chapterCreateFailed);
+        return;
+      }
+
+      const { error: trErr } = await supabase
+        .from("chapter_translations")
+        .upsert(
+          {
+            chapter_id: ch.id,
+            locale: currentLang,
+            title: titleTrim,
+            script: scriptTrim || null,
+          },
+          { onConflict: "chapter_id,locale" }
+        );
+
+      if (trErr) {
+        setCreateError(trErr.message);
+        return;
+      }
+
+      setChapterTitle("");
+      setChapterNumber("");
+      setChapterContent("");
+      setActionMsg(t.added);
+
+      await reloadAll();
+    } catch (e: any) {
+      setCreateError(e?.message || t.insertFailed);
+    } finally {
+      setCreating(false);
     }
-
-    setChapterTitle("");
-    setChapterNumber("");
-    setChapterContent("");
-    setActionMsg(t.added);
-
-    await reloadAll();
-  } catch (e: any) {
-    setCreateError(e?.message || "Insert failed");
-  } finally {
-    setCreating(false);
   }
-}
-
 
   async function deleteChapter(chapterId: string) {
     setActionMsg(null);
@@ -534,14 +625,20 @@ async function createChapter() {
     await reloadAll();
   }
 
-  if (loading) {
+  if (!accessChecked || loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
         <div className="mx-auto max-w-5xl px-6 py-10">
-          <p className="text-sm text-slate-300">{t.loading}</p>
+          <p className="text-sm text-slate-300">
+            {!accessChecked ? t.checkingAccess : t.loading}
+          </p>
         </div>
       </main>
     );
+  }
+
+  if (!allowed) {
+    return null;
   }
 
   if (!series) {
@@ -551,7 +648,10 @@ async function createChapter() {
         {pageError && (
           <pre className="whitespace-pre-wrap text-sm text-rose-300">{pageError}</pre>
         )}
-        <Link href="/" className="inline-block text-xs text-slate-400 hover:text-emerald-300">
+        <Link
+          href={`/${locale}/studio`}
+          className="inline-block text-xs text-slate-400 hover:text-emerald-300"
+        >
           ← {t.backToAllSeries}
         </Link>
       </main>
@@ -561,18 +661,19 @@ async function createChapter() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
-        {/* Top breadcrumb */}
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <Link href="/" className="inline-flex items-center gap-1 hover:text-slate-100">
+          <Link
+            href={`/${locale}/studio`}
+            className="inline-flex items-center gap-1 hover:text-slate-100"
+          >
             <span className="text-lg">←</span>
             {t.backToAllSeries}
           </Link>
-          <Link href="/" className="hover:text-slate-100">
+          <Link href={`/${locale}`} className="hover:text-slate-100">
             {t.homeBreadcrumb}
           </Link>
         </div>
 
-        {/* HEADER */}
         <section className="space-y-3">
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -583,15 +684,17 @@ async function createChapter() {
               </span>
             )}
             <span
-              className={`ml-2 rounded-full border px-2 py-0.5 text-[10px]
-              ${series.published ? "border-emerald-500/40 text-emerald-300" : "border-slate-600 text-slate-300"}`}
+              className={`ml-2 rounded-full border px-2 py-0.5 text-[10px] ${
+                series.published
+                  ? "border-emerald-500/40 text-emerald-300"
+                  : "border-slate-600 text-slate-300"
+              }`}
               title={series.published_at ? `published_at: ${series.published_at}` : undefined}
             >
               {series.published ? t.published : t.draft}
             </span>
           </span>
 
-          {/* title + actions */}
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -621,27 +724,24 @@ async function createChapter() {
                 <option value="ja">日本語</option>
               </select>
 
-              {/* PUBLISH BUTTON */}
               <button
                 type="button"
                 onClick={togglePublish}
                 disabled={togglingPublish}
-                className={`text-[11px] px-3 py-2 rounded-xl border bg-black/40 transition
-                  ${series.published
+                className={`text-[11px] px-3 py-2 rounded-xl border bg-black/40 transition ${
+                  series.published
                     ? "border-emerald-400 text-emerald-300 hover:border-emerald-300"
-                    : "border-slate-700 text-slate-200 hover:border-emerald-400 hover:text-emerald-300"}
-                  ${togglingPublish ? "opacity-60 cursor-not-allowed" : ""}`}
+                    : "border-slate-700 text-slate-200 hover:border-emerald-400 hover:text-emerald-300"
+                } ${togglingPublish ? "opacity-60 cursor-not-allowed" : ""}`}
                 title={series.published ? t.unpublish : t.publish}
               >
                 {togglingPublish ? "..." : series.published ? t.unpublish : t.publish}
               </button>
 
-              {/* EDIT BUTTON */}
               <button
                 type="button"
                 onClick={() => setEditingMeta((v) => !v)}
-                className="text-[11px] px-3 py-2 rounded-xl border border-slate-700 bg-black/40
-                           text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
+                className="text-[11px] px-3 py-2 rounded-xl border border-slate-700 bg-black/40 text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
               >
                 {t.editSeries}
               </button>
@@ -659,7 +759,6 @@ async function createChapter() {
             </div>
           )}
 
-          {/* EDIT META */}
           {editingMeta && (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -695,8 +794,7 @@ async function createChapter() {
                     type="button"
                     onClick={saveMeta}
                     disabled={savingMeta}
-                    className="text-[11px] px-3 py-2 rounded-xl bg-emerald-500 text-black
-                               hover:bg-emerald-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="text-[11px] px-3 py-2 rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {savingMeta ? t.saving : t.save}
                   </button>
@@ -717,7 +815,6 @@ async function createChapter() {
           )}
         </section>
 
-        {/* COVER */}
         <section className="grid gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
           <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
             <h2 className="mb-2 text-sm font-semibold text-slate-100">{t.seriesCover}</h2>
@@ -728,9 +825,7 @@ async function createChapter() {
           </div>
         </section>
 
-        {/* CREATE + LIST */}
         <section className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)]">
-          {/* Create */}
           <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 space-y-3">
             <h2 className="text-sm font-semibold text-slate-100">{t.addChapter}</h2>
 
@@ -767,7 +862,6 @@ async function createChapter() {
             </button>
           </div>
 
-          {/* List */}
           <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-100">{t.chaptersTitle}</h2>
@@ -791,7 +885,6 @@ async function createChapter() {
                   className="rounded-xl border border-slate-800 bg-black/30 hover:border-emerald-400/60"
                 >
                   <div className="flex items-start justify-between gap-3 px-4 py-3">
-                    {/* Left: link */}
                     <Link href={`/chapters/${c.id}`} className="block flex-1">
                       <p className="font-semibold text-slate-50 text-sm">
                         #{c.chapter_number} · {c.title}
@@ -812,7 +905,6 @@ async function createChapter() {
                       </p>
                     </Link>
 
-                    {/* Right: delete */}
                     <button
                       type="button"
                       onClick={() => deleteChapter(c.id)}
