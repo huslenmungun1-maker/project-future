@@ -276,12 +276,7 @@ export default function SeriesDetailPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
-  const currentLang: Lang = useMemo(() => {
-    const lang = series?.language as Lang | null;
-    if (lang && UI_TEXT[lang]) return lang;
-    return locale;
-  }, [series?.language, locale]);
-
+  const currentLang: Lang = locale as Lang;
   const t = UI_TEXT[currentLang];
 
   const localeForDate = useMemo(() => {
