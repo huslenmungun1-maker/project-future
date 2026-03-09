@@ -104,6 +104,7 @@ const UI = {
     errDeleteBook: "Error deleting book: ",
     errCreateChapter: "Error creating chapter: ",
     errDeleteChapter: "Error deleting chapter: ",
+    errMoveChapter: "Error reordering chapters: ",
     chapterTitlePlaceholder: "Chapter title",
     chapterContentPlaceholder: "Write the chapter content here...",
     untitledChapter: "Untitled chapter",
@@ -157,6 +158,7 @@ const UI = {
     errDeleteBook: "책 삭제 오류: ",
     errCreateChapter: "챕터 생성 오류: ",
     errDeleteChapter: "챕터 삭제 오류: ",
+    errMoveChapter: "챕터 순서 변경 오류: ",
     chapterTitlePlaceholder: "챕터 제목",
     chapterContentPlaceholder: "여기에 챕터 내용을 작성하세요...",
     untitledChapter: "제목 없는 챕터",
@@ -211,6 +213,7 @@ const UI = {
     errDeleteBook: "Ном устгах алдаа: ",
     errCreateChapter: "Бүлэг үүсгэх алдаа: ",
     errDeleteChapter: "Бүлэг устгах алдаа: ",
+    errMoveChapter: "Бүлгийн дараалал солих алдаа: ",
     chapterTitlePlaceholder: "Бүлгийн гарчиг",
     chapterContentPlaceholder: "Бүлгийн агуулгаа энд бичнэ үү...",
     untitledChapter: "Нэргүй бүлэг",
@@ -264,6 +267,7 @@ const UI = {
     errDeleteBook: "本の削除エラー: ",
     errCreateChapter: "チャプター作成エラー: ",
     errDeleteChapter: "チャプター削除エラー: ",
+    errMoveChapter: "チャプター並び替えエラー: ",
     chapterTitlePlaceholder: "チャプタータイトル",
     chapterContentPlaceholder: "ここにチャプター内容を書いてください...",
     untitledChapter: "無題のチャプター",
@@ -286,6 +290,19 @@ function formatDate(value: string | null | undefined, localeCode: string) {
   });
 }
 
+function getErrorMessage(error: unknown, fallback = "Unknown error") {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return fallback;
+}
+
 export default function PublisherBookManagePage() {
   const router = useRouter();
   const params = useParams() as { id?: string; locale?: string };
@@ -306,7 +323,7 @@ export default function PublisherBookManagePage() {
 
   const [contentType, setContentType] = useState("");
   const [mainGenre, setMainGenre] = useState("");
-  const [subgenre, setSubgenre] = useState<string[]>([]);
+  const [subgenre, setSubgenre] = useState("");
   const [audience, setAudience] = useState("");
   const [readingFormat, setReadingFormat] = useState("");
 
@@ -348,12 +365,7 @@ export default function PublisherBookManagePage() {
         .maybeSingle();
 
       if (bookError || !bookData) {
-        const errorMessage =
-          bookError && typeof bookError.message === "string"
-            ? bookError.message
-            : t.notFound;
-
-        setMessage(t.errLoadBook + errorMessage);
+        setMessage(t.errLoadBook + (bookError?.message || t.notFound));
         setLoading(false);
         return;
       }
@@ -366,7 +378,7 @@ export default function PublisherBookManagePage() {
       setStatus(b.status ?? "draft");
       setContentType(b.content_type ?? "");
       setMainGenre(b.main_genre ?? "");
-      setSubgenre(Array.isArray(b.subgenre) ? b.subgenre : []);
+      setSubgenre(Array.isArray(b.subgenre) ? (b.subgenre[0] ?? "") : "");
       setAudience(b.audience ?? "");
       setReadingFormat(b.reading_format ?? "");
 
@@ -377,11 +389,7 @@ export default function PublisherBookManagePage() {
         .order("chapter_number", { ascending: true });
 
       if (chapterError) {
-        const msg =
-          typeof (chapterError as { message?: unknown })?.message === "string"
-            ? chapterError.message
-            : "Unknown error";
-        setMessage(t.errLoadChapters + msg);
+        setMessage(t.errLoadChapters + getErrorMessage(chapterError));
         setChapters([]);
       } else {
         setChapters((chapterData || []) as Chapter[]);
@@ -425,8 +433,11 @@ export default function PublisherBookManagePage() {
         const chRows = ((chTrRes?.data as TranslationRow[]) || []).filter(
           (r) => r && r.content_id
         );
+
         const chMap = new Map<string, TranslationRow>();
-        for (const r of chRows) chMap.set(r.content_id, r);
+        for (const row of chRows) {
+          chMap.set(row.content_id, row);
+        }
 
         const mergedBook: Book | null = book
           ? {
@@ -441,6 +452,7 @@ export default function PublisherBookManagePage() {
 
         const mergedChapters: Chapter[] = chapters.map((ch) => {
           const tr = chMap.get(ch.id);
+
           return {
             ...ch,
             title: tr?.title?.trim() ? tr.title : ch.title,
@@ -473,7 +485,7 @@ export default function PublisherBookManagePage() {
       status,
       content_type: contentType || null,
       main_genre: mainGenre || null,
-      subgenre,
+      subgenre: subgenre ? [subgenre] : [],
       audience: audience || null,
       reading_format: readingFormat || null,
       updated_at: new Date().toISOString(),
@@ -489,14 +501,13 @@ export default function PublisherBookManagePage() {
       .maybeSingle();
 
     if (error) {
-      const msg =
-        typeof (error as { message?: unknown })?.message === "string"
-          ? error.message
-          : "Unknown Supabase error";
-      setMessage(t.errSaveBook + msg);
+      setMessage(t.errSaveBook + getErrorMessage(error));
     } else if (data) {
       const updatedBook = data as Book;
       setBook(updatedBook);
+      setSubgenre(
+        Array.isArray(updatedBook.subgenre) ? (updatedBook.subgenre[0] ?? "") : ""
+      );
       setMessage(t.updated);
     }
 
@@ -505,6 +516,7 @@ export default function PublisherBookManagePage() {
 
   async function handleDeleteBook() {
     if (!bookId) return;
+
     const ok = window.confirm(t.deleteConfirm);
     if (!ok) return;
 
@@ -514,11 +526,7 @@ export default function PublisherBookManagePage() {
     const { error } = await supabase.from("books").delete().eq("id", bookId);
 
     if (error) {
-      const msg =
-        typeof (error as { message?: unknown })?.message === "string"
-          ? error.message
-          : "Unknown Supabase error";
-      setMessage(t.errDeleteBook + msg);
+      setMessage(t.errDeleteBook + getErrorMessage(error));
       setSaving(false);
       return;
     }
@@ -552,11 +560,7 @@ export default function PublisherBookManagePage() {
       .maybeSingle();
 
     if (error) {
-      const msg =
-        typeof (error as { message?: unknown })?.message === "string"
-          ? error.message
-          : "Unknown Supabase error";
-      setMessage(t.errCreateChapter + msg);
+      setMessage(t.errCreateChapter + getErrorMessage(error));
     } else if (data) {
       setChapters((prev) =>
         [...prev, data as Chapter].sort(
@@ -579,11 +583,7 @@ export default function PublisherBookManagePage() {
     const { error } = await supabase.from("chapters").delete().eq("id", chapterId);
 
     if (error) {
-      const msg =
-        typeof (error as { message?: unknown })?.message === "string"
-          ? error.message
-          : "Unknown Supabase error";
-      setMessage(t.errDeleteChapter + msg);
+      setMessage(t.errDeleteChapter + getErrorMessage(error));
       return;
     }
 
@@ -605,31 +605,17 @@ export default function PublisherBookManagePage() {
     const currentNumber = current.chapter_number;
     const targetNumber = target.chapter_number;
 
-    const { error: errorA } = await supabase
-      .from("chapters")
-      .update({ chapter_number: targetNumber })
-      .eq("id", current.id);
+    setMessage(null);
 
-    if (errorA) {
-      const msg =
-        typeof (errorA as { message?: unknown })?.message === "string"
-          ? errorA.message
-          : "Unknown Supabase error";
-      setMessage(t.errLoadChapters + msg);
-      return;
-    }
+    const { error } = await supabase.rpc("swap_book_chapter_numbers", {
+      first_chapter_id: current.id,
+      first_chapter_number: currentNumber,
+      second_chapter_id: target.id,
+      second_chapter_number: targetNumber,
+    });
 
-    const { error: errorB } = await supabase
-      .from("chapters")
-      .update({ chapter_number: currentNumber })
-      .eq("id", target.id);
-
-    if (errorB) {
-      const msg =
-        typeof (errorB as { message?: unknown })?.message === "string"
-          ? errorB.message
-          : "Unknown Supabase error";
-      setMessage(t.errLoadChapters + msg);
+    if (error) {
+      setMessage(t.errMoveChapter + getErrorMessage(error));
       return;
     }
 
@@ -793,7 +779,9 @@ export default function PublisherBookManagePage() {
                         const next = e.target.value;
                         setContentType(next);
 
-                        const recommended = getRecommendedGenresFromContentType(next);
+                        const recommended =
+                          getRecommendedGenresFromContentType(next);
+
                         if (recommended.length > 0 && !recommended.includes(mainGenre)) {
                           setMainGenre(recommended[0]);
                         }
@@ -809,20 +797,34 @@ export default function PublisherBookManagePage() {
                   </div>
                 </div>
 
+                {recommendedGenres.length > 0 && (
+                  <div className="rounded-2xl border border-black/5 bg-[rgba(245,241,235,0.65)] px-4 py-3 text-xs text-stone-600">
+                    Recommended main genres:{" "}
+                    {recommendedGenres
+                      .map((value) => {
+                        const item = MAIN_GENRES.find((genre) => genre.value === value);
+                        return item
+                          ? getLocalizedLabel(item, locale as PublisherLocale)
+                          : value;
+                      })
+                      .join(", ")}
+                  </div>
+                )}
+
                 <div className="grid gap-5 md:grid-cols-2">
                   <div className="grid gap-2">
                     <label className="text-sm font-medium text-stone-700">
                       {t.mainGenre}
                     </label>
                     <OptionSearchSelect
-                     label={t.mainGenre}
-                     options={MAIN_GENRES}
-                     value={mainGenre}
-                     onChange={setMainGenre}
-                     locale={locale as PublisherLocale}
-                   />                      
+                      label={t.mainGenre}
+                      options={MAIN_GENRES}
+                      value={mainGenre}
+                      onChange={setMainGenre}
+                      locale={locale as PublisherLocale}
+                    />
                   </div>
- 
+
                   <div className="grid gap-2">
                     <label className="text-sm font-medium text-stone-700">
                       {t.subgenre}
@@ -1033,7 +1035,9 @@ export default function PublisherBookManagePage() {
                 {t.readerPrep}
               </h2>
               <div className="rounded-2xl border border-black/5 bg-[rgba(245,241,235,0.7)] p-4">
-                <p className="text-sm leading-6 text-stone-600">{t.readerPrepText}</p>
+                <p className="text-sm leading-6 text-stone-600">
+                  {t.readerPrepText}
+                </p>
               </div>
 
               <div className="mt-4">
