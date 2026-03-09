@@ -819,6 +819,7 @@ export default function PublisherBookManagePage() {
                       value={mainGenre}
                       onChange={setMainGenre}
                       locale={locale as PublisherLocale}
+                      multiple
                     />
                   </div>
 
