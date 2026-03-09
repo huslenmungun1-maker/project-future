@@ -348,14 +348,15 @@ export default function PublisherBookManagePage() {
         .maybeSingle();
 
       if (bookError || !bookData) {
-        const msg =
-          typeof (bookError as { message?: unknown })?.message === "string"
-            ? bookError.message
-            : t.notFound;
-        setMessage(t.errLoadBook + msg);
-        setLoading(false);
-        return;
-      }
+  const errorMessage =
+    bookError && typeof bookError.message === "string"
+      ? bookError.message
+      : t.notFound;
+
+  setMessage(t.errLoadBook + errorMessage);
+  setLoading(false);
+  return;
+}
 
       const b = bookData as Book;
       setBook(b);
