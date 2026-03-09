@@ -348,15 +348,15 @@ export default function PublisherBookManagePage() {
         .maybeSingle();
 
       if (bookError || !bookData) {
-  const errorMessage =
-    bookError && typeof bookError.message === "string"
-      ? bookError.message
-      : t.notFound;
+        const errorMessage =
+          bookError && typeof bookError.message === "string"
+            ? bookError.message
+            : t.notFound;
 
-  setMessage(t.errLoadBook + errorMessage);
-  setLoading(false);
-  return;
-}
+        setMessage(t.errLoadBook + errorMessage);
+        setLoading(false);
+        return;
+      }
 
       const b = bookData as Book;
       setBook(b);
@@ -801,7 +801,7 @@ export default function PublisherBookManagePage() {
                     >
                       <option value=""></option>
                       {CONTENT_TYPES.map((item) => (
-                        <option key={item} value={item}>
+                        <option key={item.value} value={item.value}>
                           {getLocalizedLabel(item, locale as PublisherLocale)}
                         </option>
                       ))}
@@ -849,7 +849,7 @@ export default function PublisherBookManagePage() {
                     >
                       <option value=""></option>
                       {AUDIENCES.map((item) => (
-                        <option key={item} value={item}>
+                        <option key={item.value} value={item.value}>
                           {getLocalizedLabel(item, locale as PublisherLocale)}
                         </option>
                       ))}
@@ -867,7 +867,7 @@ export default function PublisherBookManagePage() {
                     >
                       <option value=""></option>
                       {READING_FORMATS.map((item) => (
-                        <option key={item} value={item}>
+                        <option key={item.value} value={item.value}>
                           {getLocalizedLabel(item, locale as PublisherLocale)}
                         </option>
                       ))}
