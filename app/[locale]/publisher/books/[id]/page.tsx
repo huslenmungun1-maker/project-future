@@ -589,6 +589,60 @@ export default function PublisherBookManagePage() {
     setChapters((prev) => prev.filter((c) => c.id !== chapterId));
   }
 
+  async function moveChapter(chapterId: string, direction: "up" | "down") {
+    const sorted = [...chapters].sort(
+      (a, b) => a.chapter_number - b.chapter_number
+    );
+
+    const index = sorted.findIndex((c) => c.id === chapterId);
+    if (index === -1) return;
+
+    const current = sorted[index];
+    const target = direction === "up" ? sorted[index - 1] : sorted[index + 1];
+    if (!target) return;
+
+    const currentNumber = current.chapter_number;
+    const targetNumber = target.chapter_number;
+
+    const { error: errorA } = await supabase
+      .from("chapters")
+      .update({ chapter_number: targetNumber })
+      .eq("id", current.id);
+
+    if (errorA) {
+      const msg =
+        typeof (errorA as { message?: unknown })?.message === "string"
+          ? errorA.message
+          : "Unknown Supabase error";
+      setMessage(t.errLoadChapters + msg);
+      return;
+    }
+
+    const { error: errorB } = await supabase
+      .from("chapters")
+      .update({ chapter_number: currentNumber })
+      .eq("id", target.id);
+
+    if (errorB) {
+      const msg =
+        typeof (errorB as { message?: unknown })?.message === "string"
+          ? errorB.message
+          : "Unknown Supabase error";
+      setMessage(t.errLoadChapters + msg);
+      return;
+    }
+
+    setChapters((prev) =>
+      prev
+        .map((c) => {
+          if (c.id === current.id) return { ...c, chapter_number: targetNumber };
+          if (c.id === target.id) return { ...c, chapter_number: currentNumber };
+          return c;
+        })
+        .sort((a, b) => a.chapter_number - b.chapter_number)
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen theme-soft">
@@ -614,7 +668,9 @@ export default function PublisherBookManagePage() {
   }
 
   const shownBook = displayBook ?? book;
-  const shownChapters = displayChapters;
+  const shownChapters = [...displayChapters].sort(
+    (a, b) => a.chapter_number - b.chapter_number
+  );
 
   return (
     <div className="min-h-screen theme-soft">
@@ -931,13 +987,31 @@ export default function PublisherBookManagePage() {
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => moveChapter(ch.id, "up")}
+                            className="rounded-full border border-black/10 px-3 py-1.5 text-[11px] font-medium text-stone-700 hover:bg-white/80"
+                          >
+                            ↑
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => moveChapter(ch.id, "down")}
+                            className="rounded-full border border-black/10 px-3 py-1.5 text-[11px] font-medium text-stone-700 hover:bg-white/80"
+                          >
+                            ↓
+                          </button>
+
                           <Link
                             href={`/${locale}/publisher/chapters/${ch.id}`}
                             className="rounded-full border border-black/10 px-3 py-1.5 text-[11px] font-medium text-stone-700 hover:bg-white/80"
                           >
                             {t.editChapter}
                           </Link>
+
                           <button
+                            type="button"
                             onClick={() => handleDeleteChapter(ch.id)}
                             className="rounded-full border border-red-300 px-3 py-1.5 text-[11px] font-medium text-red-700 hover:bg-red-50"
                           >
