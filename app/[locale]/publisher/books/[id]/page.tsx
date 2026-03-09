@@ -815,24 +815,24 @@ export default function PublisherBookManagePage() {
                       {t.mainGenre}
                     </label>
                     <OptionSearchSelect
-                      options={MAIN_GENRES}
-                      value={mainGenre}
-                      onChange={setMainGenre}
-                      locale={locale as PublisherLocale}
-                      multiple
-                    />
+                     label={t.mainGenre}
+                     options={MAIN_GENRES}
+                     value={mainGenre}
+                     onChange={setMainGenre}
+                     locale={locale as PublisherLocale}
+                   />                      
                   </div>
-
+ 
                   <div className="grid gap-2">
                     <label className="text-sm font-medium text-stone-700">
                       {t.subgenre}
                     </label>
                     <OptionSearchSelect
+                      label={t.subgenre}
                       options={SUBGENRES}
                       value={subgenre}
                       onChange={setSubgenre}
                       locale={locale as PublisherLocale}
-                      multiple
                     />
                   </div>
                 </div>
