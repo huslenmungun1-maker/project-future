@@ -14,7 +14,6 @@ type Chapter = {
   title: string;
   content: string;
   created_at: string;
-  updated_at?: string | null;
   status?: string | null;
 };
 
@@ -44,7 +43,6 @@ const UI = {
     title: "Title",
     content: "Content",
     createdAt: "Created",
-    updatedAt: "Updated",
     parentBook: "Parent book",
     untitled: "Untitled chapter",
     titlePlaceholder: "Chapter title",
@@ -98,9 +96,7 @@ export default function PublisherChapterEditorPage() {
 
       const { data, error } = await supabase
         .from("chapters")
-        .select(
-          "id, book_id, chapter_number, title, content, created_at, updated_at, status"
-        )
+        .select("id, book_id, chapter_number, title, content, created_at, status")
         .eq("id", chapterId)
         .maybeSingle();
 
@@ -134,7 +130,7 @@ export default function PublisherChapterEditorPage() {
     }
 
     loadChapter();
-  }, [chapterId]);
+  }, [chapterId, t.loadError, t.notFound]);
 
   async function handleSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -147,16 +143,13 @@ export default function PublisherChapterEditorPage() {
       chapter_number: Number(chapterNumber),
       title: title.trim(),
       content: content.trim(),
-      updated_at: new Date().toISOString(),
     };
 
     const { data, error } = await supabase
       .from("chapters")
       .update(payload)
       .eq("id", chapterId)
-      .select(
-        "id, book_id, chapter_number, title, content, created_at, updated_at, status"
-      )
+      .select("id, book_id, chapter_number, title, content, created_at, status")
       .maybeSingle();
 
     if (error || !data) {
@@ -188,10 +181,7 @@ export default function PublisherChapterEditorPage() {
 
     setDeleting(true);
 
-    const { error } = await supabase
-      .from("chapters")
-      .delete()
-      .eq("id", chapter.id);
+    const { error } = await supabase.from("chapters").delete().eq("id", chapter.id);
 
     if (error) {
       const msg =
@@ -278,6 +268,7 @@ export default function PublisherChapterEditorPage() {
         <div>
           <p>{t.parentBook}</p>
           <p>{book?.title}</p>
+          <p>{t.createdAt}: {formatDate(chapter.created_at, localeForDate)}</p>
         </div>
       </main>
     </div>
