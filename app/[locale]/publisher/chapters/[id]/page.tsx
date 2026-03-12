@@ -35,6 +35,7 @@ const UI = {
     saving: "Saving...",
     saved: "Chapter updated.",
     delete: "Delete chapter",
+    deleting: "Deleting...",
     deleteConfirm: "Delete this chapter? This cannot be undone.",
     deleteError: "Error deleting chapter: ",
     saveError: "Error saving chapter: ",
@@ -180,8 +181,12 @@ export default function PublisherChapterEditorPage() {
     if (!ok) return;
 
     setDeleting(true);
+    setMessage(null);
 
-    const { error } = await supabase.from("chapters").delete().eq("id", chapter.id);
+    const { error } = await supabase
+      .from("chapters")
+      .delete()
+      .eq("id", chapter.id);
 
     if (error) {
       const msg =
@@ -200,8 +205,16 @@ export default function PublisherChapterEditorPage() {
   if (loading) {
     return (
       <div className="min-h-screen theme-soft">
-        <main className="mx-auto max-w-4xl px-6 py-10">
-          <p>{t.loading}</p>
+        <main className="mx-auto w-full max-w-5xl px-6 py-10 md:px-8 md:py-12">
+          <div
+            className="rounded-3xl border p-8 shadow-sm"
+            style={{
+              borderColor: "rgba(47,47,47,0.10)",
+              background: "rgba(255,255,255,0.72)",
+            }}
+          >
+            <p className="text-sm text-stone-600">{t.loading}</p>
+          </div>
         </main>
       </div>
     );
@@ -210,8 +223,16 @@ export default function PublisherChapterEditorPage() {
   if (!chapter) {
     return (
       <div className="min-h-screen theme-soft">
-        <main className="mx-auto max-w-4xl px-6 py-10">
-          <p>{message ?? t.notFound}</p>
+        <main className="mx-auto w-full max-w-5xl px-6 py-10 md:px-8 md:py-12">
+          <div
+            className="rounded-3xl border p-8 shadow-sm"
+            style={{
+              borderColor: "rgba(47,47,47,0.10)",
+              background: "rgba(255,255,255,0.72)",
+            }}
+          >
+            <p className="text-sm text-red-600">{message ?? t.notFound}</p>
+          </div>
         </main>
       </div>
     );
@@ -219,56 +240,202 @@ export default function PublisherChapterEditorPage() {
 
   return (
     <div className="min-h-screen theme-soft">
-      <main className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-        <Link
-          href={`/${locale}/publisher/books/${chapter.book_id}`}
-          className="text-sm"
-        >
-          ← {t.backToBook}
-        </Link>
-
-        {message && <p>{message}</p>}
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <input
-            type="number"
-            value={chapterNumber}
-            onChange={(e) =>
-              setChapterNumber(
-                e.target.value === "" ? "" : Number(e.target.value)
-              )
-            }
-          />
-
-          <input
-            type="text"
-            value={title}
-            placeholder={t.titlePlaceholder}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-
-          <textarea
-            rows={12}
-            value={content}
-            placeholder={t.contentPlaceholder}
-            onChange={(e) => setContent(e.target.value)}
-          />
-
-          <button disabled={saving}>{saving ? t.saving : t.save}</button>
-
-          <button
-            type="button"
-            disabled={saving || deleting}
-            onClick={handleDelete}
+      <main className="mx-auto w-full max-w-5xl px-6 py-10 md:px-8 md:py-12">
+        <div className="mb-6">
+          <Link
+            href={`/${locale}/publisher/books/${chapter.book_id}`}
+            className="inline-flex items-center text-sm font-medium text-stone-700 hover:text-stone-950"
           >
-            {t.delete}
-          </button>
-        </form>
+            ← {t.backToBook}
+          </Link>
+        </div>
 
-        <div>
-          <p>{t.parentBook}</p>
-          <p>{book?.title}</p>
-          <p>{t.createdAt}: {formatDate(chapter.created_at, localeForDate)}</p>
+        <section className="mb-8 space-y-3">
+          <div
+            className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide text-stone-700"
+            style={{
+              borderColor: "rgba(47,47,47,0.10)",
+              background: "rgba(255,255,255,0.70)",
+            }}
+          >
+            {t.eyebrow}
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-stone-900 md:text-4xl">
+              {title.trim() || t.untitled}
+            </h1>
+            <p className="max-w-2xl text-sm leading-6 text-stone-600 md:text-base">
+              {t.pageSubtitle}
+            </p>
+          </div>
+        </section>
+
+        {message && (
+          <div
+            className="mb-6 rounded-2xl border px-4 py-3 text-sm"
+            style={{
+              borderColor: message === t.saved ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.20)",
+              background:
+                message === t.saved ? "rgba(240,253,244,0.90)" : "rgba(254,242,242,0.90)",
+              color: message === t.saved ? "rgb(21,128,61)" : "rgb(185,28,28)",
+            }}
+          >
+            {message}
+          </div>
+        )}
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section
+            className="rounded-3xl border p-6 shadow-sm md:p-8"
+            style={{
+              borderColor: "rgba(47,47,47,0.10)",
+              background: "rgba(255,255,255,0.78)",
+            }}
+          >
+            <form onSubmit={handleSave} className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="chapterNumber"
+                    className="block text-sm font-medium text-stone-700"
+                  >
+                    {t.chapterNumber}
+                  </label>
+                  <input
+                    id="chapterNumber"
+                    type="number"
+                    min={1}
+                    value={chapterNumber}
+                    onChange={(e) =>
+                      setChapterNumber(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                    className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:ring-2"
+                    style={{
+                      borderColor: "rgba(47,47,47,0.12)",
+                      background: "rgba(255,255,255,0.94)",
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-stone-700"
+                  >
+                    {t.title}
+                  </label>
+                  <input
+                    id="title"
+                    type="text"
+                    value={title}
+                    placeholder={t.titlePlaceholder}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:ring-2"
+                    style={{
+                      borderColor: "rgba(47,47,47,0.12)",
+                      background: "rgba(255,255,255,0.94)",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="content"
+                  className="block text-sm font-medium text-stone-700"
+                >
+                  {t.content}
+                </label>
+                <textarea
+                  id="content"
+                  rows={18}
+                  value={content}
+                  placeholder={t.contentPlaceholder}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[420px] w-full resize-y rounded-2xl border px-4 py-3 text-sm leading-7 outline-none transition focus:ring-2"
+                  style={{
+                    borderColor: "rgba(47,47,47,0.12)",
+                    background: "rgba(255,255,255,0.94)",
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <button
+                  type="submit"
+                  disabled={saving || deleting}
+                  className="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{
+                    background: "rgb(41,37,36)",
+                  }}
+                >
+                  {saving ? t.saving : t.save}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={saving || deleting}
+                  onClick={handleDelete}
+                  className="inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-medium text-red-700 transition disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{
+                    borderColor: "rgba(239,68,68,0.25)",
+                    background: "rgba(254,242,242,0.96)",
+                  }}
+                >
+                  {deleting ? t.deleting : t.delete}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside
+            className="rounded-3xl border p-6 shadow-sm"
+            style={{
+              borderColor: "rgba(47,47,47,0.10)",
+              background: "rgba(255,255,255,0.78)",
+            }}
+          >
+            <div className="space-y-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                  {t.parentBook}
+                </p>
+                <p className="mt-2 text-base font-medium text-stone-900">
+                  {book?.title || "—"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                  {t.createdAt}
+                </p>
+                <p className="mt-2 text-sm text-stone-700">
+                  {formatDate(chapter.created_at, localeForDate)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                  Status
+                </p>
+                <p className="mt-2 text-sm text-stone-700">
+                  {chapter.status || "draft"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                  Chapter ID
+                </p>
+                <p className="mt-2 break-all text-xs leading-6 text-stone-500">
+                  {chapter.id}
+                </p>
+              </div>
+            </div>
+          </aside>
         </div>
       </main>
     </div>
