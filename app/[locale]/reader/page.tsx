@@ -25,7 +25,8 @@ type SeriesRow = {
   title: string;
   description: string | null;
   created_at: string;
-  cover_image_url: string | null;
+  cover_url?: string | null;
+  cover_image_url?: string | null;
   language: string | null;
   published?: boolean | null;
   published_at?: string | null;
@@ -146,14 +147,16 @@ export default function ReaderHomePage() {
       const [booksRes, seriesRes] = await Promise.all([
         supabase
           .from("books")
-          .select("id, title, description, status, created_at, cover_url, views, page_count")
+          .select(
+            "id, title, description, status, created_at, cover_url, views, page_count"
+          )
           .eq("status", "published")
           .order("created_at", { ascending: false }),
 
         supabase
           .from("series")
           .select(
-            "id, title, description, created_at, cover_image_url, language, published, published_at, views"
+            "id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views"
           )
           .or("published.eq.true,published_at.not.is.null")
           .order("published_at", { ascending: false })
@@ -261,6 +264,8 @@ export default function ReaderHomePage() {
       timeStyle: "short",
     });
 
+  const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url;
+
   const setProjectGlow = () => setActiveGlow("rgba(16,185,129,0.12)");
   const setBookGlow = () => setActiveGlow("rgba(99,102,241,0.12)");
   const resetGlow = () => setActiveGlow("rgba(99,102,241,0.10)");
@@ -269,8 +274,7 @@ export default function ReaderHomePage() {
     <main
       className="min-h-screen text-slate-100 transition-all duration-500"
       style={{
-        background:
-          `radial-gradient(circle at top center, ${activeGlow}, rgba(2,6,23,0) 34%), linear-gradient(to bottom, #020617, #020617 18%, #020617 100%)`,
+        background: `radial-gradient(circle at top center, ${activeGlow}, rgba(2,6,23,0) 34%), linear-gradient(to bottom, #020617, #020617 18%, #020617 100%)`,
       }}
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12">
@@ -319,69 +323,90 @@ export default function ReaderHomePage() {
 
           {series.length > 0 && (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
-              {series.map((s) => (
-                <article
-                  key={s.id}
-                  onMouseEnter={setProjectGlow}
-                  onMouseLeave={resetGlow}
-                  className="group"
-                >
-                  <Link href={`/${locale}/reader/series/${s.id}/1`} className="block">
-                    <div
-                      className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition-all duration-500 group-hover:-translate-y-1 group-hover:rotate-[0.4deg] group-hover:border-emerald-400/60 group-hover:shadow-[0_24px_55px_rgba(16,185,129,0.16)]"
-                      style={{ aspectRatio: "2 / 3" }}
-                    >
-                      {s.cover_image_url ? (
-                        <>
-                          <img
-                            src={s.cover_image_url}
-                            alt={s.title || ""}
-                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-white/10" />
-                          <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
-                        </>
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950" />
-                      )}
+              {series.map((s) => {
+                const coverSrc = getSeriesCover(s);
 
-                      <div className="absolute inset-x-0 bottom-0 p-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="line-clamp-2 text-sm font-semibold text-white">
-                              {s.title}
-                            </h3>
-                            {s.language && (
-                              <span className="rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[10px] text-slate-200 backdrop-blur">
-                                {s.language.toUpperCase()}
-                              </span>
+                return (
+                  <article
+                    key={s.id}
+                    onMouseEnter={setProjectGlow}
+                    onMouseLeave={resetGlow}
+                    className="group"
+                  >
+                    <Link href={`/${locale}/reader/series/${s.id}/1`} className="block">
+                      <div
+                        className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition-all duration-500 group-hover:-translate-y-1 group-hover:rotate-[0.4deg] group-hover:border-emerald-400/60 group-hover:shadow-[0_24px_55px_rgba(16,185,129,0.16)]"
+                        style={{ aspectRatio: "2 / 3" }}
+                      >
+                        {coverSrc ? (
+                          <>
+                            <img
+                              src={coverSrc}
+                              alt={s.title || ""}
+                              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-white/10" />
+                            <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                          </>
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950" />
+                            <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
+                            <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10" />
+                            <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                              <div className="space-y-3">
+                                <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                                  Enkhverse
+                                </div>
+                                <div className="text-lg font-bold leading-tight text-white">
+                                  {s.title}
+                                </div>
+                                <div className="text-[11px] text-slate-300/80">
+                                  {t.noCover}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="absolute inset-x-0 bottom-0 p-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="line-clamp-2 text-sm font-semibold text-white">
+                                {s.title}
+                              </h3>
+                              {s.language && (
+                                <span className="rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[10px] text-slate-200 backdrop-blur">
+                                  {s.language.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            {s.description && (
+                              <p className="line-clamp-2 text-[11px] text-slate-200/90">
+                                {s.description}
+                              </p>
                             )}
                           </div>
-                          {s.description && (
-                            <p className="line-clamp-2 text-[11px] text-slate-200/90">
-                              {s.description}
-                            </p>
-                          )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="mt-3 space-y-2">
-                      <p className="text-[10px] text-slate-500">
-                        {t.publishedAt}: {s.published_at ? formatDate(s.published_at) : "—"}
-                      </p>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-slate-500">
-                          {(s.views ?? 0).toLocaleString()} {t.views}
-                        </span>
-                        <span className="inline-flex items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-200 transition-all duration-300 group-hover:border-emerald-300/60 group-hover:bg-emerald-400/15">
-                          {t.startReading}
-                        </span>
+                      <div className="mt-3 space-y-2">
+                        <p className="text-[10px] text-slate-500">
+                          {t.publishedAt}: {s.published_at ? formatDate(s.published_at) : "—"}
+                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-500">
+                            {(s.views ?? 0).toLocaleString()} {t.views}
+                          </span>
+                          <span className="inline-flex items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-200 transition-all duration-300 group-hover:border-emerald-300/60 group-hover:bg-emerald-400/15">
+                            {t.startReading}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </article>
-              ))}
+                    </Link>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
