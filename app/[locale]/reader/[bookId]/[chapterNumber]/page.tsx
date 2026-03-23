@@ -26,6 +26,7 @@ type SeriesRow = {
   published: boolean;
   created_at: string;
   language: string | null;
+  cover_url?: string | null;
   cover_image_url?: string | null;
   published_at?: string | null;
   views?: number | null;
@@ -139,10 +140,19 @@ export default function ReaderChapterPage() {
 
   const currentChapter = useMemo(() => {
     return (
-      displayChapters.find((c) => (c.chapter_number ?? 0) === chapterNumber) ||
-      null
+      displayChapters.find((c) => (c.chapter_number ?? 0) === chapterNumber) || null
     );
   }, [displayChapters, chapterNumber]);
+
+  const currentChapterIndex = useMemo(() => {
+    return displayChapters.findIndex((c) => (c.chapter_number ?? 0) === chapterNumber);
+  }, [displayChapters, chapterNumber]);
+
+  const prevChapter = currentChapterIndex > 0 ? displayChapters[currentChapterIndex - 1] : null;
+  const nextChapter =
+    currentChapterIndex >= 0 && currentChapterIndex < displayChapters.length - 1
+      ? displayChapters[currentChapterIndex + 1]
+      : null;
 
   const contentText = useMemo(() => {
     const text = currentChapter?.content ?? "";
@@ -185,10 +195,7 @@ export default function ReaderChapterPage() {
 
               const current = Number((data as { views?: number | null } | null)?.views ?? 0);
 
-              await supabase
-                .from("books")
-                .update({ views: current + 1 })
-                .eq("id", contentId);
+              await supabase.from("books").update({ views: current + 1 }).eq("id", contentId);
             } else {
               const { data } = await supabase
                 .from("series")
@@ -198,10 +205,7 @@ export default function ReaderChapterPage() {
 
               const current = Number((data as { views?: number | null } | null)?.views ?? 0);
 
-              await supabase
-                .from("series")
-                .update({ views: current + 1 })
-                .eq("id", contentId);
+              await supabase.from("series").update({ views: current + 1 }).eq("id", contentId);
             }
           } catch {
             // ignore view increment failure
@@ -235,8 +239,7 @@ export default function ReaderChapterPage() {
           }
 
           const contentTr = (contentTrRes?.data as TranslationRow | null) ?? null;
-          const mergedTitle =
-            contentTr?.title?.trim() ? contentTr.title : baseTitle;
+          const mergedTitle = contentTr?.title?.trim() ? contentTr.title : baseTitle;
 
           const chapterIds = baseChapters.map((c) => c.id);
           let mergedChapters = baseChapters;
@@ -330,7 +333,9 @@ export default function ReaderChapterPage() {
 
       const { data: series, error: seriesErr } = await supabase
         .from("series")
-        .select("id, title, description, published, created_at, language, cover_image_url, published_at, views")
+        .select(
+          "id, title, description, published, created_at, language, cover_url, cover_image_url, published_at, views"
+        )
         .eq("id", contentId)
         .maybeSingle();
 
@@ -351,7 +356,7 @@ export default function ReaderChapterPage() {
       setContentType("series");
       setTitle(seriesRow.title);
       setDisplayTitle(seriesRow.title);
-      setCoverUrl(seriesRow.cover_image_url || "");
+      setCoverUrl(seriesRow.cover_url || seriesRow.cover_image_url || "");
       setViews(Number(seriesRow.views ?? 0) + 1);
 
       await incrementView("series");
@@ -390,8 +395,8 @@ export default function ReaderChapterPage() {
       ? `/${locale}/reader/series/${contentId}`
       : `/${locale}/reader/${contentId}`;
 
-  const prevHref = `${basePath}/${Math.max(1, chapterNumber - 1)}`;
-  const nextHref = `${basePath}/${chapterNumber + 1}`;
+  const prevHref = prevChapter ? `${basePath}/${prevChapter.chapter_number ?? 1}` : null;
+  const nextHref = nextChapter ? `${basePath}/${nextChapter.chapter_number ?? 1}` : null;
   const homeHref = `/${locale}/reader`;
 
   if (status === "loading") {
@@ -407,7 +412,7 @@ export default function ReaderChapterPage() {
   if (status === "error") {
     return (
       <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
-        <div className="mx-auto max-w-6xl px-6 py-12 space-y-4">
+        <div className="mx-auto max-w-6xl space-y-4 px-6 py-12">
           <Link
             href={homeHref}
             className="inline-flex items-center rounded-full border border-stone-700/70 bg-black/20 px-4 py-2 text-xs text-stone-200 transition hover:border-stone-500"
@@ -487,7 +492,7 @@ export default function ReaderChapterPage() {
               </h2>
 
               <div className="space-y-2">
-                {chapters.map((ch) => {
+                {displayChapters.map((ch) => {
                   const href = `${basePath}/${ch.chapter_number ?? 1}`;
                   const active = (ch.chapter_number ?? 0) === chapterNumber;
 
@@ -553,19 +558,31 @@ export default function ReaderChapterPage() {
             </article>
 
             <div className="flex items-center justify-between gap-3">
-              <Link
-                href={prevHref}
-                className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-5 py-2.5 text-xs font-medium text-slate-200 transition hover:border-slate-500"
-              >
-                {t.prev}
-              </Link>
+              {prevHref ? (
+                <Link
+                  href={prevHref}
+                  className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-5 py-2.5 text-xs font-medium text-slate-200 transition hover:border-slate-500"
+                >
+                  {t.prev}
+                </Link>
+              ) : (
+                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-slate-800 bg-black/10 px-5 py-2.5 text-xs font-medium text-slate-500">
+                  {t.prev}
+                </span>
+              )}
 
-              <Link
-                href={nextHref}
-                className="inline-flex items-center rounded-full border border-indigo-400/40 bg-indigo-500/14 px-5 py-2.5 text-xs font-semibold text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/20"
-              >
-                {t.next}
-              </Link>
+              {nextHref ? (
+                <Link
+                  href={nextHref}
+                  className="inline-flex items-center rounded-full border border-indigo-400/40 bg-indigo-500/14 px-5 py-2.5 text-xs font-semibold text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/20"
+                >
+                  {t.next}
+                </Link>
+              ) : (
+                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-slate-800 bg-black/10 px-5 py-2.5 text-xs font-semibold text-slate-500">
+                  {t.next}
+                </span>
+              )}
             </div>
           </section>
         </div>
