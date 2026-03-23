@@ -15,6 +15,8 @@ type BookRow = {
   description: string | null;
   status: "draft" | "published";
   created_at: string;
+  cover_url?: string | null;
+  views?: number | null;
 };
 
 type SeriesRow = {
@@ -24,6 +26,9 @@ type SeriesRow = {
   published: boolean;
   created_at: string;
   language: string | null;
+  cover_image_url?: string | null;
+  published_at?: string | null;
+  views?: number | null;
 };
 
 type ChapterRow = {
@@ -32,7 +37,6 @@ type ChapterRow = {
   chapter_number: number | null;
   created_at: string;
   content: string | null;
-
   book_id?: string | null;
   series_id?: string | null;
 };
@@ -59,6 +63,7 @@ const UI_TEXT = {
     next: "Next",
     goHome: "Go to Reader home",
     noContent: "No content for this chapter.",
+    views: "views",
   },
   mn: {
     back: "← Буцах",
@@ -72,6 +77,7 @@ const UI_TEXT = {
     next: "Дараах",
     goHome: "Уншигчийн нүүр рүү",
     noContent: "Энэ бүлэгт контент алга.",
+    views: "үзэлт",
   },
   ko: {
     back: "← 뒤로",
@@ -85,6 +91,7 @@ const UI_TEXT = {
     next: "다음",
     goHome: "리더 홈으로",
     noContent: "이 챕터에 내용이 없습니다.",
+    views: "조회수",
   },
   ja: {
     back: "← 戻る",
@@ -98,6 +105,7 @@ const UI_TEXT = {
     next: "次へ",
     goHome: "リーダーホームへ",
     noContent: "このチャプターには内容がありません。",
+    views: "閲覧",
   },
 } as const;
 
@@ -113,7 +121,6 @@ export default function ReaderChapterPage() {
   const locale = safeLocale((params?.locale as string) || "en");
   const t = UI_TEXT[locale];
 
-  // keep your folder name [bookId] but treat it as contentId
   const contentId = (params?.bookId as string) || "";
   const chapterParam = (params?.chapterNumber as string) || "1";
   const chapterNumber = Number(chapterParam) || 1;
@@ -123,11 +130,10 @@ export default function ReaderChapterPage() {
 
   const [contentType, setContentType] = useState<ContentType | null>(null);
   const [title, setTitle] = useState<string>("");
+  const [coverUrl, setCoverUrl] = useState<string>("");
+  const [views, setViews] = useState<number>(0);
 
-  // originals
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
-
-  // translated display (fallback to originals)
   const [displayTitle, setDisplayTitle] = useState<string>("");
   const [displayChapters, setDisplayChapters] = useState<ChapterRow[]>([]);
 
@@ -149,6 +155,8 @@ export default function ReaderChapterPage() {
       setError(null);
       setContentType(null);
       setTitle("");
+      setCoverUrl("");
+      setViews(0);
       setDisplayTitle("");
       setChapters([]);
       setDisplayChapters([]);
@@ -159,10 +167,120 @@ export default function ReaderChapterPage() {
         return;
       }
 
-      // 1) Try BOOK first
+      const incrementView = async (type: ContentType) => {
+        try {
+          if (type === "book") {
+            await supabase.rpc("increment_book_views", { target_id: contentId });
+          } else {
+            await supabase.rpc("increment_series_views", { target_id: contentId });
+          }
+        } catch {
+          try {
+            if (type === "book") {
+              const { data } = await supabase
+                .from("books")
+                .select("views")
+                .eq("id", contentId)
+                .maybeSingle();
+
+              const current = Number((data as { views?: number | null } | null)?.views ?? 0);
+
+              await supabase
+                .from("books")
+                .update({ views: current + 1 })
+                .eq("id", contentId);
+            } else {
+              const { data } = await supabase
+                .from("series")
+                .select("views")
+                .eq("id", contentId)
+                .maybeSingle();
+
+              const current = Number((data as { views?: number | null } | null)?.views ?? 0);
+
+              await supabase
+                .from("series")
+                .update({ views: current + 1 })
+                .eq("id", contentId);
+            }
+          } catch {
+            // ignore view increment failure
+          }
+        }
+      };
+
+      const applyTranslations = async (args: {
+        locale: Locale;
+        contentType: ContentType;
+        contentId: string;
+        baseTitle: string;
+        baseChapters: ChapterRow[];
+      }) => {
+        const { locale, contentType, contentId, baseTitle, baseChapters } = args;
+
+        setDisplayTitle(baseTitle);
+        setDisplayChapters(baseChapters);
+
+        try {
+          const contentTrRes = await supabase
+            .from("content_translations")
+            .select("content_type, content_id, locale, title, description, body")
+            .eq("content_type", contentType)
+            .eq("content_id", contentId)
+            .eq("locale", locale)
+            .maybeSingle();
+
+          if (contentTrRes?.error) {
+            console.warn("Content translation load error:", contentTrRes.error);
+          }
+
+          const contentTr = (contentTrRes?.data as TranslationRow | null) ?? null;
+          const mergedTitle =
+            contentTr?.title?.trim() ? contentTr.title : baseTitle;
+
+          const chapterIds = baseChapters.map((c) => c.id);
+          let mergedChapters = baseChapters;
+
+          if (chapterIds.length > 0) {
+            const chTrRes = await supabase
+              .from("content_translations")
+              .select("content_type, content_id, locale, title, description, body")
+              .eq("content_type", "chapter")
+              .eq("locale", locale)
+              .in("content_id", chapterIds);
+
+            if (chTrRes?.error) {
+              console.warn("Chapter translations load error:", chTrRes.error);
+            } else {
+              const rows = ((chTrRes.data as TranslationRow[]) || []).filter(
+                (r) => r && r.content_id
+              );
+              const map = new Map<string, TranslationRow>();
+              for (const r of rows) map.set(r.content_id, r);
+
+              mergedChapters = baseChapters.map((ch) => {
+                const tr = map.get(ch.id);
+                return {
+                  ...ch,
+                  title: tr?.title?.trim() ? tr.title : ch.title,
+                  content: tr?.body?.trim() ? tr.body : ch.content,
+                };
+              });
+            }
+          }
+
+          setDisplayTitle(mergedTitle);
+          setDisplayChapters(mergedChapters);
+        } catch (e) {
+          console.warn("Translation lookup skipped (fallback).", e);
+          setDisplayTitle(baseTitle);
+          setDisplayChapters(baseChapters);
+        }
+      };
+
       const { data: book, error: bookErr } = await supabase
         .from("books")
-        .select("id, title, description, status, created_at")
+        .select("id, title, description, status, created_at, cover_url, views")
         .eq("id", contentId)
         .maybeSingle();
 
@@ -173,8 +291,15 @@ export default function ReaderChapterPage() {
       }
 
       if (book && (book as BookRow).status === "published") {
+        const bookRow = book as BookRow;
+
         setContentType("book");
-        setTitle((book as BookRow).title);
+        setTitle(bookRow.title);
+        setDisplayTitle(bookRow.title);
+        setCoverUrl(bookRow.cover_url || "");
+        setViews(Number(bookRow.views ?? 0) + 1);
+
+        await incrementView("book");
 
         const { data: bookCh, error: chErr } = await supabase
           .from("chapters")
@@ -191,12 +316,11 @@ export default function ReaderChapterPage() {
         const baseChapters = (bookCh as ChapterRow[]) || [];
         setChapters(baseChapters);
 
-        // ---- translations for BOOK + CHAPTERS ----
         await applyTranslations({
           locale: locale as Locale,
           contentType: "book",
           contentId,
-          baseTitle: (book as BookRow).title,
+          baseTitle: bookRow.title,
           baseChapters,
         });
 
@@ -204,10 +328,9 @@ export default function ReaderChapterPage() {
         return;
       }
 
-      // 2) Else try SERIES (project)
       const { data: series, error: seriesErr } = await supabase
         .from("series")
-        .select("id, title, description, published, created_at, language")
+        .select("id, title, description, published, created_at, language, cover_image_url, published_at, views")
         .eq("id", contentId)
         .maybeSingle();
 
@@ -223,8 +346,15 @@ export default function ReaderChapterPage() {
         return;
       }
 
+      const seriesRow = series as SeriesRow;
+
       setContentType("series");
-      setTitle((series as SeriesRow).title);
+      setTitle(seriesRow.title);
+      setDisplayTitle(seriesRow.title);
+      setCoverUrl(seriesRow.cover_image_url || "");
+      setViews(Number(seriesRow.views ?? 0) + 1);
+
+      await incrementView("series");
 
       const { data: seriesCh, error: sChErr } = await supabase
         .from("chapters")
@@ -241,113 +371,34 @@ export default function ReaderChapterPage() {
       const baseChapters = (seriesCh as ChapterRow[]) || [];
       setChapters(baseChapters);
 
-      // ---- translations for SERIES + CHAPTERS ----
       await applyTranslations({
         locale: locale as Locale,
         contentType: "series",
         contentId,
-        baseTitle: (series as SeriesRow).title,
+        baseTitle: seriesRow.title,
         baseChapters,
       });
 
       setStatus("ok");
     };
 
-    // helper inside effect to keep everything in one file
-    const applyTranslations = async (args: {
-      locale: Locale;
-      contentType: ContentType;
-      contentId: string;
-      baseTitle: string;
-      baseChapters: ChapterRow[];
-    }) => {
-      const { locale, contentType, contentId, baseTitle, baseChapters } = args;
-
-      // default fallback
-      setDisplayTitle(baseTitle);
-      setDisplayChapters(baseChapters);
-
-      // if user is on English, we can still allow fallback but keep it simple
-      // (still supports EN translations if you store them)
-      try {
-        // content translation (book/series title)
-        const contentTrRes = await supabase
-          .from("content_translations")
-          .select("content_type, content_id, locale, title, description, body")
-          .eq("content_type", contentType)
-          .eq("content_id", contentId)
-          .eq("locale", locale)
-          .maybeSingle();
-
-        if (contentTrRes?.error) {
-          console.warn("Content translation load error:", contentTrRes.error);
-        }
-
-        const contentTr = (contentTrRes?.data as TranslationRow | null) ?? null;
-        const mergedTitle =
-          contentTr?.title?.trim() ? contentTr.title : baseTitle;
-
-        // chapter translations
-        const chapterIds = baseChapters.map((c) => c.id);
-        let mergedChapters = baseChapters;
-
-        if (chapterIds.length > 0) {
-          const chTrRes = await supabase
-            .from("content_translations")
-            .select("content_type, content_id, locale, title, description, body")
-            .eq("content_type", "chapter")
-            .eq("locale", locale)
-            .in("content_id", chapterIds);
-
-          if (chTrRes?.error) {
-            console.warn("Chapter translations load error:", chTrRes.error);
-          } else {
-            const rows = ((chTrRes.data as TranslationRow[]) || []).filter(
-              (r) => r && r.content_id
-            );
-            const map = new Map<string, TranslationRow>();
-            for (const r of rows) map.set(r.content_id, r);
-
-            mergedChapters = baseChapters.map((ch) => {
-              const tr = map.get(ch.id);
-              return {
-                ...ch,
-                title: tr?.title?.trim() ? tr.title : ch.title,
-                content: tr?.body?.trim() ? tr.body : ch.content,
-              };
-            });
-          }
-        }
-
-        setDisplayTitle(mergedTitle);
-        setDisplayChapters(mergedChapters);
-      } catch (e) {
-        // content_translations table missing => fallback
-        console.warn("Translation lookup skipped (fallback).", e);
-        setDisplayTitle(baseTitle);
-        setDisplayChapters(baseChapters);
-      }
-    };
-
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentId, locale]);
+  }, [contentId, locale, t.notFound]);
 
-const basePath =
-  contentType === "series"
-    ? `/${locale}/reader/series/${contentId}`
-    : `/${locale}/reader/${contentId}`;
+  const basePath =
+    contentType === "series"
+      ? `/${locale}/reader/series/${contentId}`
+      : `/${locale}/reader/${contentId}`;
 
-const prevHref = `${basePath}/${Math.max(1, chapterNumber - 1)}`;
-const nextHref = `${basePath}/${chapterNumber + 1}`;
-const homeHref = `/${locale}/reader`;
-
+  const prevHref = `${basePath}/${Math.max(1, chapterNumber - 1)}`;
+  const nextHref = `${basePath}/${chapterNumber + 1}`;
+  const homeHref = `/${locale}/reader`;
 
   if (status === "loading") {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
-        <div className="mx-auto max-w-4xl px-6 py-10">
-          <p className="text-sm text-slate-300">{t.loading}</p>
+      <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
+        <div className="mx-auto max-w-6xl px-6 py-12">
+          <p className="text-sm text-stone-300">{t.loading}</p>
         </div>
       </main>
     );
@@ -355,11 +406,11 @@ const homeHref = `/${locale}/reader`;
 
   if (status === "error") {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
-        <div className="mx-auto max-w-4xl px-6 py-10 space-y-3">
+      <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
+        <div className="mx-auto max-w-6xl px-6 py-12 space-y-4">
           <Link
             href={homeHref}
-            className="text-xs text-slate-300 hover:text-emerald-300"
+            className="inline-flex items-center rounded-full border border-stone-700/70 bg-black/20 px-4 py-2 text-xs text-stone-200 transition hover:border-stone-500"
           >
             {t.goHome}
           </Link>
@@ -372,66 +423,151 @@ const homeHref = `/${locale}/reader`;
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <Link
-            href={homeHref}
-            className="text-xs text-slate-300 hover:text-emerald-300"
-          >
-            {t.back}
-          </Link>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.08),transparent_28%),linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100 transition-all duration-500">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="space-y-5">
+            <div className="rounded-[28px] border border-slate-800 bg-slate-950/65 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur">
+              <div
+                className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+                style={{ aspectRatio: "2 / 3" }}
+              >
+                {coverUrl ? (
+                  <>
+                    <img
+                      src={coverUrl}
+                      alt={displayTitle || title}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/20 to-white/10" />
+                    <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 via-slate-900 to-slate-950" />
+                    <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
+                    <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                      <div className="space-y-3">
+                        <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                          Enkhverse
+                        </div>
+                        <div className="text-lg font-bold leading-tight text-white">
+                          {displayTitle || title}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
 
-          <span className="text-[11px] text-slate-400">
-            {t.reader}
-            {contentType ? ` • ${contentType === "book" ? "Book" : "Project"}` : ""}
-          </span>
-        </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Link
+                    href={homeHref}
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-4 py-2 text-xs text-slate-200 transition hover:border-slate-500"
+                  >
+                    {t.back}
+                  </Link>
 
-        <header className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            {displayTitle || title}
-          </h1>
-          <p className="text-sm text-slate-300">
-            {t.chapter} {chapterNumber}
-            {currentChapter?.title ? ` · ${currentChapter.title}` : ""}
-          </p>
+                  <span className="rounded-full border border-slate-700 bg-black/20 px-3 py-1 text-[11px] text-slate-300">
+                    {views.toLocaleString()} {t.views}
+                  </span>
+                </div>
 
-          {currentChapter?.created_at && (
-            <p className="text-[11px] text-slate-500">
-              {t.createdAt}:{" "}
-              {new Date(currentChapter.created_at).toLocaleString("en-GB", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            </p>
-          )}
-        </header>
+                <p className="text-[11px] text-slate-400">
+                  {t.reader}
+                  {contentType ? ` • ${contentType === "book" ? "Book" : "Project"}` : ""}
+                </p>
+              </div>
+            </div>
 
-        <section className="rounded-2xl border border-slate-800 bg-black/30 p-5">
-          {contentText ? (
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-slate-100">
-              {contentText}
-            </pre>
-          ) : (
-            <p className="text-sm text-slate-400">{t.noContent}</p>
-          )}
-        </section>
+            <div className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-4 backdrop-blur">
+              <h2 className="mb-3 text-sm font-semibold text-white">
+                {displayTitle || title}
+              </h2>
 
-        <div className="flex items-center justify-between">
-          <Link
-            href={prevHref}
-            className="rounded-xl border border-slate-700 bg-black/30 px-4 py-2 text-xs text-slate-200 hover:border-slate-500"
-          >
-            {t.prev}
-          </Link>
+              <div className="space-y-2">
+                {chapters.map((ch) => {
+                  const href = `${basePath}/${ch.chapter_number ?? 1}`;
+                  const active = (ch.chapter_number ?? 0) === chapterNumber;
 
-          <Link
-            href={nextHref}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-black hover:bg-emerald-400"
-          >
-            {t.next}
-          </Link>
+                  return (
+                    <Link
+                      key={ch.id}
+                      href={href}
+                      className={`block rounded-2xl border px-3 py-2 text-sm transition ${
+                        active
+                          ? "border-indigo-400/60 bg-indigo-500/12 text-white"
+                          : "border-slate-800 bg-black/20 text-slate-300 hover:border-slate-600"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="truncate">
+                          {t.chapter} {ch.chapter_number ?? "—"}
+                        </span>
+                        <span className="truncate text-[11px] opacity-80">
+                          {ch.title || ""}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          <section className="space-y-6">
+            <header className="rounded-[28px] border border-slate-800 bg-slate-950/60 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-white">
+                  {displayTitle || title}
+                </h1>
+
+                <p className="text-sm text-slate-300">
+                  {t.chapter} {chapterNumber}
+                  {currentChapter?.title ? ` · ${currentChapter.title}` : ""}
+                </p>
+
+                {currentChapter?.created_at && (
+                  <p className="text-[11px] text-slate-500">
+                    {t.createdAt}:{" "}
+                    {new Date(currentChapter.created_at).toLocaleString("en-GB", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                )}
+              </div>
+            </header>
+
+            <article className="rounded-[30px] border border-stone-300/10 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] p-8 text-stone-900 shadow-[0_24px_70px_rgba(0,0,0,0.26)] md:p-12">
+              {contentText ? (
+                <div className="mx-auto max-w-3xl">
+                  <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8 text-stone-800">
+                    {contentText}
+                  </pre>
+                </div>
+              ) : (
+                <p className="text-sm text-stone-500">{t.noContent}</p>
+              )}
+            </article>
+
+            <div className="flex items-center justify-between gap-3">
+              <Link
+                href={prevHref}
+                className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-5 py-2.5 text-xs font-medium text-slate-200 transition hover:border-slate-500"
+              >
+                {t.prev}
+              </Link>
+
+              <Link
+                href={nextHref}
+                className="inline-flex items-center rounded-full border border-indigo-400/40 bg-indigo-500/14 px-5 py-2.5 text-xs font-semibold text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/20"
+              >
+                {t.next}
+              </Link>
+            </div>
+          </section>
         </div>
       </div>
     </main>
