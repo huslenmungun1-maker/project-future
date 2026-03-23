@@ -151,6 +151,7 @@ export default function ReaderHomePage() {
             "id, title, description, status, created_at, cover_url, views, page_count"
           )
           .eq("status", "published")
+          .order("views", { ascending: false })
           .order("created_at", { ascending: false }),
 
         supabase
@@ -159,6 +160,7 @@ export default function ReaderHomePage() {
             "id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views"
           )
           .or("published.eq.true,published_at.not.is.null")
+          .order("views", { ascending: false })
           .order("published_at", { ascending: false })
           .order("created_at", { ascending: false }),
       ]);
