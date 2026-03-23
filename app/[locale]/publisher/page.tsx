@@ -190,7 +190,9 @@ export default function PublisherPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
+      <div className="mx-auto max-w-6xl px-6 py-10 space-y-8">
+
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight">{t.title}</h1>
@@ -237,14 +239,12 @@ export default function PublisherPage() {
             {items.length === 0 ? (
               <p className="text-sm text-slate-400">{t.none}</p>
             ) : (
-              <ul className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+
                 {items.map((s) => {
                   const created = new Date(s.created_at).toLocaleString(
                     localeForDate,
-                    {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }
+                    { dateStyle: "medium", timeStyle: "short" }
                   );
 
                   const publishedAt = s.published_at
@@ -255,48 +255,60 @@ export default function PublisherPage() {
                     : null;
 
                   return (
-                    <li
-                      key={s.id}
-                      className="rounded-2xl border border-slate-800 bg-black/40 p-4 space-y-2 hover:border-emerald-400/60"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <h3 className="text-base font-bold text-slate-50 truncate">
-                            {s.title || "Untitled series"}
-                          </h3>
+                    <div key={s.id} className="group space-y-2">
 
-                          {s.description && (
-                            <p className="text-sm text-slate-300 line-clamp-2">
-                              {s.description}
-                            </p>
-                          )}
+                      {/* Book Cover */}
+                      <div
+                        className="relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 group-hover:scale-[1.04]"
+                        style={{ aspectRatio: "2 / 3" }}
+                      >
+                        {s.cover_image_url ? (
+                          <img
+                            src={s.cover_image_url}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-slate-800 flex items-center justify-center text-xs text-slate-400">
+                            No Cover
+                          </div>
+                        )}
+                      </div>
 
-                          <p className="mt-2 text-[11px] text-slate-500">
-                            {t.created}: {created}
-                            {publishedAt ? ` · ${t.publishedAt}: ${publishedAt}` : ""}
-                          </p>
-                        </div>
+                      {/* Info */}
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-slate-100 truncate">
+                          {s.title || "Untitled series"}
+                        </h3>
 
-                        <div className="flex shrink-0 flex-col gap-2">
+                        <p className="text-[11px] text-slate-500">
+                          {t.created}: {created}
+                          {publishedAt
+                            ? ` · ${t.publishedAt}: ${publishedAt}`
+                            : ""}
+                        </p>
+
+                        <div className="flex gap-2 text-[11px]">
                           <Link
                             href={`/${locale}/studio/series/${s.id}`}
-                            className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400 hover:text-emerald-200 text-center"
+                            className="text-slate-400 hover:text-emerald-300"
                           >
                             {t.openStudio}
                           </Link>
 
                           <Link
                             href={`/${locale}/reader/series/${s.id}/1`}
-                            className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400 hover:text-emerald-200 text-center"
+                            className="text-slate-400 hover:text-emerald-300"
                           >
                             {t.openReader}
                           </Link>
                         </div>
                       </div>
-                    </li>
+
+                    </div>
                   );
                 })}
-              </ul>
+
+              </div>
             )}
           </section>
         )}

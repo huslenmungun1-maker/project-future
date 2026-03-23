@@ -15,6 +15,9 @@ type BookRow = {
   description: string | null;
   status: BookStatus;
   created_at: string;
+  cover_url?: string | null;
+  views?: number | null;
+  page_count?: number | null;
 };
 
 type SeriesRow = {
@@ -26,6 +29,7 @@ type SeriesRow = {
   language: string | null;
   published?: boolean | null;
   published_at?: string | null;
+  views?: number | null;
 };
 
 type TranslationRow = {
@@ -50,6 +54,8 @@ const UI_TEXT = {
     startReading: "Start reading",
     createdAt: "Created",
     publishedAt: "Published",
+    views: "views",
+    noCover: "No cover",
     howItWorksTitle: "How it works",
     howItWorksBody:
       "Projects go to /reader/series/[seriesId]/1 and books go to /reader/[bookId]/1.",
@@ -67,6 +73,8 @@ const UI_TEXT = {
     startReading: "Уншиж эхлэх",
     createdAt: "Үүсгэсэн",
     publishedAt: "Нийтэлсэн",
+    views: "үзэлт",
+    noCover: "Ковергүй",
     howItWorksTitle: "Яаж ажилладаг вэ",
     howItWorksBody: "Төсөл: /reader/series/[seriesId]/1, Ном: /reader/[bookId]/1",
     backHome: "Нүүр рүү буцах",
@@ -83,6 +91,8 @@ const UI_TEXT = {
     startReading: "읽기 시작",
     createdAt: "생성일",
     publishedAt: "게시일",
+    views: "조회수",
+    noCover: "표지 없음",
     howItWorksTitle: "작동 방식",
     howItWorksBody: "프로젝트: /reader/series/[seriesId]/1, 책: /reader/[bookId]/1",
     backHome: "홈으로",
@@ -99,6 +109,8 @@ const UI_TEXT = {
     startReading: "読み始める",
     createdAt: "作成日",
     publishedAt: "公開日",
+    views: "閲覧",
+    noCover: "表紙なし",
     howItWorksTitle: "使い方",
     howItWorksBody:
       "プロジェクト: /reader/series/[seriesId]/1、 本: /reader/[bookId]/1",
@@ -116,6 +128,7 @@ export default function ReaderHomePage() {
   const [status, setStatus] = useState<Status>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
+  const [activeGlow, setActiveGlow] = useState<string>("rgba(99,102,241,0.10)");
 
   const statusMessage = useMemo(() => {
     if (status === "loading") return "";
@@ -133,14 +146,14 @@ export default function ReaderHomePage() {
       const [booksRes, seriesRes] = await Promise.all([
         supabase
           .from("books")
-          .select("id, title, description, status, created_at")
+          .select("id, title, description, status, created_at, cover_url, views, page_count")
           .eq("status", "published")
           .order("created_at", { ascending: false }),
 
         supabase
           .from("series")
           .select(
-            "id, title, description, created_at, cover_image_url, language, published, published_at"
+            "id, title, description, created_at, cover_image_url, language, published, published_at, views"
           )
           .or("published.eq.true,published_at.not.is.null")
           .order("published_at", { ascending: false })
@@ -171,9 +184,7 @@ export default function ReaderHomePage() {
           bookIds.length > 0
             ? supabase
                 .from("content_translations")
-                .select(
-                  "content_type, content_id, locale, title, description, body"
-                )
+                .select("content_type, content_id, locale, title, description, body")
                 .eq("content_type", "book")
                 .eq("locale", locale)
                 .in("content_id", bookIds)
@@ -182,9 +193,7 @@ export default function ReaderHomePage() {
           seriesIds.length > 0
             ? supabase
                 .from("content_translations")
-                .select(
-                  "content_type, content_id, locale, title, description, body"
-                )
+                .select("content_type, content_id, locale, title, description, body")
                 .eq("content_type", "series")
                 .eq("locale", locale)
                 .in("content_id", seriesIds)
@@ -252,12 +261,22 @@ export default function ReaderHomePage() {
       timeStyle: "short",
     });
 
+  const setProjectGlow = () => setActiveGlow("rgba(16,185,129,0.12)");
+  const setBookGlow = () => setActiveGlow("rgba(99,102,241,0.12)");
+  const resetGlow = () => setActiveGlow("rgba(99,102,241,0.10)");
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-12">
+    <main
+      className="min-h-screen text-slate-100 transition-all duration-500"
+      style={{
+        background:
+          `radial-gradient(circle at top center, ${activeGlow}, rgba(2,6,23,0) 34%), linear-gradient(to bottom, #020617, #020617 18%, #020617 100%)`,
+      }}
+    >
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300 transition-all duration-300">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               {t.chip}
             </span>
@@ -269,30 +288,28 @@ export default function ReaderHomePage() {
 
           <Link
             href={`/${locale}`}
-            className="mt-2 inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 hover:border-emerald-400 hover:text-emerald-200 sm:mt-0"
+            className="mt-2 inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 transition-all duration-300 hover:border-emerald-400 hover:text-emerald-200 sm:mt-0"
           >
             ← {t.backHome}
           </Link>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-300">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-300 backdrop-blur">
             <p className="mb-1 font-semibold">Supabase</p>
             {status === "loading" && <p>Loading…</p>}
             {status === "ok" && <p>{statusMessage}</p>}
-            {status === "error" && (
-              <p className="text-rose-300">{statusMessage}</p>
-            )}
+            {status === "error" && <p className="text-rose-300">{statusMessage}</p>}
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-300 md:col-span-2">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-300 backdrop-blur md:col-span-2">
             <p className="mb-1 font-semibold">{t.howItWorksTitle}</p>
             <p>{t.howItWorksBody}</p>
           </div>
         </section>
 
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-slate-100">
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
             {t.publishedProjects}
           </h2>
 
@@ -301,53 +318,76 @@ export default function ReaderHomePage() {
           )}
 
           {series.length > 0 && (
-            <ul className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
               {series.map((s) => (
-                <li
+                <article
                   key={s.id}
-                  className="rounded-xl border border-slate-800 bg-black/40 p-4 transition hover:border-emerald-400/70"
+                  onMouseEnter={setProjectGlow}
+                  onMouseLeave={resetGlow}
+                  className="group"
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-slate-50">
-                          {s.title}
-                        </h3>
-                        {s.language && (
-                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
-                            {s.language.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-
-                      {s.description && (
-                        <p className="line-clamp-2 text-xs text-slate-300">
-                          {s.description}
-                        </p>
+                  <Link href={`/${locale}/reader/series/${s.id}/1`} className="block">
+                    <div
+                      className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition-all duration-500 group-hover:-translate-y-1 group-hover:rotate-[0.4deg] group-hover:border-emerald-400/60 group-hover:shadow-[0_24px_55px_rgba(16,185,129,0.16)]"
+                      style={{ aspectRatio: "2 / 3" }}
+                    >
+                      {s.cover_image_url ? (
+                        <>
+                          <img
+                            src={s.cover_image_url}
+                            alt={s.title || ""}
+                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-white/10" />
+                          <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                        </>
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950" />
                       )}
 
-                      <p className="text-[10px] text-slate-500">
-                        {t.publishedAt}:{" "}
-                        {s.published_at ? formatDate(s.published_at) : "—"} ·{" "}
-                        {t.createdAt}: {formatDate(s.created_at)}
-                      </p>
+                      <div className="absolute inset-x-0 bottom-0 p-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="line-clamp-2 text-sm font-semibold text-white">
+                              {s.title}
+                            </h3>
+                            {s.language && (
+                              <span className="rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[10px] text-slate-200 backdrop-blur">
+                                {s.language.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          {s.description && (
+                            <p className="line-clamp-2 text-[11px] text-slate-200/90">
+                              {s.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <Link
-                      href={`/${locale}/reader/series/${s.id}/1`}
-                      className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-black hover:bg-emerald-500"
-                    >
-                      {t.startReading}
-                    </Link>
-                  </div>
-                </li>
+                    <div className="mt-3 space-y-2">
+                      <p className="text-[10px] text-slate-500">
+                        {t.publishedAt}: {s.published_at ? formatDate(s.published_at) : "—"}
+                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-500">
+                          {(s.views ?? 0).toLocaleString()} {t.views}
+                        </span>
+                        <span className="inline-flex items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-200 transition-all duration-300 group-hover:border-emerald-300/60 group-hover:bg-emerald-400/15">
+                          {t.startReading}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
         </section>
 
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-slate-100">
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
             {t.publishedBooks}
           </h2>
 
@@ -356,39 +396,81 @@ export default function ReaderHomePage() {
           )}
 
           {books.length > 0 && (
-            <ul className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
               {books.map((b) => (
-                <li
+                <article
                   key={b.id}
-                  className="rounded-xl border border-slate-800 bg-black/40 p-4 transition hover:border-indigo-400/70"
+                  onMouseEnter={setBookGlow}
+                  onMouseLeave={resetGlow}
+                  className="group"
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-semibold text-slate-50">
-                        {b.title}
-                      </h3>
-
-                      {b.description && (
-                        <p className="line-clamp-2 text-xs text-slate-300">
-                          {b.description}
-                        </p>
+                  <Link href={`/${locale}/reader/${b.id}/1`} className="block">
+                    <div
+                      className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition-all duration-500 group-hover:-translate-y-1 group-hover:-rotate-[0.4deg] group-hover:border-indigo-400/60 group-hover:shadow-[0_24px_55px_rgba(99,102,241,0.18)]"
+                      style={{ aspectRatio: "2 / 3" }}
+                    >
+                      {b.cover_url ? (
+                        <>
+                          <img
+                            src={b.cover_url}
+                            alt={b.title || ""}
+                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/15 to-white/10" />
+                          <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                        </>
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 via-slate-900 to-slate-950" />
+                          <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
+                          <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10" />
+                          <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                            <div className="space-y-3">
+                              <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                                Enkhverse
+                              </div>
+                              <div className="text-lg font-bold leading-tight text-white">
+                                {b.title}
+                              </div>
+                              <div className="text-[11px] text-slate-300/80">
+                                {t.noCover}
+                              </div>
+                            </div>
+                          </div>
+                        </>
                       )}
 
+                      <div className="absolute inset-x-0 bottom-0 p-3">
+                        <div className="space-y-1">
+                          <h3 className="line-clamp-2 text-sm font-semibold text-white">
+                            {b.title}
+                          </h3>
+                          {b.description && (
+                            <p className="line-clamp-2 text-[11px] text-slate-200/90">
+                              {b.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
                       <p className="text-[10px] text-slate-500">
                         {t.createdAt}: {formatDate(b.created_at)}
                       </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-500">
+                          {(b.views ?? 0).toLocaleString()} {t.views}
+                        </span>
+                        <span className="inline-flex items-center justify-center rounded-full border border-indigo-400/30 bg-indigo-400/10 px-3 py-1 text-[11px] font-semibold text-indigo-100 transition-all duration-300 group-hover:border-indigo-300/60 group-hover:bg-indigo-400/15">
+                          {t.startReading}
+                        </span>
+                      </div>
                     </div>
-
-                    <Link
-                      href={`/${locale}/reader/${b.id}/1`}
-                      className="inline-flex items-center justify-center rounded-lg bg-indigo-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400"
-                    >
-                      {t.startReading}
-                    </Link>
-                  </div>
-                </li>
+                  </Link>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
