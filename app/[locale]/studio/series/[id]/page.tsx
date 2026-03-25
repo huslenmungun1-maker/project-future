@@ -1,3 +1,6 @@
+Replace `app/[locale]/studio/series/[id]/page.tsx` with this:
+
+```tsx
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -79,6 +82,10 @@ const UI_TEXT = {
     published: "Published",
     confirmUnpublish: "Unpublish this project? Readers won’t see it anymore.",
     publishUpdateFailed: "Publish update failed: ",
+    titleLabel: "Title",
+    descriptionLabel: "Description",
+    titlePlaceholder: "Project title",
+    descriptionPlaceholder: "Short summary of your world...",
   },
   mn: {
     backToAllSeries: "Бүх төслүүд рүү буцах",
@@ -130,6 +137,10 @@ const UI_TEXT = {
     published: "Нийтлэгдсэн",
     confirmUnpublish: "Энэ төслийг нийтлэлээс буулгах уу? Уншигчид харахгүй.",
     publishUpdateFailed: "Нийтлэл шинэчлэлт амжилтгүй: ",
+    titleLabel: "Гарчиг",
+    descriptionLabel: "Тайлбар",
+    titlePlaceholder: "Төслийн гарчиг",
+    descriptionPlaceholder: "Өөрийн ертөнцийн товч тайлбар...",
   },
   ko: {
     backToAllSeries: "모든 프로젝트로 돌아가기",
@@ -180,6 +191,10 @@ const UI_TEXT = {
     published: "게시됨",
     confirmUnpublish: "게시를 해제할까요? 리더에서 보이지 않아요.",
     publishUpdateFailed: "게시 업데이트 실패: ",
+    titleLabel: "제목",
+    descriptionLabel: "설명",
+    titlePlaceholder: "프로젝트 제목",
+    descriptionPlaceholder: "당신의 세계를 짧게 소개해보세요...",
   },
   ja: {
     backToAllSeries: "すべてのプロジェクトに戻る",
@@ -230,6 +245,10 @@ const UI_TEXT = {
     published: "公開中",
     confirmUnpublish: "非公開にしますか？読者に表示されません。",
     publishUpdateFailed: "公開更新に失敗: ",
+    titleLabel: "タイトル",
+    descriptionLabel: "説明",
+    titlePlaceholder: "プロジェクトタイトル",
+    descriptionPlaceholder: "あなたの世界を短く紹介してください...",
   },
 } as const;
 
@@ -251,7 +270,9 @@ export default function SeriesDetailPage() {
     "";
 
   const localeRaw = (params?.locale as string) || "en";
-  const locale = (["en", "mn", "ko", "ja"].includes(localeRaw) ? localeRaw : "en") as Lang;
+  const locale = (["en", "mn", "ko", "ja"].includes(localeRaw)
+    ? localeRaw
+    : "en") as Lang;
 
   const [accessChecked, setAccessChecked] = useState(false);
   const [allowed, setAllowed] = useState(false);
@@ -622,9 +643,16 @@ export default function SeriesDetailPage() {
 
   if (!accessChecked || loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
+      <main
+        className="min-h-screen"
+        style={{
+          background:
+            "radial-gradient(circle at top, rgba(255,255,255,0.3), transparent 32%), var(--bg)",
+          color: "var(--text)",
+        }}
+      >
         <div className="mx-auto max-w-5xl px-6 py-10">
-          <p className="text-sm text-slate-300">
+          <p style={{ color: "var(--muted)" }}>
             {!accessChecked ? t.checkingAccess : t.loading}
           </p>
         </div>
@@ -638,231 +666,420 @@ export default function SeriesDetailPage() {
 
   if (!series) {
     return (
-      <main className="min-h-screen bg-black text-slate-200 p-10 space-y-3">
-        <div className="text-lg font-semibold">{t.projectNotFound}.</div>
-        {pageError && (
-          <pre className="whitespace-pre-wrap text-sm text-rose-300">{pageError}</pre>
-        )}
-        <Link
-          href={`/${locale}/studio`}
-          className="inline-block text-xs text-slate-400 hover:text-emerald-300"
-        >
-          ← {t.backToAllSeries}
-        </Link>
+      <main
+        className="min-h-screen"
+        style={{
+          background:
+            "radial-gradient(circle at top, rgba(255,255,255,0.3), transparent 32%), var(--bg)",
+          color: "var(--text)",
+        }}
+      >
+        <div className="mx-auto max-w-5xl px-6 py-10 space-y-4">
+          <div className="text-lg font-semibold">{t.projectNotFound}.</div>
+          {pageError && (
+            <pre
+              className="whitespace-pre-wrap rounded-2xl p-4 text-sm"
+              style={{
+                background: "rgba(122,46,46,0.08)",
+                border: "1px solid rgba(122,46,46,0.2)",
+                color: "var(--danger)",
+              }}
+            >
+              {pageError}
+            </pre>
+          )}
+          <Link
+            href={`/${locale}/studio`}
+            className="inline-flex items-center gap-2 text-sm transition"
+            style={{ color: "var(--muted)" }}
+          >
+            <span>←</span>
+            {t.backToAllSeries}
+          </Link>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
+    <main
+      className="min-h-screen"
+      style={{
+        background:
+          "radial-gradient(circle at top, rgba(255,255,255,0.3), transparent 32%), var(--bg)",
+        color: "var(--text)",
+      }}
+    >
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
-        <div className="flex items-center justify-between text-xs text-slate-400">
+        <div
+          className="flex flex-col gap-3 text-xs md:flex-row md:items-center md:justify-between"
+          style={{ color: "var(--muted)" }}
+        >
           <Link
             href={`/${locale}/studio`}
-            className="inline-flex items-center gap-1 hover:text-slate-100"
+            className="inline-flex items-center gap-2 transition hover:opacity-80"
           >
-            <span className="text-lg">←</span>
+            <span className="text-base">←</span>
             {t.backToAllSeries}
           </Link>
-          <Link href={`/${locale}`} className="hover:text-slate-100">
+
+          <Link href={`/${locale}`} className="transition hover:opacity-80">
             {t.homeBreadcrumb}
           </Link>
         </div>
 
-        <section className="space-y-3">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            {t.seriesDetail}
-            {series.language && (
-              <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-[10px] text-slate-300">
-                {series.language.toUpperCase()}
+        <section
+          className="rounded-[24px] p-6 md:p-8"
+          style={{
+            background: "linear-gradient(180deg, rgba(233,230,223,0.96), rgba(217,212,204,0.9))",
+            border: "1px solid rgba(47,47,47,0.1)",
+            boxShadow: "var(--shadow-soft)",
+          }}
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-medium"
+                style={{
+                  background: "rgba(255,255,255,0.45)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: "var(--text)",
+                }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ background: "var(--accent)" }}
+                />
+                {t.seriesDetail}
               </span>
-            )}
-            <span
-              className={`ml-2 rounded-full border px-2 py-0.5 text-[10px] ${
-                series.published
-                  ? "border-emerald-500/40 text-emerald-300"
-                  : "border-slate-600 text-slate-300"
-              }`}
-              title={series.published_at ? `published_at: ${series.published_at}` : undefined}
-            >
-              {series.published ? t.published : t.draft}
-            </span>
-          </span>
 
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                {series.title}
-              </h1>
-              {series.description && (
-                <p className="max-w-xl text-sm text-slate-300">{series.description}</p>
-              )}
-              <p className="mt-2 text-[11px] text-slate-500">
-                {t.createdAt}:{" "}
-                {new Date(series.created_at).toLocaleString(localeForDate, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <select
-                value={currentLang}
-                onChange={(e) => updateLanguage(e.target.value as Lang)}
-                className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-400"
-              >
-                <option value="en">English</option>
-                <option value="mn">Монгол</option>
-                <option value="ko">한국어</option>
-                <option value="ja">日本語</option>
-              </select>
-
-              <button
-                type="button"
-                onClick={togglePublish}
-                disabled={togglingPublish}
-                className={`text-[11px] px-3 py-2 rounded-xl border bg-black/40 transition ${
-                  series.published
-                    ? "border-emerald-400 text-emerald-300 hover:border-emerald-300"
-                    : "border-slate-700 text-slate-200 hover:border-emerald-400 hover:text-emerald-300"
-                } ${togglingPublish ? "opacity-60 cursor-not-allowed" : ""}`}
-                title={series.published ? t.unpublish : t.publish}
-              >
-                {togglingPublish ? "..." : series.published ? t.unpublish : t.publish}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEditingMeta((v) => !v)}
-                className="text-[11px] px-3 py-2 rounded-xl border border-slate-700 bg-black/40 text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
-              >
-                {t.editSeries}
-              </button>
-            </div>
-          </div>
-
-          {(pageError || actionMsg) && (
-            <div className="rounded-xl border border-slate-800 bg-black/30 p-3 text-xs">
-              {pageError && (
-                <pre className="whitespace-pre-wrap text-rose-300">{pageError}</pre>
-              )}
-              {actionMsg && (
-                <pre className="whitespace-pre-wrap text-emerald-200">{actionMsg}</pre>
-              )}
-            </div>
-          )}
-
-          {editingMeta && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-100">{t.editSeriesInfo}</h2>
-                <span className="text-[11px] text-slate-400">
-                  {t.idLabel}: {series.id.slice(0, 8)}…
+              {series.language && (
+                <span
+                  className="rounded-full px-3 py-1 text-[11px] font-medium"
+                  style={{
+                    background: "rgba(255,255,255,0.35)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  {series.language.toUpperCase()}
                 </span>
+              )}
+
+              <span
+                className="rounded-full px-3 py-1 text-[11px] font-medium"
+                style={{
+                  background: series.published
+                    ? "rgba(94,99,87,0.12)"
+                    : "rgba(255,255,255,0.35)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: series.published ? "var(--accent)" : "var(--muted)",
+                }}
+                title={series.published_at ? `published_at: ${series.published_at}` : undefined}
+              >
+                {series.published ? t.published : t.draft}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  {series.title}
+                </h1>
+
+                {series.description && (
+                  <p
+                    className="mt-3 max-w-2xl text-sm leading-6"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {series.description}
+                  </p>
+                )}
+
+                <p className="mt-4 text-[11px]" style={{ color: "var(--muted)" }}>
+                  {t.createdAt}:{" "}
+                  {new Date(series.created_at).toLocaleString(localeForDate, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-300">Title</label>
-                  <input
-                    className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    placeholder="Series title"
-                  />
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={currentLang}
+                  onChange={(e) => updateLanguage(e.target.value as Lang)}
+                  className="rounded-full px-4 py-2 text-xs outline-none"
+                  style={{
+                    background: "rgba(255,255,255,0.7)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <option value="en">English</option>
+                  <option value="mn">Монгол</option>
+                  <option value="ko">한국어</option>
+                  <option value="ja">日本語</option>
+                </select>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-300">Description</label>
-                  <textarea
-                    className="h-28 rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
-                    value={draftDescription}
-                    onChange={(e) => setDraftDescription(e.target.value)}
-                    placeholder="Short summary of your world..."
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={togglePublish}
+                  disabled={togglingPublish}
+                  className="rounded-full px-4 py-2 text-xs transition disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{
+                    background: series.published ? "rgba(94,99,87,0.12)" : "rgba(255,255,255,0.7)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                    color: series.published ? "var(--accent)" : "var(--text)",
+                  }}
+                  title={series.published ? t.unpublish : t.publish}
+                >
+                  {togglingPublish ? "..." : series.published ? t.unpublish : t.publish}
+                </button>
 
-                <div className="flex items-center gap-2 justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={saveMeta}
-                    disabled={savingMeta}
-                    className="text-[11px] px-3 py-2 rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {savingMeta ? t.saving : t.save}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDraftTitle(series.title);
-                      setDraftDescription(series.description ?? "");
-                      setEditingMeta(false);
-                    }}
-                    className="text-[11px] px-3 py-2 rounded-xl border border-slate-700 bg-black/40 text-slate-300 hover:border-slate-500"
-                  >
-                    {t.cancel}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingMeta((v) => !v)}
+                  className="rounded-full px-4 py-2 text-xs transition hover:opacity-85"
+                  style={{
+                    background: "var(--accent)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                    color: "#f8f7f3",
+                  }}
+                >
+                  {t.editSeries}
+                </button>
               </div>
             </div>
-          )}
+
+            {(pageError || actionMsg) && (
+              <div
+                className="rounded-2xl p-4 text-xs"
+                style={{
+                  background: "rgba(255,255,255,0.45)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                }}
+              >
+                {pageError && (
+                  <pre
+                    className="whitespace-pre-wrap"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    {pageError}
+                  </pre>
+                )}
+                {actionMsg && (
+                  <pre
+                    className="whitespace-pre-wrap"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    {actionMsg}
+                  </pre>
+                )}
+              </div>
+            )}
+
+            {editingMeta && (
+              <div
+                className="rounded-[22px] p-5"
+                style={{
+                  background: "rgba(255,255,255,0.45)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-semibold">{t.editSeriesInfo}</h2>
+                  <span className="text-[11px]" style={{ color: "var(--muted)" }}>
+                    {t.idLabel}: {series.id.slice(0, 8)}…
+                  </span>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs" style={{ color: "var(--muted)" }}>
+                      {t.titleLabel}
+                    </label>
+                    <input
+                      className="rounded-2xl px-4 py-3 text-sm outline-none"
+                      style={{
+                        background: "rgba(255,255,255,0.8)",
+                        border: "1px solid rgba(47,47,47,0.12)",
+                        color: "var(--text)",
+                      }}
+                      value={draftTitle}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      placeholder={t.titlePlaceholder}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs" style={{ color: "var(--muted)" }}>
+                      {t.descriptionLabel}
+                    </label>
+                    <textarea
+                      className="h-28 rounded-2xl px-4 py-3 text-sm outline-none"
+                      style={{
+                        background: "rgba(255,255,255,0.8)",
+                        border: "1px solid rgba(47,47,47,0.12)",
+                        color: "var(--text)",
+                      }}
+                      value={draftDescription}
+                      onChange={(e) => setDraftDescription(e.target.value)}
+                      placeholder={t.descriptionPlaceholder}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={saveMeta}
+                      disabled={savingMeta}
+                      className="rounded-full px-4 py-2 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-60"
+                      style={{
+                        background: "var(--accent)",
+                        border: "1px solid rgba(47,47,47,0.12)",
+                        color: "#f8f7f3",
+                      }}
+                    >
+                      {savingMeta ? t.saving : t.save}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftTitle(series.title);
+                        setDraftDescription(series.description ?? "");
+                        setEditingMeta(false);
+                      }}
+                      className="rounded-full px-4 py-2 text-[11px] transition hover:opacity-85"
+                      style={{
+                        background: "rgba(255,255,255,0.75)",
+                        border: "1px solid rgba(47,47,47,0.12)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      {t.cancel}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
-        <section className="grid gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-100">{t.seriesCover}</h2>
+        <section className="grid gap-6 md:grid-cols-[300px_minmax(0,1fr)]">
+          <div
+            className="rounded-[24px] p-5"
+            style={{
+              background: "var(--panel)",
+              border: "1px solid rgba(47,47,47,0.12)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <h2 className="mb-3 text-sm font-semibold">{t.seriesCover}</h2>
             <CoverImageUploader seriesId={series.id} initialUrl={series.cover_image_url} />
           </div>
-          <div className="self-center text-xs text-slate-400">
-            <p>{t.coverHelp}</p>
+
+          <div
+            className="rounded-[24px] p-5 text-sm leading-6"
+            style={{
+              background: "rgba(233,230,223,0.72)",
+              border: "1px solid rgba(47,47,47,0.12)",
+              color: "var(--muted)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            {t.coverHelp}
           </div>
         </section>
 
-        <section className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)]">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-100">{t.addChapter}</h2>
+        <section className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+          <div
+            className="rounded-[24px] p-5"
+            style={{
+              background: "var(--panel)",
+              border: "1px solid rgba(47,47,47,0.12)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <h2 className="text-sm font-semibold">{t.addChapter}</h2>
 
-            <input
-              placeholder={t.chapterTitle}
-              value={chapterTitle}
-              onChange={(e) => setChapterTitle(e.target.value)}
-              className="w-full rounded-xl bg-black/40 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-            />
+            <div className="mt-4 space-y-3">
+              <input
+                placeholder={t.chapterTitle}
+                value={chapterTitle}
+                onChange={(e) => setChapterTitle(e.target.value)}
+                className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: "var(--text)",
+                }}
+              />
 
-            <input
-              placeholder={t.chapterNumber}
-              value={chapterNumber}
-              onChange={(e) => setChapterNumber(e.target.value)}
-              className="w-full rounded-xl bg-black/40 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-            />
+              <input
+                placeholder={t.chapterNumber}
+                value={chapterNumber}
+                onChange={(e) => setChapterNumber(e.target.value)}
+                className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: "var(--text)",
+                }}
+              />
 
-            <textarea
-              placeholder={t.contentScript}
-              value={chapterContent}
-              onChange={(e) => setChapterContent(e.target.value)}
-              className="w-full rounded-xl bg-black/40 border border-slate-700 px-3 py-2 text-sm h-32 outline-none focus:border-emerald-400"
-            />
+              <textarea
+                placeholder={t.contentScript}
+                value={chapterContent}
+                onChange={(e) => setChapterContent(e.target.value)}
+                className="h-36 w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: "var(--text)",
+                }}
+              />
 
-            {createError && <p className="text-xs text-rose-300">⚠️ {createError}</p>}
+              {createError && (
+                <p className="text-xs" style={{ color: "var(--danger)" }}>
+                  ⚠️ {createError}
+                </p>
+              )}
 
-            <button
-              onClick={createChapter}
-              disabled={creating}
-              className="w-full rounded-xl bg-emerald-500 py-2 text-black font-semibold hover:bg-emerald-400 disabled:opacity-60"
-              type="button"
-            >
-              {creating ? t.create : t.addChapter}
-            </button>
+              <button
+                onClick={createChapter}
+                disabled={creating}
+                className="w-full rounded-full px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
+                style={{
+                  background: "var(--accent)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: "#f8f7f3",
+                }}
+                type="button"
+              >
+                {creating ? t.create : t.addChapter}
+              </button>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-100">{t.chaptersTitle}</h2>
+          <div
+            className="rounded-[24px] p-5"
+            style={{
+              background: "var(--panel)",
+              border: "1px solid rgba(47,47,47,0.12)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">{t.chaptersTitle}</h2>
               <button
                 onClick={reloadAll}
-                className="text-xs rounded-xl border border-slate-700 bg-black/40 px-3 py-2 hover:border-slate-500"
+                className="rounded-full px-4 py-2 text-xs transition hover:opacity-85"
+                style={{
+                  background: "rgba(255,255,255,0.75)",
+                  border: "1px solid rgba(47,47,47,0.12)",
+                  color: "var(--text)",
+                }}
                 type="button"
               >
                 {t.retry}
@@ -870,28 +1087,37 @@ export default function SeriesDetailPage() {
             </div>
 
             {chapters.length === 0 && (
-              <p className="text-xs text-slate-400 mt-2">{t.noChapters}</p>
+              <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+                {t.noChapters}
+              </p>
             )}
 
-            <ul className="mt-3 flex flex-col gap-3">
+            <ul className="mt-4 flex flex-col gap-3">
               {chapters.map((c) => (
                 <li
                   key={c.id}
-                  className="rounded-xl border border-slate-800 bg-black/30 hover:border-emerald-400/60"
+                  className="rounded-[20px] transition"
+                  style={{
+                    background: "rgba(255,255,255,0.45)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                  }}
                 >
-                  <div className="flex items-start justify-between gap-3 px-4 py-3">
-                    <Link href={`/chapters/${c.id}`} className="block flex-1">
-                      <p className="font-semibold text-slate-50 text-sm">
+                  <div className="flex items-start justify-between gap-3 px-4 py-4">
+                    <Link href={`/chapters/${c.id}`} className="block min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-[var(--text)]">
                         #{c.chapter_number} · {c.title}
                       </p>
 
                       {c.content?.trim() && (
-                        <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
+                        <p
+                          className="mt-1 line-clamp-2 text-[12px]"
+                          style={{ color: "var(--muted)" }}
+                        >
                           {c.content}
                         </p>
                       )}
 
-                      <p className="mt-1 text-[10px] text-slate-500">
+                      <p className="mt-2 text-[10px]" style={{ color: "var(--muted)" }}>
                         {t.createdAt}:{" "}
                         {new Date(c.created_at).toLocaleString(localeForDate, {
                           dateStyle: "medium",
@@ -903,7 +1129,8 @@ export default function SeriesDetailPage() {
                     <button
                       type="button"
                       onClick={() => deleteChapter(c.id)}
-                      className="ml-3 text-[11px] text-rose-400 hover:text-rose-300"
+                      className="ml-3 text-[11px] transition hover:opacity-80"
+                      style={{ color: "var(--danger)" }}
                       title={t.delete}
                     >
                       {t.delete}
@@ -918,3 +1145,4 @@ export default function SeriesDetailPage() {
     </main>
   );
 }
+```
