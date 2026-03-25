@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
@@ -36,6 +36,9 @@ const UI_TEXT = {
     created: "Created",
     publishedAt: "Published",
     login: "Go to login",
+    noCover: "No cover",
+    untitled: "Untitled series",
+    items: "items",
   },
   mn: {
     title: "Publisher",
@@ -52,6 +55,9 @@ const UI_TEXT = {
     created: "Үүсгэсэн",
     publishedAt: "Нийтэлсэн",
     login: "Нэвтрэх",
+    noCover: "Ковергүй",
+    untitled: "Нэргүй цуврал",
+    items: "ширхэг",
   },
   ko: {
     title: "Publisher",
@@ -68,6 +74,9 @@ const UI_TEXT = {
     created: "생성일",
     publishedAt: "발행일",
     login: "로그인",
+    noCover: "표지 없음",
+    untitled: "제목 없는 시리즈",
+    items: "개",
   },
   ja: {
     title: "Publisher",
@@ -84,6 +93,9 @@ const UI_TEXT = {
     created: "作成日",
     publishedAt: "公開日",
     login: "ログインへ",
+    noCover: "表紙なし",
+    untitled: "無題のシリーズ",
+    items: "件",
   },
 } as const;
 
@@ -95,7 +107,6 @@ function normalizeLocale(raw: string): SupportedLocale {
 
 export default function PublisherPage() {
   const params = useParams();
-  const router = useRouter();
   const locale = normalizeLocale((params?.locale as string) || "en");
   const t = UI_TEXT[locale];
 
@@ -189,36 +200,89 @@ export default function PublisherPage() {
   }, [locale, t.error, t.notLoggedIn]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-100">
+    <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-10 space-y-8">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-3">
+            <span
+              className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.72)",
+                color: "var(--muted)",
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--accent)" }}
+              />
+              {t.title}
+            </span>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-extrabold tracking-tight">{t.title}</h1>
-            <p className="text-sm text-slate-300 max-w-2xl">{t.subtitle}</p>
+            <div className="space-y-2">
+              <h1
+                className="text-3xl font-bold tracking-tight sm:text-4xl"
+                style={{ color: "var(--text)" }}
+              >
+                {t.title}
+              </h1>
+              <p className="max-w-2xl text-sm" style={{ color: "var(--muted)" }}>
+                {t.subtitle}
+              </p>
+            </div>
           </div>
 
           <Link
             href={`/${locale}`}
-            className="text-xs text-slate-400 hover:text-emerald-200"
+            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-medium transition"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(255,255,255,0.55)",
+              color: "var(--text)",
+            }}
           >
             ← {t.backHome}
           </Link>
-        </div>
+        </header>
 
         {status === "loading" && (
-          <p className="text-sm text-slate-300">{t.loading}</p>
+          <div
+            className="rounded-[24px] border p-5"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(233,230,223,0.72)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              {t.loading}
+            </p>
+          </div>
         )}
 
         {status === "error" && (
-          <div className="rounded-2xl border border-slate-800 bg-black/40 p-4">
-            <p className="text-sm text-rose-300">{message}</p>
+          <div
+            className="rounded-[24px] border p-5"
+            style={{
+              borderColor: "rgba(122,46,46,0.2)",
+              background: "rgba(233,230,223,0.72)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--danger)" }}>
+              {message}
+            </p>
+
             {!isAuthed && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <Link
                   href={`/${locale}/login`}
-                  className="inline-flex rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400 hover:text-emerald-200"
+                  className="inline-flex rounded-full border px-4 py-2 text-xs font-medium transition"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "rgba(255,255,255,0.55)",
+                    color: "var(--text)",
+                  }}
                 >
                   {t.login}
                 </Link>
@@ -228,23 +292,39 @@ export default function PublisherPage() {
         )}
 
         {status === "ok" && (
-          <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-100">
+          <section
+            className="rounded-[28px] border p-5 space-y-5"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(233,230,223,0.72)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <h2
+                className="text-sm font-semibold uppercase tracking-[0.18em]"
+                style={{ color: "var(--muted)" }}
+              >
                 {t.publishedOnly}
               </h2>
-              <span className="text-xs text-slate-400">{items.length} items</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>
+                {items.length} {t.items}
+              </span>
             </div>
 
             {items.length === 0 ? (
-              <p className="text-sm text-slate-400">{t.none}</p>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {t.none}
+              </p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-
+              <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
                 {items.map((s) => {
                   const created = new Date(s.created_at).toLocaleString(
                     localeForDate,
-                    { dateStyle: "medium", timeStyle: "short" }
+                    {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }
                   );
 
                   const publishedAt = s.published_at
@@ -255,59 +335,117 @@ export default function PublisherPage() {
                     : null;
 
                   return (
-                    <div key={s.id} className="group space-y-2">
+                    <article key={s.id} className="group">
+                      <div className="block">
+                        <div
+                          className="relative overflow-hidden rounded-[24px] border transition duration-300 group-hover:-translate-y-1"
+                          style={{
+                            aspectRatio: "2 / 3",
+                            borderColor: "var(--border)",
+                            background:
+                              "linear-gradient(145deg, rgba(233,230,223,0.94), rgba(217,212,204,0.88))",
+                            boxShadow: "var(--shadow-soft)",
+                          }}
+                        >
+                          {s.cover_image_url ? (
+                            <>
+                              <img
+                                src={s.cover_image_url}
+                                alt={s.title || t.untitled}
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/36 via-transparent to-white/10" />
+                              <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
+                            </>
+                          ) : (
+                            <>
+                              <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(94,99,87,0.24),rgba(217,212,204,0.9))]" />
+                              <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/35 to-transparent" />
+                              <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                                <div className="space-y-3">
+                                  <div
+                                    className="text-[10px] uppercase tracking-[0.28em]"
+                                    style={{ color: "var(--muted)" }}
+                                  >
+                                    Enkhverse
+                                  </div>
+                                  <div
+                                    className="text-lg font-bold leading-tight"
+                                    style={{ color: "var(--text)" }}
+                                  >
+                                    {s.title || t.untitled}
+                                  </div>
+                                  <div
+                                    className="text-[11px]"
+                                    style={{ color: "var(--muted)" }}
+                                  >
+                                    {t.noCover}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
 
-                      {/* Book Cover */}
-                      <div
-                        className="relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 group-hover:scale-[1.04]"
-                        style={{ aspectRatio: "2 / 3" }}
-                      >
-                        {s.cover_image_url ? (
-                          <img
-                            src={s.cover_image_url}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-slate-800 flex items-center justify-center text-xs text-slate-400">
-                            No Cover
+                        <div className="mt-3 space-y-2">
+                          <div className="space-y-1">
+                            <h3
+                              className="line-clamp-2 text-sm font-semibold"
+                              style={{ color: "var(--text)" }}
+                            >
+                              {s.title || t.untitled}
+                            </h3>
+
+                            {s.description ? (
+                              <p
+                                className="line-clamp-2 text-[11px]"
+                                style={{ color: "var(--muted)" }}
+                              >
+                                {s.description}
+                              </p>
+                            ) : null}
                           </div>
-                        )}
-                      </div>
 
-                      {/* Info */}
-                      <div className="space-y-1">
-                        <h3 className="text-sm font-bold text-slate-100 truncate">
-                          {s.title || "Untitled series"}
-                        </h3>
+                          <div className="space-y-1">
+                            <p className="text-[10px]" style={{ color: "var(--muted)" }}>
+                              {t.created}: {created}
+                            </p>
 
-                        <p className="text-[11px] text-slate-500">
-                          {t.created}: {created}
-                          {publishedAt
-                            ? ` · ${t.publishedAt}: ${publishedAt}`
-                            : ""}
-                        </p>
+                            <p className="text-[10px]" style={{ color: "var(--muted)" }}>
+                              {t.publishedAt}: {publishedAt || "—"}
+                            </p>
+                          </div>
 
-                        <div className="flex gap-2 text-[11px]">
-                          <Link
-                            href={`/${locale}/studio/series/${s.id}`}
-                            className="text-slate-400 hover:text-emerald-300"
-                          >
-                            {t.openStudio}
-                          </Link>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <Link
+                              href={`/${locale}/studio/series/${s.id}`}
+                              className="inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold transition"
+                              style={{
+                                borderColor: "rgba(94,99,87,0.28)",
+                                background: "rgba(94,99,87,0.14)",
+                                color: "var(--text)",
+                              }}
+                            >
+                              {t.openStudio}
+                            </Link>
 
-                          <Link
-                            href={`/${locale}/reader/series/${s.id}/1`}
-                            className="text-slate-400 hover:text-emerald-300"
-                          >
-                            {t.openReader}
-                          </Link>
+                            <Link
+                              href={`/${locale}/reader/series/${s.id}/1`}
+                              className="inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold transition"
+                              style={{
+                                borderColor: "rgba(94,99,87,0.28)",
+                                background: "rgba(94,99,87,0.14)",
+                                color: "var(--text)",
+                              }}
+                            >
+                              {t.openReader}
+                            </Link>
+                          </div>
                         </div>
                       </div>
-
-                    </div>
+                    </article>
                   );
                 })}
-
               </div>
             )}
           </section>
