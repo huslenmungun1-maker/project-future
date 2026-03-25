@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
@@ -49,55 +49,59 @@ type ChapterTranslationRow = {
 const UI_TEXT = {
   en: {
     backToReader: "Back to Reader",
-    chip: "Reader • Project",
+    chip: "Reader · Series",
     loading: "Loading…",
-    notFound: "Project or chapter not found.",
-    supabaseError: "Could not load project/chapter.",
+    notFound: "Series or chapter not found.",
+    supabaseError: "Could not load series/chapter.",
     chapter: "Chapter",
     next: "Next",
     prev: "Prev",
     createdAt: "Created",
     noContent: "No content yet for this chapter.",
     views: "views",
+    untitledSeries: "Untitled series",
   },
   mn: {
     backToReader: "Уншигч руу буцах",
-    chip: "Уншигч • Төсөл",
+    chip: "Уншигч · Цуврал",
     loading: "Ачаалж байна…",
-    notFound: "Төсөл эсвэл бүлэг олдсонгүй.",
-    supabaseError: "Төсөл/бүлгийг ачаалж чадсангүй.",
+    notFound: "Цуврал эсвэл бүлэг олдсонгүй.",
+    supabaseError: "Цуврал/бүлгийг ачаалж чадсангүй.",
     chapter: "Бүлэг",
     next: "Дараах",
     prev: "Өмнөх",
     createdAt: "Үүсгэсэн",
     noContent: "Энэ бүлэгт одоогоор контент алга.",
     views: "үзэлт",
+    untitledSeries: "Нэргүй цуврал",
   },
   ko: {
     backToReader: "리더로 돌아가기",
-    chip: "리더 • 프로젝트",
+    chip: "리더 · 시리즈",
     loading: "불러오는 중…",
-    notFound: "프로젝트 또는 챕터를 찾을 수 없습니다.",
-    supabaseError: "프로젝트/챕터를 불러올 수 없습니다.",
+    notFound: "시리즈 또는 챕터를 찾을 수 없습니다.",
+    supabaseError: "시리즈/챕터를 불러올 수 없습니다.",
     chapter: "챕터",
     next: "다음",
     prev: "이전",
     createdAt: "생성일",
     noContent: "이 챕터에는 아직 내용이 없습니다.",
     views: "조회수",
+    untitledSeries: "제목 없는 시리즈",
   },
   ja: {
     backToReader: "リーダーへ戻る",
-    chip: "リーダー • プロジェクト",
+    chip: "リーダー · シリーズ",
     loading: "読み込み中…",
-    notFound: "プロジェクトまたはチャプターが見つかりません。",
-    supabaseError: "プロジェクト/チャプターを読み込めません。",
+    notFound: "シリーズまたはチャプターが見つかりません。",
+    supabaseError: "シリーズ/チャプターを読み込めません。",
     chapter: "チャプター",
     next: "次へ",
     prev: "前へ",
     createdAt: "作成日",
     noContent: "このチャプターにはまだ内容がありません。",
     views: "閲覧",
+    untitledSeries: "無題のシリーズ",
   },
 } as const;
 
@@ -164,12 +168,11 @@ async function fetchChapterTranslations(
 }
 
 export default function ReaderSeriesChapterPage() {
-  const params = useParams() as Record<string, string>;
-  const pathname = usePathname();
+  const params = useParams() as Record<string, string | string[]>;
 
-  const locale = normalizeLocale((pathname.split("/")[1] || "en") as string);
-  const seriesId = params.seriesId || "";
-  const chapterNumber = Number(params.chapterNumber || "1") || 1;
+  const locale = normalizeLocale(String(params.locale || "en"));
+  const seriesId = String(params.seriesId || "");
+  const chapterNumber = Number(String(params.chapter || "1")) || 1;
 
   const t = UI_TEXT[locale];
 
@@ -322,9 +325,11 @@ export default function ReaderSeriesChapterPage() {
 
   if (status === "loading") {
     return (
-      <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
+      <main className="min-h-screen theme-soft">
         <div className="mx-auto max-w-6xl px-6 py-12">
-          <p className="text-sm text-stone-300">{t.loading}</p>
+          <p style={{ color: "var(--muted)" }} className="text-sm">
+            {t.loading}
+          </p>
         </div>
       </main>
     );
@@ -332,21 +337,38 @@ export default function ReaderSeriesChapterPage() {
 
   if (status === "error" || !seriesBase || !currentChapter) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
+      <main className="min-h-screen theme-soft">
         <div className="mx-auto max-w-6xl space-y-4 px-6 py-12">
           <Link
             href={homeHref}
-            className="inline-flex items-center rounded-full border border-stone-700/70 bg-black/20 px-4 py-2 text-xs text-stone-200 transition hover:border-stone-500"
+            className="inline-flex items-center rounded-full border px-4 py-2 text-xs font-medium transition"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(233,230,223,0.72)",
+              color: "var(--text)",
+            }}
           >
             {t.backToReader}
           </Link>
-          <p className="text-sm text-rose-300">{message || t.notFound}</p>
+
+          <div
+            className="rounded-[24px] border p-5"
+            style={{
+              borderColor: "rgba(122,46,46,0.2)",
+              background: "rgba(233,230,223,0.72)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--danger)" }}>
+              {message || t.notFound}
+            </p>
+          </div>
         </div>
       </main>
     );
   }
 
-  const seriesTitle = seriesTr?.title || seriesBase.title || "Untitled series";
+  const seriesTitle = seriesTr?.title || seriesBase.title || t.untitledSeries;
   const seriesDesc = seriesTr?.description || seriesBase.description || null;
   const coverSrc = seriesBase.cover_url || seriesBase.cover_image_url || "";
 
@@ -361,14 +383,26 @@ export default function ReaderSeriesChapterPage() {
     "";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_28%),linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100 transition-all duration-500">
+    <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="space-y-5">
-            <div className="rounded-[28px] border border-slate-800 bg-slate-950/65 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur">
+            <div
+              className="rounded-[28px] border p-4"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.78)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
               <div
-                className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
-                style={{ aspectRatio: "2 / 3" }}
+                className="relative overflow-hidden rounded-[22px] border"
+                style={{
+                  aspectRatio: "2 / 3",
+                  borderColor: "rgba(47,47,47,0.12)",
+                  background:
+                    "linear-gradient(145deg, rgba(94,99,87,0.18), rgba(217,212,204,0.8))",
+                }}
               >
                 {coverSrc ? (
                   <>
@@ -377,19 +411,25 @@ export default function ReaderSeriesChapterPage() {
                       alt={seriesTitle}
                       className="h-full w-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/20 to-white/10" />
-                    <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-white/10" />
+                    <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
                   </>
                 ) : (
                   <>
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/25 via-slate-900 to-slate-950" />
-                    <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
+                    <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(94,99,87,0.24),rgba(217,212,204,0.9))]" />
+                    <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/35 to-transparent" />
                     <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                       <div className="space-y-3">
-                        <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                        <div
+                          className="text-[10px] uppercase tracking-[0.28em]"
+                          style={{ color: "var(--muted)" }}
+                        >
                           Enkhverse
                         </div>
-                        <div className="text-lg font-bold leading-tight text-white">
+                        <div
+                          className="text-lg font-bold leading-tight"
+                          style={{ color: "var(--text)" }}
+                        >
                           {seriesTitle}
                         </div>
                       </div>
@@ -402,32 +442,59 @@ export default function ReaderSeriesChapterPage() {
                 <div className="flex items-center justify-between gap-3">
                   <Link
                     href={homeHref}
-                    className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-4 py-2 text-xs text-slate-200 transition hover:border-slate-500"
+                    className="inline-flex items-center rounded-full border px-4 py-2 text-xs font-medium transition"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: "rgba(255,255,255,0.55)",
+                      color: "var(--text)",
+                    }}
                   >
                     ← {t.backToReader}
                   </Link>
 
-                  <span className="rounded-full border border-slate-700 bg-black/20 px-3 py-1 text-[11px] text-slate-300">
+                  <span
+                    className="rounded-full border px-3 py-1 text-[11px]"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: "rgba(255,255,255,0.5)",
+                      color: "var(--muted)",
+                    }}
+                  >
                     {views.toLocaleString()} {t.views}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-400">{t.chip}</p>
+                <p className="text-[11px]" style={{ color: "var(--muted)" }}>
+                  {t.chip}
+                </p>
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-4 backdrop-blur">
-              <h2 className="mb-2 text-sm font-semibold text-white">{seriesTitle}</h2>
+            <div
+              className="rounded-[24px] border p-4"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.72)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
+              <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text)" }}>
+                {seriesTitle}
+              </h2>
 
               {seriesDesc && (
-                <p className="mb-4 line-clamp-3 text-[12px] text-slate-400">{seriesDesc}</p>
+                <p
+                  className="mb-4 line-clamp-3 text-[12px]"
+                  style={{ color: "var(--muted)" }}
+                >
+                  {seriesDesc}
+                </p>
               )}
 
               <div className="space-y-2">
                 {chapters.map((ch) => {
                   const tr = chapterTranslations.get(ch.id);
-                  const itemTitle =
-                    tr?.title || ch.title || `${t.chapter} ${ch.chapter_number}`;
+                  const itemTitle = tr?.title || ch.title || `${t.chapter} ${ch.chapter_number}`;
                   const href = `${basePath}/${ch.chapter_number}`;
                   const active = ch.chapter_number === chapterNumber;
 
@@ -435,17 +502,21 @@ export default function ReaderSeriesChapterPage() {
                     <Link
                       key={ch.id}
                       href={href}
-                      className={`block rounded-2xl border px-3 py-2 text-sm transition ${
-                        active
-                          ? "border-emerald-400/60 bg-emerald-500/12 text-white"
-                          : "border-slate-800 bg-black/20 text-slate-300 hover:border-slate-600"
-                      }`}
+                      className="block rounded-2xl border px-3 py-2 text-sm transition"
+                      style={{
+                        borderColor: active ? "rgba(94,99,87,0.32)" : "var(--border)",
+                        background: active ? "rgba(94,99,87,0.12)" : "rgba(255,255,255,0.48)",
+                        color: "var(--text)",
+                      }}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="truncate">
                           {t.chapter} {ch.chapter_number}
                         </span>
-                        <span className="truncate text-[11px] opacity-80">
+                        <span
+                          className="truncate text-[11px]"
+                          style={{ color: "var(--muted)" }}
+                        >
                           {itemTitle}
                         </span>
                       </div>
@@ -457,23 +528,43 @@ export default function ReaderSeriesChapterPage() {
           </aside>
 
           <section className="space-y-6">
-            <header className="rounded-[28px] border border-slate-800 bg-slate-950/60 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur">
+            <header
+              className="rounded-[28px] border p-6"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.82)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
               <div className="space-y-2">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span
+                  className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "rgba(255,255,255,0.52)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: "var(--accent)" }}
+                  />
                   {t.chip}
                 </span>
 
-                <h1 className="text-3xl font-bold tracking-tight text-white">
+                <h1
+                  className="text-3xl font-bold tracking-tight"
+                  style={{ color: "var(--text)" }}
+                >
                   {seriesTitle}
                 </h1>
 
-                <p className="text-sm text-slate-300">
+                <p className="text-sm" style={{ color: "var(--muted)" }}>
                   {t.chapter} {currentChapter.chapter_number}
                   {chapterTitle ? ` · ${chapterTitle}` : ""}
                 </p>
 
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px]" style={{ color: "var(--muted)" }}>
                   {t.createdAt}:{" "}
                   {new Date(currentChapter.created_at).toLocaleString(localeForDate, {
                     dateStyle: "medium",
@@ -483,15 +574,28 @@ export default function ReaderSeriesChapterPage() {
               </div>
             </header>
 
-            <article className="rounded-[30px] border border-stone-300/10 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] p-8 text-stone-900 shadow-[0_24px_70px_rgba(0,0,0,0.26)] md:p-12">
+            <article
+              className="rounded-[30px] border p-8 md:p-12"
+              style={{
+                borderColor: "var(--border)",
+                background:
+                  "linear-gradient(to bottom, rgba(255,255,255,0.96), rgba(233,230,223,0.92))",
+                boxShadow: "0 24px 70px rgba(0,0,0,0.12)",
+              }}
+            >
               {chapterText ? (
                 <div className="mx-auto max-w-3xl">
-                  <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8 text-stone-800">
+                  <pre
+                    className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8"
+                    style={{ color: "var(--text)" }}
+                  >
                     {chapterText}
                   </pre>
                 </div>
               ) : (
-                <p className="text-sm text-stone-500">{t.noContent}</p>
+                <p className="text-sm" style={{ color: "var(--muted)" }}>
+                  {t.noContent}
+                </p>
               )}
             </article>
 
@@ -499,12 +603,24 @@ export default function ReaderSeriesChapterPage() {
               {prevHref ? (
                 <Link
                   href={prevHref}
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-5 py-2.5 text-xs font-medium text-slate-200 transition hover:border-slate-500"
+                  className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-medium transition"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "rgba(255,255,255,0.55)",
+                    color: "var(--text)",
+                  }}
                 >
                   {t.prev}
                 </Link>
               ) : (
-                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-slate-800 bg-black/10 px-5 py-2.5 text-xs font-medium text-slate-500">
+                <span
+                  className="inline-flex cursor-not-allowed items-center rounded-full border px-5 py-2.5 text-xs font-medium"
+                  style={{
+                    borderColor: "rgba(47,47,47,0.08)",
+                    background: "rgba(255,255,255,0.28)",
+                    color: "rgba(107,111,102,0.65)",
+                  }}
+                >
                   {t.prev}
                 </span>
               )}
@@ -512,12 +628,24 @@ export default function ReaderSeriesChapterPage() {
               {nextHref ? (
                 <Link
                   href={nextHref}
-                  className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/14 px-5 py-2.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/60 hover:bg-emerald-500/20"
+                  className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-semibold transition"
+                  style={{
+                    borderColor: "rgba(94,99,87,0.28)",
+                    background: "rgba(94,99,87,0.14)",
+                    color: "var(--text)",
+                  }}
                 >
                   {t.next}
                 </Link>
               ) : (
-                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-slate-800 bg-black/10 px-5 py-2.5 text-xs font-semibold text-slate-500">
+                <span
+                  className="inline-flex cursor-not-allowed items-center rounded-full border px-5 py-2.5 text-xs font-semibold"
+                  style={{
+                    borderColor: "rgba(47,47,47,0.08)",
+                    background: "rgba(255,255,255,0.28)",
+                    color: "rgba(107,111,102,0.65)",
+                  }}
+                >
                   {t.next}
                 </span>
               )}
