@@ -1,6 +1,3 @@
-Replace `app/[locale]/studio/series/[id]/page.tsx` with this:
-
-```tsx
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -1145,4 +1142,3 @@ export default function SeriesDetailPage() {
     </main>
   );
 }
-```
