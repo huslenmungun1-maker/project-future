@@ -46,76 +46,74 @@ const UI_TEXT = {
   en: {
     chip: "Reader",
     heroTitle: "Read published content",
-    heroBody: "Pick a published project or book and start from Chapter 1.",
+    heroBody: "Pick a published series or book and start from Chapter 1.",
     supabaseOk: "Loaded published content from Supabase.",
     supabaseEmpty: "No published content yet.",
     supabaseError: "Could not load reader content.",
-    publishedProjects: "Published projects",
+    publishedProjects: "Published series",
     publishedBooks: "Published books",
     startReading: "Start reading",
     createdAt: "Created",
     publishedAt: "Published",
     views: "views",
     noCover: "No cover",
-    howItWorksTitle: "How it works",
-    howItWorksBody:
-      "Projects go to /reader/series/[seriesId]/1 and books go to /reader/[bookId]/1.",
     backHome: "Back to home",
+    untitledBook: "Untitled book",
+    untitledSeries: "Untitled series",
   },
   mn: {
     chip: "Уншигч",
     heroTitle: "Нийтлэгдсэн контент унших",
-    heroBody: "Нийтлэгдсэн төсөл эсвэл ном сонгоод 1-р бүлгээс эхлээрэй.",
-    supabaseOk: "Supabase-ээс нийтлэгдсэн контентыг уншлаа.",
+    heroBody: "Нийтлэгдсэн цуврал эсвэл ном сонгоод 1-р бүлгээс эхлээрэй.",
+    supabaseOk: "Supabase-ээс нийтлэгдсэн контентыг ачааллаа.",
     supabaseEmpty: "Одоогоор нийтлэгдсэн контент алга.",
-    supabaseError: "Уншигч контент ачаалах боломжгүй.",
-    publishedProjects: "Нийтлэгдсэн төслүүд",
+    supabaseError: "Уншигчийн контентыг ачаалж чадсангүй.",
+    publishedProjects: "Нийтлэгдсэн цувралууд",
     publishedBooks: "Нийтлэгдсэн номууд",
     startReading: "Уншиж эхлэх",
     createdAt: "Үүсгэсэн",
     publishedAt: "Нийтэлсэн",
     views: "үзэлт",
     noCover: "Ковергүй",
-    howItWorksTitle: "Яаж ажилладаг вэ",
-    howItWorksBody: "Төсөл: /reader/series/[seriesId]/1, Ном: /reader/[bookId]/1",
     backHome: "Нүүр рүү буцах",
+    untitledBook: "Нэргүй ном",
+    untitledSeries: "Нэргүй цуврал",
   },
   ko: {
     chip: "리더",
     heroTitle: "게시된 콘텐츠 읽기",
-    heroBody: "게시된 프로젝트 또는 책을 선택하고 1장부터 시작하세요.",
+    heroBody: "게시된 시리즈 또는 책을 선택하고 1장부터 시작하세요.",
     supabaseOk: "Supabase에서 게시된 콘텐츠를 불러왔습니다.",
     supabaseEmpty: "게시된 콘텐츠가 없습니다.",
     supabaseError: "리더 콘텐츠를 불러올 수 없습니다.",
-    publishedProjects: "게시된 프로젝트",
+    publishedProjects: "게시된 시리즈",
     publishedBooks: "게시된 책",
     startReading: "읽기 시작",
     createdAt: "생성일",
     publishedAt: "게시일",
     views: "조회수",
     noCover: "표지 없음",
-    howItWorksTitle: "작동 방식",
-    howItWorksBody: "프로젝트: /reader/series/[seriesId]/1, 책: /reader/[bookId]/1",
     backHome: "홈으로",
+    untitledBook: "제목 없는 책",
+    untitledSeries: "제목 없는 시리즈",
   },
   ja: {
     chip: "リーダー",
     heroTitle: "公開されたコンテンツを読む",
-    heroBody: "公開されたプロジェクトまたは本を選んで、第1章から始めましょう。",
+    heroBody: "公開されたシリーズまたは本を選んで、第1章から始めましょう。",
     supabaseOk: "Supabase から公開コンテンツを読み込みました。",
     supabaseEmpty: "公開されたコンテンツがありません。",
     supabaseError: "リーダーコンテンツを読み込めません。",
-    publishedProjects: "公開プロジェクト",
+    publishedProjects: "公開シリーズ",
     publishedBooks: "公開された本",
     startReading: "読み始める",
     createdAt: "作成日",
     publishedAt: "公開日",
     views: "閲覧",
     noCover: "表紙なし",
-    howItWorksTitle: "使い方",
-    howItWorksBody:
-      "プロジェクト: /reader/series/[seriesId]/1、 本: /reader/[bookId]/1",
     backHome: "ホームへ戻る",
+    untitledBook: "無題の本",
+    untitledSeries: "無題のシリーズ",
   },
 } as const;
 
@@ -129,7 +127,6 @@ export default function ReaderHomePage() {
   const [status, setStatus] = useState<Status>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
-  const [activeGlow, setActiveGlow] = useState<string>("rgba(99,102,241,0.10)");
 
   const statusMessage = useMemo(() => {
     if (status === "loading") return "";
@@ -217,9 +214,7 @@ export default function ReaderHomePage() {
             return {
               ...b,
               title: (tr?.title?.trim() ? tr.title : b.title) as string,
-              description: tr?.description?.trim()
-                ? tr.description
-                : b.description,
+              description: tr?.description?.trim() ? tr.description : b.description,
             };
           });
         }
@@ -236,9 +231,7 @@ export default function ReaderHomePage() {
             return {
               ...s,
               title: (tr?.title?.trim() ? tr.title : s.title) as string,
-              description: tr?.description?.trim()
-                ? tr.description
-                : s.description,
+              description: tr?.description?.trim() ? tr.description : s.description,
             };
           });
         }
@@ -261,148 +254,214 @@ export default function ReaderHomePage() {
   }, [locale]);
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleString("en-GB", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    new Date(iso).toLocaleString(
+      locale === "mn"
+        ? "mn-MN"
+        : locale === "ko"
+        ? "ko-KR"
+        : locale === "ja"
+        ? "ja-JP"
+        : "en-GB",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
+    );
 
-  const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url;
-
-  const setProjectGlow = () => setActiveGlow("rgba(16,185,129,0.12)");
-  const setBookGlow = () => setActiveGlow("rgba(99,102,241,0.12)");
-  const resetGlow = () => setActiveGlow("rgba(99,102,241,0.10)");
+  const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url || "";
+  const getBookCover = (item: BookRow) => item.cover_url || "";
 
   return (
-    <main
-      className="min-h-screen text-slate-100 transition-all duration-500"
-      style={{
-        background: `radial-gradient(circle at top center, ${activeGlow}, rgba(2,6,23,0) 34%), linear-gradient(to bottom, #020617, #020617 18%, #020617 100%)`,
-      }}
-    >
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-black/40 px-3 py-1 text-[11px] font-medium text-slate-300 transition-all duration-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+    <main className="min-h-screen theme-soft">
+      <div className="mx-auto max-w-6xl px-6 py-12">
+        <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-3">
+            <span
+              className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.72)",
+                color: "var(--muted)",
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--accent)" }}
+              />
               {t.chip}
             </span>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              {t.heroTitle}
-            </h1>
-            <p className="max-w-xl text-sm text-slate-300">{t.heroBody}</p>
+
+            <div className="space-y-2">
+              <h1
+                className="text-3xl font-bold tracking-tight sm:text-4xl"
+                style={{ color: "var(--text)" }}
+              >
+                {t.heroTitle}
+              </h1>
+              <p className="max-w-2xl text-sm" style={{ color: "var(--muted)" }}>
+                {t.heroBody}
+              </p>
+            </div>
           </div>
 
           <Link
             href={`/${locale}`}
-            className="mt-2 inline-flex items-center justify-center rounded-full border border-slate-700 bg-black/40 px-4 py-2 text-xs font-medium text-slate-200 transition-all duration-300 hover:border-emerald-400 hover:text-emerald-200 sm:mt-0"
+            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-medium transition"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(255,255,255,0.55)",
+              color: "var(--text)",
+            }}
           >
             ← {t.backHome}
           </Link>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-300 backdrop-blur">
-            <p className="mb-1 font-semibold">Supabase</p>
-            {status === "loading" && <p>Loading…</p>}
-            {status === "ok" && <p>{statusMessage}</p>}
-            {status === "error" && <p className="text-rose-300">{statusMessage}</p>}
+        <div className="mb-10">
+          <div
+            className="rounded-[24px] border p-4 text-xs"
+            style={{
+              borderColor: status === "error" ? "rgba(122,46,46,0.2)" : "var(--border)",
+              background: "rgba(233,230,223,0.72)",
+              color: status === "error" ? "var(--danger)" : "var(--muted)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            {status === "loading" ? t.chip + "…" : statusMessage}
+          </div>
+        </div>
+
+        <section className="mb-12 space-y-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2
+              className="text-sm font-semibold uppercase tracking-[0.18em]"
+              style={{ color: "var(--muted)" }}
+            >
+              {t.publishedProjects}
+            </h2>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-300 backdrop-blur md:col-span-2">
-            <p className="mb-1 font-semibold">{t.howItWorksTitle}</p>
-            <p>{t.howItWorksBody}</p>
-          </div>
-        </section>
+          {status !== "loading" && series.length === 0 ? (
+            <div
+              className="rounded-[24px] border p-5"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.66)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {t.supabaseEmpty}
+              </p>
+            </div>
+          ) : null}
 
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-100">
-            {t.publishedProjects}
-          </h2>
-
-          {status !== "loading" && series.length === 0 && (
-            <p className="text-xs text-slate-400">{t.supabaseEmpty}</p>
-          )}
-
-          {series.length > 0 && (
+          {series.length > 0 ? (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
-              {series.map((s) => {
-                const coverSrc = getSeriesCover(s);
+              {series.map((item) => {
+                const coverSrc = getSeriesCover(item);
 
                 return (
-                  <article
-                    key={s.id}
-                    onMouseEnter={setProjectGlow}
-                    onMouseLeave={resetGlow}
-                    className="group"
-                  >
-                    <Link href={`/${locale}/reader/series/${s.id}/1`} className="block">
+                  <article key={item.id} className="group">
+                    <Link href={`/${locale}/reader/series/${item.id}/1`} className="block">
                       <div
-                        className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition-all duration-500 group-hover:-translate-y-1 group-hover:rotate-[0.4deg] group-hover:border-emerald-400/60 group-hover:shadow-[0_24px_55px_rgba(16,185,129,0.16)]"
-                        style={{ aspectRatio: "2 / 3" }}
+                        className="relative overflow-hidden rounded-[24px] border transition duration-300 group-hover:-translate-y-1"
+                        style={{
+                          aspectRatio: "2 / 3",
+                          borderColor: "var(--border)",
+                          background:
+                            "linear-gradient(145deg, rgba(233,230,223,0.94), rgba(217,212,204,0.88))",
+                          boxShadow: "var(--shadow-soft)",
+                        }}
                       >
                         {coverSrc ? (
                           <>
                             <img
                               src={coverSrc}
-                              alt={s.title || ""}
-                              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                              alt={item.title || t.untitledSeries}
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-white/10" />
-                            <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/36 via-transparent to-white/10" />
+                            <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
                           </>
                         ) : (
                           <>
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950" />
-                            <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
-                            <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10" />
+                            <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(94,99,87,0.24),rgba(217,212,204,0.9))]" />
+                            <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/35 to-transparent" />
                             <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                               <div className="space-y-3">
-                                <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                                <div
+                                  className="text-[10px] uppercase tracking-[0.28em]"
+                                  style={{ color: "var(--muted)" }}
+                                >
                                   Enkhverse
                                 </div>
-                                <div className="text-lg font-bold leading-tight text-white">
-                                  {s.title}
+                                <div
+                                  className="text-lg font-bold leading-tight"
+                                  style={{ color: "var(--text)" }}
+                                >
+                                  {item.title || t.untitledSeries}
                                 </div>
-                                <div className="text-[11px] text-slate-300/80">
+                                <div className="text-[11px]" style={{ color: "var(--muted)" }}>
                                   {t.noCover}
                                 </div>
                               </div>
                             </div>
                           </>
                         )}
-
-                        <div className="absolute inset-x-0 bottom-0 p-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="line-clamp-2 text-sm font-semibold text-white">
-                                {s.title}
-                              </h3>
-                              {s.language && (
-                                <span className="rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[10px] text-slate-200 backdrop-blur">
-                                  {s.language.toUpperCase()}
-                                </span>
-                              )}
-                            </div>
-                            {s.description && (
-                              <p className="line-clamp-2 text-[11px] text-slate-200/90">
-                                {s.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
                       </div>
 
                       <div className="mt-3 space-y-2">
-                        <p className="text-[10px] text-slate-500">
-                          {t.publishedAt}: {s.published_at ? formatDate(s.published_at) : "—"}
-                        </p>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] text-slate-500">
-                            {(s.views ?? 0).toLocaleString()} {t.views}
-                          </span>
-                          <span className="inline-flex items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-200 transition-all duration-300 group-hover:border-emerald-300/60 group-hover:bg-emerald-400/15">
-                            {t.startReading}
-                          </span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className="line-clamp-2 text-sm font-semibold"
+                              style={{ color: "var(--text)" }}
+                            >
+                              {item.title || t.untitledSeries}
+                            </h3>
+                            {item.language ? (
+                              <span
+                                className="rounded-full border px-2 py-0.5 text-[10px]"
+                                style={{
+                                  borderColor: "var(--border)",
+                                  background: "rgba(255,255,255,0.5)",
+                                  color: "var(--muted)",
+                                }}
+                              >
+                                {item.language.toUpperCase()}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {item.description ? (
+                            <p className="line-clamp-2 text-[11px]" style={{ color: "var(--muted)" }}>
+                              {item.description}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[10px]" style={{ color: "var(--muted)" }}>
+                            {t.publishedAt}: {item.published_at ? formatDate(item.published_at) : "—"}
+                          </p>
+
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+                              {(item.views ?? 0).toLocaleString()} {t.views}
+                            </span>
+
+                            <span
+                              className="inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold"
+                              style={{
+                                borderColor: "rgba(94,99,87,0.28)",
+                                background: "rgba(94,99,87,0.14)",
+                                color: "var(--text)",
+                              }}
+                            >
+                              {t.startReading}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </Link>
@@ -410,95 +469,134 @@ export default function ReaderHomePage() {
                 );
               })}
             </div>
-          )}
+          ) : null}
         </section>
 
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-100">
-            {t.publishedBooks}
-          </h2>
+        <section className="space-y-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2
+              className="text-sm font-semibold uppercase tracking-[0.18em]"
+              style={{ color: "var(--muted)" }}
+            >
+              {t.publishedBooks}
+            </h2>
+          </div>
 
-          {status !== "loading" && books.length === 0 && (
-            <p className="text-xs text-slate-400">{t.supabaseEmpty}</p>
-          )}
+          {status !== "loading" && books.length === 0 ? (
+            <div
+              className="rounded-[24px] border p-5"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.66)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {t.supabaseEmpty}
+              </p>
+            </div>
+          ) : null}
 
-          {books.length > 0 && (
+          {books.length > 0 ? (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
-              {books.map((b) => (
-                <article
-                  key={b.id}
-                  onMouseEnter={setBookGlow}
-                  onMouseLeave={resetGlow}
-                  className="group"
-                >
-                  <Link href={`/${locale}/reader/${b.id}/1`} className="block">
-                    <div
-                      className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition-all duration-500 group-hover:-translate-y-1 group-hover:-rotate-[0.4deg] group-hover:border-indigo-400/60 group-hover:shadow-[0_24px_55px_rgba(99,102,241,0.18)]"
-                      style={{ aspectRatio: "2 / 3" }}
-                    >
-                      {b.cover_url ? (
-                        <>
-                          <img
-                            src={b.cover_url}
-                            alt={b.title || ""}
-                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/15 to-white/10" />
-                          <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
-                        </>
-                      ) : (
-                        <>
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 via-slate-900 to-slate-950" />
-                          <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
-                          <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10" />
-                          <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-                            <div className="space-y-3">
-                              <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
-                                Enkhverse
-                              </div>
-                              <div className="text-lg font-bold leading-tight text-white">
-                                {b.title}
-                              </div>
-                              <div className="text-[11px] text-slate-300/80">
-                                {t.noCover}
+              {books.map((item) => {
+                const coverSrc = getBookCover(item);
+
+                return (
+                  <article key={item.id} className="group">
+                    <Link href={`/${locale}/reader/${item.id}/1`} className="block">
+                      <div
+                        className="relative overflow-hidden rounded-[24px] border transition duration-300 group-hover:-translate-y-1"
+                        style={{
+                          aspectRatio: "2 / 3",
+                          borderColor: "var(--border)",
+                          background:
+                            "linear-gradient(145deg, rgba(233,230,223,0.94), rgba(217,212,204,0.88))",
+                          boxShadow: "var(--shadow-soft)",
+                        }}
+                      >
+                        {coverSrc ? (
+                          <>
+                            <img
+                              src={coverSrc}
+                              alt={item.title || t.untitledBook}
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/36 via-transparent to-white/10" />
+                            <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
+                          </>
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(94,99,87,0.24),rgba(217,212,204,0.9))]" />
+                            <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/35 to-transparent" />
+                            <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                              <div className="space-y-3">
+                                <div
+                                  className="text-[10px] uppercase tracking-[0.28em]"
+                                  style={{ color: "var(--muted)" }}
+                                >
+                                  Enkhverse
+                                </div>
+                                <div
+                                  className="text-lg font-bold leading-tight"
+                                  style={{ color: "var(--text)" }}
+                                >
+                                  {item.title || t.untitledBook}
+                                </div>
+                                <div className="text-[11px]" style={{ color: "var(--muted)" }}>
+                                  {t.noCover}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </>
-                      )}
+                          </>
+                        )}
+                      </div>
 
-                      <div className="absolute inset-x-0 bottom-0 p-3">
+                      <div className="mt-3 space-y-2">
                         <div className="space-y-1">
-                          <h3 className="line-clamp-2 text-sm font-semibold text-white">
-                            {b.title}
+                          <h3
+                            className="line-clamp-2 text-sm font-semibold"
+                            style={{ color: "var(--text)" }}
+                          >
+                            {item.title || t.untitledBook}
                           </h3>
-                          {b.description && (
-                            <p className="line-clamp-2 text-[11px] text-slate-200/90">
-                              {b.description}
+
+                          {item.description ? (
+                            <p className="line-clamp-2 text-[11px]" style={{ color: "var(--muted)" }}>
+                              {item.description}
                             </p>
-                          )}
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[10px]" style={{ color: "var(--muted)" }}>
+                            {t.createdAt}: {formatDate(item.created_at)}
+                          </p>
+
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+                              {(item.views ?? 0).toLocaleString()} {t.views}
+                            </span>
+
+                            <span
+                              className="inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold"
+                              style={{
+                                borderColor: "rgba(94,99,87,0.28)",
+                                background: "rgba(94,99,87,0.14)",
+                                color: "var(--text)",
+                              }}
+                            >
+                              {t.startReading}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="mt-3 space-y-2">
-                      <p className="text-[10px] text-slate-500">
-                        {t.createdAt}: {formatDate(b.created_at)}
-                      </p>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-slate-500">
-                          {(b.views ?? 0).toLocaleString()} {t.views}
-                        </span>
-                        <span className="inline-flex items-center justify-center rounded-full border border-indigo-400/30 bg-indigo-400/10 px-3 py-1 text-[11px] font-semibold text-indigo-100 transition-all duration-300 group-hover:border-indigo-300/60 group-hover:bg-indigo-400/15">
-                          {t.startReading}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </article>
-              ))}
+                    </Link>
+                  </article>
+                );
+              })}
             </div>
-          )}
+          ) : null}
         </section>
       </div>
     </main>
