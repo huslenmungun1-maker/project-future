@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
-type ContentType = "book" | "series";
 type Locale = "en" | "mn" | "ko" | "ja";
 
 type BookRow = {
@@ -19,19 +18,6 @@ type BookRow = {
   views?: number | null;
 };
 
-type SeriesRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  published: boolean;
-  created_at: string;
-  language: string | null;
-  cover_url?: string | null;
-  cover_image_url?: string | null;
-  published_at?: string | null;
-  views?: number | null;
-};
-
 type ChapterRow = {
   id: string;
   title: string;
@@ -39,7 +25,9 @@ type ChapterRow = {
   created_at: string;
   content: string | null;
   book_id?: string | null;
-  series_id?: string | null;
+  status?: string | null;
+  is_published?: boolean | null;
+  published_at?: string | null;
 };
 
 type TranslationRow = {
@@ -53,8 +41,8 @@ type TranslationRow = {
 
 const UI_TEXT = {
   en: {
-    back: "← Back",
-    reader: "Reader",
+    back: "Back to Reader",
+    chip: "Reader · Book",
     loading: "Loading…",
     notFound: "Not found.",
     loadError: "Could not load.",
@@ -65,10 +53,11 @@ const UI_TEXT = {
     goHome: "Go to Reader home",
     noContent: "No content for this chapter.",
     views: "views",
+    untitledBook: "Untitled book",
   },
   mn: {
-    back: "← Буцах",
-    reader: "Уншигч",
+    back: "Уншигч руу буцах",
+    chip: "Уншигч · Ном",
     loading: "Ачаалж байна…",
     notFound: "Олдсонгүй.",
     loadError: "Ачаалж чадсангүй.",
@@ -79,10 +68,11 @@ const UI_TEXT = {
     goHome: "Уншигчийн нүүр рүү",
     noContent: "Энэ бүлэгт контент алга.",
     views: "үзэлт",
+    untitledBook: "Нэргүй ном",
   },
   ko: {
-    back: "← 뒤로",
-    reader: "리더",
+    back: "리더로 돌아가기",
+    chip: "리더 · 책",
     loading: "불러오는 중…",
     notFound: "찾을 수 없습니다.",
     loadError: "불러오지 못했습니다.",
@@ -93,10 +83,11 @@ const UI_TEXT = {
     goHome: "리더 홈으로",
     noContent: "이 챕터에 내용이 없습니다.",
     views: "조회수",
+    untitledBook: "제목 없는 책",
   },
   ja: {
-    back: "← 戻る",
-    reader: "リーダー",
+    back: "リーダーへ戻る",
+    chip: "リーダー · 本",
     loading: "読み込み中…",
     notFound: "見つかりません。",
     loadError: "読み込めませんでした。",
@@ -107,6 +98,7 @@ const UI_TEXT = {
     goHome: "リーダーホームへ",
     noContent: "このチャプターには内容がありません。",
     views: "閲覧",
+    untitledBook: "無題の本",
   },
 } as const;
 
@@ -116,39 +108,55 @@ function safeLocale(raw: string): SupportedLocale {
   return (["en", "mn", "ko", "ja"].includes(raw) ? raw : "en") as SupportedLocale;
 }
 
+function isPublishedChapter(chapter: ChapterRow) {
+  return (
+    chapter.status === "published" ||
+    chapter.is_published === true ||
+    Boolean(chapter.published_at)
+  );
+}
+
 export default function ReaderChapterPage() {
   const params = useParams();
 
   const locale = safeLocale((params?.locale as string) || "en");
   const t = UI_TEXT[locale];
 
-  const contentId = (params?.bookId as string) || "";
+  const bookId = (params?.bookId as string) || "";
   const chapterParam = (params?.chapterNumber as string) || "1";
   const chapterNumber = Number(chapterParam) || 1;
 
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
 
-  const [contentType, setContentType] = useState<ContentType | null>(null);
   const [title, setTitle] = useState<string>("");
   const [coverUrl, setCoverUrl] = useState<string>("");
   const [views, setViews] = useState<number>(0);
 
-  const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [displayTitle, setDisplayTitle] = useState<string>("");
   const [displayChapters, setDisplayChapters] = useState<ChapterRow[]>([]);
 
+  const localeForDate = useMemo(() => {
+    return locale === "mn"
+      ? "mn-MN"
+      : locale === "ko"
+      ? "ko-KR"
+      : locale === "ja"
+      ? "ja-JP"
+      : "en-GB";
+  }, [locale]);
+
   const currentChapter = useMemo(() => {
-    return (
-      displayChapters.find((c) => (c.chapter_number ?? 0) === chapterNumber) || null
-    );
+    return displayChapters.find((c) => (c.chapter_number ?? 0) === chapterNumber) || null;
   }, [displayChapters, chapterNumber]);
 
   const currentChapterIndex = useMemo(() => {
     return displayChapters.findIndex((c) => (c.chapter_number ?? 0) === chapterNumber);
   }, [displayChapters, chapterNumber]);
 
-  const prevChapter = currentChapterIndex > 0 ? displayChapters[currentChapterIndex - 1] : null;
+  const prevChapter =
+    currentChapterIndex > 0 ? displayChapters[currentChapterIndex - 1] : null;
+
   const nextChapter =
     currentChapterIndex >= 0 && currentChapterIndex < displayChapters.length - 1
       ? displayChapters[currentChapterIndex + 1]
@@ -163,50 +171,32 @@ export default function ReaderChapterPage() {
     const load = async () => {
       setStatus("loading");
       setError(null);
-      setContentType(null);
       setTitle("");
       setCoverUrl("");
       setViews(0);
       setDisplayTitle("");
-      setChapters([]);
       setDisplayChapters([]);
 
-      if (!contentId) {
+      if (!bookId) {
         setStatus("error");
-        setError("Missing content id.");
+        setError("Missing book id.");
         return;
       }
 
-      const incrementView = async (type: ContentType) => {
+      const incrementView = async () => {
         try {
-          if (type === "book") {
-            await supabase.rpc("increment_book_views", { target_id: contentId });
-          } else {
-            await supabase.rpc("increment_series_views", { target_id: contentId });
-          }
+          await supabase.rpc("increment_book_views", { target_id: bookId });
         } catch {
           try {
-            if (type === "book") {
-              const { data } = await supabase
-                .from("books")
-                .select("views")
-                .eq("id", contentId)
-                .maybeSingle();
+            const { data } = await supabase
+              .from("books")
+              .select("views")
+              .eq("id", bookId)
+              .maybeSingle();
 
-              const current = Number((data as { views?: number | null } | null)?.views ?? 0);
+            const current = Number((data as { views?: number | null } | null)?.views ?? 0);
 
-              await supabase.from("books").update({ views: current + 1 }).eq("id", contentId);
-            } else {
-              const { data } = await supabase
-                .from("series")
-                .select("views")
-                .eq("id", contentId)
-                .maybeSingle();
-
-              const current = Number((data as { views?: number | null } | null)?.views ?? 0);
-
-              await supabase.from("series").update({ views: current + 1 }).eq("id", contentId);
-            }
+            await supabase.from("books").update({ views: current + 1 }).eq("id", bookId);
           } catch {
             // ignore view increment failure
           }
@@ -215,12 +205,11 @@ export default function ReaderChapterPage() {
 
       const applyTranslations = async (args: {
         locale: Locale;
-        contentType: ContentType;
-        contentId: string;
+        bookId: string;
         baseTitle: string;
         baseChapters: ChapterRow[];
       }) => {
-        const { locale, contentType, contentId, baseTitle, baseChapters } = args;
+        const { locale, bookId, baseTitle, baseChapters } = args;
 
         setDisplayTitle(baseTitle);
         setDisplayChapters(baseChapters);
@@ -229,13 +218,13 @@ export default function ReaderChapterPage() {
           const contentTrRes = await supabase
             .from("content_translations")
             .select("content_type, content_id, locale, title, description, body")
-            .eq("content_type", contentType)
-            .eq("content_id", contentId)
+            .eq("content_type", "book")
+            .eq("content_id", bookId)
             .eq("locale", locale)
             .maybeSingle();
 
           if (contentTrRes?.error) {
-            console.warn("Content translation load error:", contentTrRes.error);
+            console.warn("Book translation load error:", contentTrRes.error);
           }
 
           const contentTr = (contentTrRes?.data as TranslationRow | null) ?? null;
@@ -275,7 +264,7 @@ export default function ReaderChapterPage() {
           setDisplayTitle(mergedTitle);
           setDisplayChapters(mergedChapters);
         } catch (e) {
-          console.warn("Translation lookup skipped (fallback).", e);
+          console.warn("Translation lookup skipped.", e);
           setDisplayTitle(baseTitle);
           setDisplayChapters(baseChapters);
         }
@@ -284,7 +273,7 @@ export default function ReaderChapterPage() {
       const { data: book, error: bookErr } = await supabase
         .from("books")
         .select("id, title, description, status, created_at, cover_url, views")
-        .eq("id", contentId)
+        .eq("id", bookId)
         .maybeSingle();
 
       if (bookErr) {
@@ -293,117 +282,79 @@ export default function ReaderChapterPage() {
         return;
       }
 
-      if (book && (book as BookRow).status === "published") {
-        const bookRow = book as BookRow;
-
-        setContentType("book");
-        setTitle(bookRow.title);
-        setDisplayTitle(bookRow.title);
-        setCoverUrl(bookRow.cover_url || "");
-        setViews(Number(bookRow.views ?? 0) + 1);
-
-        await incrementView("book");
-
-        const { data: bookCh, error: chErr } = await supabase
-          .from("chapters")
-          .select("id, title, chapter_number, created_at, content, book_id")
-          .eq("book_id", contentId)
-          .order("chapter_number", { ascending: true });
-
-        if (chErr) {
-          setStatus("error");
-          setError(chErr.message);
-          return;
-        }
-
-        const baseChapters = (bookCh as ChapterRow[]) || [];
-        setChapters(baseChapters);
-
-        await applyTranslations({
-          locale: locale as Locale,
-          contentType: "book",
-          contentId,
-          baseTitle: bookRow.title,
-          baseChapters,
-        });
-
-        setStatus("ok");
-        return;
-      }
-
-      const { data: series, error: seriesErr } = await supabase
-        .from("series")
-        .select(
-          "id, title, description, published, created_at, language, cover_url, cover_image_url, published_at, views"
-        )
-        .eq("id", contentId)
-        .maybeSingle();
-
-      if (seriesErr) {
-        setStatus("error");
-        setError(seriesErr.message);
-        return;
-      }
-
-      if (!series || !(series as SeriesRow).published) {
+      if (!book || (book as BookRow).status !== "published") {
         setStatus("error");
         setError(t.notFound);
         return;
       }
 
-      const seriesRow = series as SeriesRow;
+      const bookRow = book as BookRow;
 
-      setContentType("series");
-      setTitle(seriesRow.title);
-      setDisplayTitle(seriesRow.title);
-      setCoverUrl(seriesRow.cover_url || seriesRow.cover_image_url || "");
-      setViews(Number(seriesRow.views ?? 0) + 1);
+      setTitle(bookRow.title);
+      setDisplayTitle(bookRow.title);
+      setCoverUrl(bookRow.cover_url || "");
+      setViews(Number(bookRow.views ?? 0) + 1);
 
-      await incrementView("series");
+      await incrementView();
 
-      const { data: seriesCh, error: sChErr } = await supabase
+      const { data: bookCh, error: chErr } = await supabase
         .from("chapters")
-        .select("id, title, chapter_number, created_at, content, series_id")
-        .eq("series_id", contentId)
+        .select(
+          "id, title, chapter_number, created_at, content, book_id, status, is_published, published_at"
+        )
+        .eq("book_id", bookId)
         .order("chapter_number", { ascending: true });
 
-      if (sChErr) {
+      if (chErr) {
         setStatus("error");
-        setError(sChErr.message);
+        setError(chErr.message);
         return;
       }
 
-      const baseChapters = (seriesCh as ChapterRow[]) || [];
-      setChapters(baseChapters);
+      const allChapters = (bookCh as ChapterRow[]) || [];
+      const publishedChapters = allChapters.filter(isPublishedChapter);
+
+      if (publishedChapters.length === 0) {
+        setStatus("error");
+        setError(t.notFound);
+        return;
+      }
+
+      const hasCurrentChapter = publishedChapters.some(
+        (ch) => (ch.chapter_number ?? 0) === chapterNumber
+      );
+
+      if (!hasCurrentChapter) {
+        setStatus("error");
+        setError(t.notFound);
+        return;
+      }
 
       await applyTranslations({
         locale: locale as Locale,
-        contentType: "series",
-        contentId,
-        baseTitle: seriesRow.title,
-        baseChapters,
+        bookId,
+        baseTitle: bookRow.title,
+        baseChapters: publishedChapters,
       });
 
       setStatus("ok");
     };
 
     load();
-  }, [contentId, locale, t.notFound]);
+  }, [bookId, chapterNumber, locale, t.notFound]);
 
-  const basePath =
-    contentType === "series"
-      ? `/${locale}/reader/series/${contentId}`
-      : `/${locale}/reader/${contentId}`;
-
+  const basePath = `/${locale}/reader/${bookId}`;
   const prevHref = prevChapter ? `${basePath}/${prevChapter.chapter_number ?? 1}` : null;
   const nextHref = nextChapter ? `${basePath}/${nextChapter.chapter_number ?? 1}` : null;
   const homeHref = `/${locale}/reader`;
 
   if (status === "loading") {
     return (
-      <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
+      <main className="min-h-screen theme-soft">
         <div className="mx-auto max-w-6xl px-6 py-12">
-          <p className="text-sm text-stone-300">{t.loading}</p>
+          <p style={{ color: "var(--muted)" }} className="text-sm">
+            {t.loading}
+          </p>
         </div>
       </main>
     );
@@ -411,31 +362,58 @@ export default function ReaderChapterPage() {
 
   if (status === "error") {
     return (
-      <main className="min-h-screen bg-[linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100">
+      <main className="min-h-screen theme-soft">
         <div className="mx-auto max-w-6xl space-y-4 px-6 py-12">
           <Link
             href={homeHref}
-            className="inline-flex items-center rounded-full border border-stone-700/70 bg-black/20 px-4 py-2 text-xs text-stone-200 transition hover:border-stone-500"
+            className="inline-flex items-center rounded-full border px-4 py-2 text-xs font-medium transition"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(233,230,223,0.72)",
+              color: "var(--text)",
+            }}
           >
             {t.goHome}
           </Link>
-          <p className="text-sm text-rose-300">
-            {t.loadError} {error ? `(${error})` : ""}
-          </p>
+
+          <div
+            className="rounded-[24px] border p-5"
+            style={{
+              borderColor: "rgba(122,46,46,0.2)",
+              background: "rgba(233,230,223,0.72)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--danger)" }}>
+              {t.loadError} {error ? `(${error})` : ""}
+            </p>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.08),transparent_28%),linear-gradient(to_bottom,#020617,#0f172a_35%,#111827)] text-stone-100 transition-all duration-500">
+    <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="space-y-5">
-            <div className="rounded-[28px] border border-slate-800 bg-slate-950/65 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur">
+            <div
+              className="rounded-[28px] border p-4"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.78)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
               <div
-                className="relative overflow-hidden rounded-[22px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
-                style={{ aspectRatio: "2 / 3" }}
+                className="relative overflow-hidden rounded-[22px] border"
+                style={{
+                  aspectRatio: "2 / 3",
+                  borderColor: "rgba(47,47,47,0.12)",
+                  background:
+                    "linear-gradient(145deg, rgba(94,99,87,0.18), rgba(217,212,204,0.8))",
+                }}
               >
                 {coverUrl ? (
                   <>
@@ -444,20 +422,26 @@ export default function ReaderChapterPage() {
                       alt={displayTitle || title}
                       className="h-full w-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/20 to-white/10" />
-                    <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-white/10" />
+                    <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
                   </>
                 ) : (
                   <>
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 via-slate-900 to-slate-950" />
-                    <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/10 to-transparent" />
+                    <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(94,99,87,0.24),rgba(217,212,204,0.9))]" />
+                    <div className="absolute inset-y-0 right-0 w-[12px] bg-gradient-to-l from-white/35 to-transparent" />
                     <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                       <div className="space-y-3">
-                        <div className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                        <div
+                          className="text-[10px] uppercase tracking-[0.28em]"
+                          style={{ color: "var(--muted)" }}
+                        >
                           Enkhverse
                         </div>
-                        <div className="text-lg font-bold leading-tight text-white">
-                          {displayTitle || title}
+                        <div
+                          className="text-lg font-bold leading-tight"
+                          style={{ color: "var(--text)" }}
+                        >
+                          {displayTitle || title || t.untitledBook}
                         </div>
                       </div>
                     </div>
@@ -469,26 +453,44 @@ export default function ReaderChapterPage() {
                 <div className="flex items-center justify-between gap-3">
                   <Link
                     href={homeHref}
-                    className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-4 py-2 text-xs text-slate-200 transition hover:border-slate-500"
+                    className="inline-flex items-center rounded-full border px-4 py-2 text-xs font-medium transition"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: "rgba(255,255,255,0.55)",
+                      color: "var(--text)",
+                    }}
                   >
-                    {t.back}
+                    ← {t.back}
                   </Link>
 
-                  <span className="rounded-full border border-slate-700 bg-black/20 px-3 py-1 text-[11px] text-slate-300">
+                  <span
+                    className="rounded-full border px-3 py-1 text-[11px]"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: "rgba(255,255,255,0.5)",
+                      color: "var(--muted)",
+                    }}
+                  >
                     {views.toLocaleString()} {t.views}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                  {t.reader}
-                  {contentType ? ` • ${contentType === "book" ? "Book" : "Project"}` : ""}
+                <p className="text-[11px]" style={{ color: "var(--muted)" }}>
+                  {t.chip}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-800 bg-slate-950/55 p-4 backdrop-blur">
-              <h2 className="mb-3 text-sm font-semibold text-white">
-                {displayTitle || title}
+            <div
+              className="rounded-[24px] border p-4"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.72)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
+              <h2 className="mb-3 text-sm font-semibold" style={{ color: "var(--text)" }}>
+                {displayTitle || title || t.untitledBook}
               </h2>
 
               <div className="space-y-2">
@@ -500,17 +502,21 @@ export default function ReaderChapterPage() {
                     <Link
                       key={ch.id}
                       href={href}
-                      className={`block rounded-2xl border px-3 py-2 text-sm transition ${
-                        active
-                          ? "border-indigo-400/60 bg-indigo-500/12 text-white"
-                          : "border-slate-800 bg-black/20 text-slate-300 hover:border-slate-600"
-                      }`}
+                      className="block rounded-2xl border px-3 py-2 text-sm transition"
+                      style={{
+                        borderColor: active ? "rgba(94,99,87,0.32)" : "var(--border)",
+                        background: active ? "rgba(94,99,87,0.12)" : "rgba(255,255,255,0.48)",
+                        color: "var(--text)",
+                      }}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="truncate">
                           {t.chapter} {ch.chapter_number ?? "—"}
                         </span>
-                        <span className="truncate text-[11px] opacity-80">
+                        <span
+                          className="truncate text-[11px]"
+                          style={{ color: "var(--muted)" }}
+                        >
                           {ch.title || ""}
                         </span>
                       </div>
@@ -522,21 +528,46 @@ export default function ReaderChapterPage() {
           </aside>
 
           <section className="space-y-6">
-            <header className="rounded-[28px] border border-slate-800 bg-slate-950/60 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur">
+            <header
+              className="rounded-[28px] border p-6"
+              style={{
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.82)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight text-white">
-                  {displayTitle || title}
+                <span
+                  className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "rgba(255,255,255,0.52)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: "var(--accent)" }}
+                  />
+                  {t.chip}
+                </span>
+
+                <h1
+                  className="text-3xl font-bold tracking-tight"
+                  style={{ color: "var(--text)" }}
+                >
+                  {displayTitle || title || t.untitledBook}
                 </h1>
 
-                <p className="text-sm text-slate-300">
+                <p className="text-sm" style={{ color: "var(--muted)" }}>
                   {t.chapter} {chapterNumber}
                   {currentChapter?.title ? ` · ${currentChapter.title}` : ""}
                 </p>
 
                 {currentChapter?.created_at && (
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px]" style={{ color: "var(--muted)" }}>
                     {t.createdAt}:{" "}
-                    {new Date(currentChapter.created_at).toLocaleString("en-GB", {
+                    {new Date(currentChapter.created_at).toLocaleString(localeForDate, {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
@@ -545,15 +576,28 @@ export default function ReaderChapterPage() {
               </div>
             </header>
 
-            <article className="rounded-[30px] border border-stone-300/10 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] p-8 text-stone-900 shadow-[0_24px_70px_rgba(0,0,0,0.26)] md:p-12">
+            <article
+              className="rounded-[30px] border p-8 md:p-12"
+              style={{
+                borderColor: "var(--border)",
+                background:
+                  "linear-gradient(to bottom, rgba(255,255,255,0.96), rgba(233,230,223,0.92))",
+                boxShadow: "0 24px 70px rgba(0,0,0,0.12)",
+              }}
+            >
               {contentText ? (
                 <div className="mx-auto max-w-3xl">
-                  <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8 text-stone-800">
+                  <pre
+                    className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8"
+                    style={{ color: "var(--text)" }}
+                  >
                     {contentText}
                   </pre>
                 </div>
               ) : (
-                <p className="text-sm text-stone-500">{t.noContent}</p>
+                <p className="text-sm" style={{ color: "var(--muted)" }}>
+                  {t.noContent}
+                </p>
               )}
             </article>
 
@@ -561,12 +605,24 @@ export default function ReaderChapterPage() {
               {prevHref ? (
                 <Link
                   href={prevHref}
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-black/20 px-5 py-2.5 text-xs font-medium text-slate-200 transition hover:border-slate-500"
+                  className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-medium transition"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "rgba(255,255,255,0.55)",
+                    color: "var(--text)",
+                  }}
                 >
                   {t.prev}
                 </Link>
               ) : (
-                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-slate-800 bg-black/10 px-5 py-2.5 text-xs font-medium text-slate-500">
+                <span
+                  className="inline-flex cursor-not-allowed items-center rounded-full border px-5 py-2.5 text-xs font-medium"
+                  style={{
+                    borderColor: "rgba(47,47,47,0.08)",
+                    background: "rgba(255,255,255,0.28)",
+                    color: "rgba(107,111,102,0.65)",
+                  }}
+                >
                   {t.prev}
                 </span>
               )}
@@ -574,12 +630,24 @@ export default function ReaderChapterPage() {
               {nextHref ? (
                 <Link
                   href={nextHref}
-                  className="inline-flex items-center rounded-full border border-indigo-400/40 bg-indigo-500/14 px-5 py-2.5 text-xs font-semibold text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/20"
+                  className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-semibold transition"
+                  style={{
+                    borderColor: "rgba(94,99,87,0.28)",
+                    background: "rgba(94,99,87,0.14)",
+                    color: "var(--text)",
+                  }}
                 >
                   {t.next}
                 </Link>
               ) : (
-                <span className="inline-flex cursor-not-allowed items-center rounded-full border border-slate-800 bg-black/10 px-5 py-2.5 text-xs font-semibold text-slate-500">
+                <span
+                  className="inline-flex cursor-not-allowed items-center rounded-full border px-5 py-2.5 text-xs font-semibold"
+                  style={{
+                    borderColor: "rgba(47,47,47,0.08)",
+                    background: "rgba(255,255,255,0.28)",
+                    color: "rgba(107,111,102,0.65)",
+                  }}
+                >
                   {t.next}
                 </span>
               )}
