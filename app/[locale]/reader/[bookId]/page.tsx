@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
@@ -13,6 +13,19 @@ type BookRow = {
   title: string;
   description: string | null;
   created_at: string;
+  status?: "draft" | "published" | null;
+};
+
+type ChapterRow = {
+  id: string;
+  book_id: string;
+  chapter_number: number | null;
+  title: string | null;
+  content: string | null;
+  created_at: string;
+  status?: string | null;
+  is_published?: boolean | null;
+  published_at?: string | null;
 };
 
 type TranslationRow = {
@@ -36,6 +49,7 @@ const UI = {
     untitled: "Untitled book",
     noDesc: "No description yet.",
     created: "Created",
+    open: "Open",
   },
   ko: {
     title: "라이브러리 – 게시된 책",
@@ -47,6 +61,7 @@ const UI = {
     untitled: "제목 없음",
     noDesc: "설명이 없습니다.",
     created: "생성일",
+    open: "열기",
   },
   mn: {
     title: "Номын сан – Нийтлэгдсэн номууд",
@@ -59,6 +74,7 @@ const UI = {
     untitled: "Гарчиггүй ном",
     noDesc: "Тайлбар алга.",
     created: "Үүсгэсэн",
+    open: "Нээх",
   },
   ja: {
     title: "ライブラリ – 公開された本",
@@ -70,6 +86,7 @@ const UI = {
     untitled: "無題の本",
     noDesc: "説明はまだありません。",
     created: "作成日",
+    open: "開く",
   },
 } as const;
 
@@ -77,145 +94,196 @@ function safeLocale(raw: string): Locale {
   return (["en", "ko", "mn", "ja"].includes(raw) ? raw : "en") as Locale;
 }
 
+function isPublishedChapter(chapter: ChapterRow) {
+  return (
+    chapter.status === "published" ||
+    chapter.is_published === true ||
+    Boolean(chapter.published_at)
+  );
+}
+
 export default function ReaderBooksPage() {
   const params = useParams();
+  const router = useRouter();
+
   const locale = safeLocale((params?.locale as string) || "en");
+  const bookId = (params?.bookId as string) || "";
   const t = UI[locale];
 
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [books, setBooks] = useState<BookRow[]>([]);
+  const [book, setBook] = useState<BookRow | null>(null);
+  const [description, setDescription] = useState<string>("");
+  const [firstChapterNumber, setFirstChapterNumber] = useState<number | null>(null);
 
   useEffect(() => {
-    async function loadBooks() {
-      setStatus("loading");
-      setErrorMessage(null);
-
-      const { data, error } = await supabase
-        .from("books")
-        .select("id, title, description, created_at")
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error loading published books:", error);
-        setErrorMessage(error.message);
+    async function loadBookPage() {
+      if (!bookId) {
+        setErrorMessage("Missing book id.");
         setStatus("error");
         return;
       }
 
-      const baseBooks = (data || []) as BookRow[];
+      setStatus("loading");
+      setErrorMessage(null);
+      setBook(null);
+      setDescription("");
+      setFirstChapterNumber(null);
 
-      // --- translations (title/description) ---
-      let finalBooks = baseBooks;
+      const { data: bookData, error: bookError } = await supabase
+        .from("books")
+        .select("id, title, description, created_at, status")
+        .eq("id", bookId)
+        .eq("status", "published")
+        .maybeSingle();
 
-      try {
-        const ids = baseBooks.map((b) => b.id);
-        if (ids.length > 0) {
-          const trRes = await supabase
-            .from("content_translations")
-            .select("content_type, content_id, locale, title, description, body")
-            .eq("content_type", "book")
-            .eq("locale", locale)
-            .in("content_id", ids);
-
-          if (trRes.error) {
-            console.warn("Book translations not loaded:", trRes.error);
-          } else {
-            const rows = ((trRes.data as TranslationRow[]) || []).filter(
-              (r) => r && r.content_id
-            );
-            const map = new Map<string, TranslationRow>();
-            for (const r of rows) map.set(r.content_id, r);
-
-            finalBooks = baseBooks.map((b) => {
-              const tr = map.get(b.id);
-              return {
-                ...b,
-                title: (tr?.title?.trim() ? tr.title : b.title) as string,
-                description:
-                  tr?.description?.trim() ? tr.description : b.description,
-              };
-            });
-          }
-        }
-      } catch (e) {
-        // table missing -> fallback
-        console.warn("Translation lookup skipped (fallback).", e);
+      if (bookError || !bookData) {
+        setErrorMessage(bookError?.message || "Book not found.");
+        setStatus("error");
+        return;
       }
 
-      setBooks(finalBooks);
+      const baseBook = bookData as BookRow;
+
+      let finalBook = baseBook;
+      let finalDescription = baseBook.description ?? "";
+
+      try {
+        const trRes = await supabase
+          .from("content_translations")
+          .select("content_type, content_id, locale, title, description, body")
+          .eq("content_type", "book")
+          .eq("content_id", bookId)
+          .eq("locale", locale)
+          .maybeSingle();
+
+        const tr = (trRes?.data as TranslationRow | null) ?? null;
+
+        finalBook = {
+          ...baseBook,
+          title: tr?.title?.trim() ? tr.title : baseBook.title,
+          description: tr?.description?.trim() ? tr.description : baseBook.description,
+        };
+
+        finalDescription = finalBook.description ?? "";
+      } catch {
+        finalBook = baseBook;
+        finalDescription = baseBook.description ?? "";
+      }
+
+      const { data: chapterData, error: chapterError } = await supabase
+        .from("chapters")
+        .select(
+          "id, book_id, chapter_number, title, content, created_at, status, is_published, published_at"
+        )
+        .eq("book_id", bookId)
+        .order("chapter_number", { ascending: true });
+
+      if (chapterError) {
+        setErrorMessage(chapterError.message);
+        setStatus("error");
+        return;
+      }
+
+      const publishedChapters = ((chapterData || []) as ChapterRow[])
+        .filter(isPublishedChapter)
+        .filter((chapter) => typeof chapter.chapter_number === "number");
+
+      const firstPublishedChapter = publishedChapters[0] ?? null;
+
+      setBook(finalBook);
+      setDescription(finalDescription);
+      setFirstChapterNumber(firstPublishedChapter?.chapter_number ?? null);
       setStatus("ok");
     }
 
-    loadBooks();
-  }, [locale]);
+    loadBookPage();
+  }, [bookId, locale]);
 
-  const baseLocale = locale ? `/${locale}` : "";
+  useEffect(() => {
+    if (status !== "ok") return;
+    if (!bookId) return;
+    if (firstChapterNumber == null) return;
+
+    router.replace(`/${locale}/reader/${bookId}/${firstChapterNumber}`);
+  }, [status, bookId, locale, firstChapterNumber, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#020417] text-slate-50">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-6 py-8 text-sm text-slate-300">
+            {t.loading}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="min-h-screen bg-[#020417] text-slate-50">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
+          <div className="rounded-2xl border border-red-500/40 bg-red-900/30 px-6 py-8 text-sm text-red-200">
+            <div className="text-base font-semibold">{t.errTitle}</div>
+            <p className="mt-2 text-xs opacity-80">{errorMessage || "Unknown error."}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!book) {
+    return (
+      <div className="min-h-screen bg-[#020417] text-slate-50">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
+          <div className="rounded-2xl border border-red-500/40 bg-red-900/30 px-6 py-8 text-sm text-red-200">
+            <div className="text-base font-semibold">{t.errTitle}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (firstChapterNumber == null) {
+    return (
+      <div className="min-h-screen bg-[#020417] text-slate-50">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
+            <h1 className="text-2xl font-semibold tracking-tight">{book.title || t.untitled}</h1>
+            <p className="mt-3 text-sm text-slate-400">{description || t.noDesc}</p>
+            <p className="mt-4 text-xs text-slate-500">
+              {t.created} {new Date(book.created_at).toLocaleDateString()}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-6 py-8 text-sm text-slate-300">
+            {t.empty}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#020417] text-slate-50">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-            <p className="mt-1 text-xs text-slate-400">
-              {t.subtitleA}
-              <span className="font-semibold text-indigo-200">{t.subtitleB}</span>.
-            </p>
-          </div>
-        </header>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
+          <h1 className="text-2xl font-semibold tracking-tight">{book.title || t.untitled}</h1>
+          <p className="mt-3 text-sm text-slate-400">{description || t.noDesc}</p>
+          <p className="mt-4 text-xs text-slate-500">
+            {t.created} {new Date(book.created_at).toLocaleDateString()}
+          </p>
 
-        {status === "loading" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-6 py-8 text-sm text-slate-300">
-            {t.loading}
+          <div className="mt-6">
+            <Link
+              href={`/${locale}/reader/${bookId}/${firstChapterNumber}`}
+              className="inline-flex rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-indigo-500/70 hover:bg-slate-900"
+            >
+              {t.open}
+            </Link>
           </div>
-        )}
-
-        {status === "error" && (
-          <div className="rounded-2xl border border-red-500/40 bg-red-900/30 px-6 py-8 text-sm text-red-200">
-            <div className="text-base font-semibold">{t.errTitle}</div>
-            <p className="mt-2 text-xs opacity-80">
-              {errorMessage || "Unknown error."}
-            </p>
-          </div>
-        )}
-
-        {status === "ok" && books.length === 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-6 py-8 text-sm text-slate-300">
-            {t.empty}
-          </div>
-        )}
-
-        {status === "ok" && books.length > 0 && (
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {books.map((book) => {
-              // keep your existing route style
-              const href = `${baseLocale}/reader/books/${book.id}`;
-              return (
-                <li
-                  key={book.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-sm shadow-sm hover:border-indigo-500/70 hover:shadow-lg hover:shadow-indigo-500/20"
-                >
-                  <Link href={href}>
-                    <div className="flex flex-col gap-2">
-                      <h2 className="line-clamp-2 text-sm font-semibold text-slate-50">
-                        {book.title || t.untitled}
-                      </h2>
-                      <p className="line-clamp-3 text-xs text-slate-400">
-                        {book.description || t.noDesc}
-                      </p>
-                      <span className="mt-1 text-[11px] text-slate-500">
-                        {t.created}{" "}
-                        {new Date(book.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        </div>
       </div>
     </div>
   );
