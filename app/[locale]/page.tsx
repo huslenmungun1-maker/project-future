@@ -34,6 +34,10 @@ const UI_TEXT = {
     ai: "AI Tools",
     payments: "Payments",
     login: "Login (for owner / creators)",
+    becomeCreatorChip: "Creators",
+    becomeCreatorTitle: "Want to publish on Enkhverse?",
+    becomeCreatorBody: "Apply to become a creator and share your manga, webtoons, or illustrations with readers worldwide.",
+    becomeCreatorButton: "Become a creator",
     footerNote:
       "If some links give 404 now, that's fine. We'll build them one by one.",
   },
@@ -62,6 +66,10 @@ const UI_TEXT = {
     ai: "AI 도구",
     payments: "결제",
     login: "로그인 (오너 / 크리에이터용)",
+    becomeCreatorChip: "크리에이터",
+    becomeCreatorTitle: "Enkhverse에 작품을 올리고 싶으신가요?",
+    becomeCreatorBody: "크리에이터 신청을 하고 전 세계 독자들에게 만화, 웹툰, 일러스트를 공유하세요.",
+    becomeCreatorButton: "크리에이터 되기",
     footerNote:
       "일부 링크가 지금 404여도 괜찮습니다. 하나씩 만들어 갈게요.",
   },
@@ -90,6 +98,10 @@ const UI_TEXT = {
     ai: "AI хэрэгслүүд",
     payments: "Төлбөр",
     login: "Нэвтрэх (эзэмшигч / бүтээгч)",
+    becomeCreatorChip: "Бүтээгчид",
+    becomeCreatorTitle: "Enkhverse дээр бүтээлээ нийтлэхийг хүсч байна уу?",
+    becomeCreatorBody: "Бүтээгч болохын тулд өргөдлөө гаргаж, манга, вэбтун эсвэл зурагт бүтээлүүдээ дэлхийн уншигчидтай хуваалцаарай.",
+    becomeCreatorButton: "Бүтээгч болох",
     footerNote:
       "Зарим холбоос одоохондоо 404 өгч байвал зүгээр. Бид нэг нэгээр нь бүтээнэ.",
   },
@@ -118,6 +130,10 @@ const UI_TEXT = {
     ai: "AIツール",
     payments: "支払い",
     login: "ログイン（オーナー / クリエイター用）",
+    becomeCreatorChip: "クリエイター",
+    becomeCreatorTitle: "Enkhverseで作品を公開しませんか？",
+    becomeCreatorBody: "クリエイター申請をして、マンガ、ウェブトゥーン、イラストを世界中の読者と共有しましょう。",
+    becomeCreatorButton: "クリエイターになる",
     footerNote:
       "一部のリンクが今は404でも大丈夫です。これから一つずつ作っていきます。",
   },
@@ -251,6 +267,40 @@ export default async function LocaleHomePage({
                 {t.ownerButton}
               </Link>
             </div>
+          </div>
+        </section>
+
+        <section
+          className="mt-8 flex flex-col gap-4 rounded-[24px] p-6 sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            background: "linear-gradient(135deg, rgba(94,99,87,0.10), rgba(233,230,223,0.80))",
+            border: "1px solid rgba(94,99,87,0.18)",
+            boxShadow: "var(--shadow-soft)",
+          }}
+        >
+          <div className="space-y-2">
+            <div
+              className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+              style={{
+                background: "var(--accent)",
+                color: "#f8f7f3",
+              }}
+            >
+              {t.becomeCreatorChip}
+            </div>
+            <h2 className="text-lg font-semibold tracking-tight">{t.becomeCreatorTitle}</h2>
+            <p className="max-w-md text-sm leading-6" style={{ color: "var(--muted)" }}>
+              {t.becomeCreatorBody}
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            <Link
+              href={`/${currentLocale}/creator/apply`}
+              className="btn-ios text-sm"
+            >
+              {t.becomeCreatorButton}
+            </Link>
           </div>
         </section>
 
