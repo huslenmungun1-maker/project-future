@@ -118,3 +118,27 @@ body {
 .btn-ios-danger:active {
   transform: scale(0.97);
 }
+
+/* ============================= */
+/*  Form inputs                  */
+/* ============================= */
+
+.soft-input {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.soft-input:focus {
+  border-color: var(--accent);
+}
+
+.soft-input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
