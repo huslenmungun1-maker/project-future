@@ -78,8 +78,13 @@ return NextResponse.redirect(url);
 return res;
 }
 
-// Studio → any logged-in user
+// Studio → owner only
 if (restPath.startsWith("/studio")) {
+if (!isOwner) {
+const url = req.nextUrl.clone();
+url.pathname = `/${locale}/profile`;
+return NextResponse.redirect(url);
+}
 return res;
 }
 

@@ -5,6 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
+const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
+
 type Mode = "login" | "signup";
 
 export default function LoginPage() {
@@ -13,7 +15,7 @@ export default function LoginPage() {
   const search = useSearchParams();
 
   const locale = (params?.locale as string) || "en";
-  const redirectTo = search.get("redirect") || `/${locale}/studio`;
+  const explicitRedirect = search.get("redirect");
 
   const supabase = useMemo(() => createClientComponentClient(), []);
 
@@ -58,8 +60,13 @@ export default function LoginPage() {
         return;
       }
 
+      const isOwner = OWNER_EMAIL && data.session.user.email === OWNER_EMAIL;
+      const destination =
+        explicitRedirect ||
+        (isOwner ? `/${locale}/studio` : `/${locale}/profile`);
+
       setLoading(false);
-      router.replace(redirectTo);
+      router.replace(destination);
       router.refresh();
     } catch (err: any) {
       setErrorMsg(typeof err?.message === "string" ? err.message : "Login failed.");
@@ -207,9 +214,9 @@ export default function LoginPage() {
                 : "Create Account"}
             </button>
 
-            {mode === "login" && (
+            {mode === "login" && explicitRedirect && (
               <p className="text-[11px] text-slate-500">
-                After login → <span className="text-slate-300">{redirectTo}</span>
+                After login → <span className="text-slate-300">{explicitRedirect}</span>
               </p>
             )}
           </form>
