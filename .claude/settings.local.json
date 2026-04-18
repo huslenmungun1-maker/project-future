@@ -4,7 +4,10 @@
       "Bash(wc -l /c/Users/User/Desktop/project-future/app/**/*.tsx)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(mkdir -p \"C:/Users/User/Desktop/project-future/supabase/migrations\")",
+      "Bash(mkdir -p \"C:/Users/User/Desktop/project-future/app/[locale]/creator/apply\")",
+      "Bash(xargs grep *)"
     ]
   }
 }
