@@ -7,7 +7,9 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Session } from "@supabase/supabase-js";
 
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
+type UserRole = "reader" | "creator" | "owner";
 
+// Fallback while transitioning to role-based system
 const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
 
 function normalizeLocale(raw: string): SupportedLocale {
@@ -33,10 +35,10 @@ const LABEL: Record<SupportedLocale, string> = {
 };
 
 const UI_TEXT = {
-  en:  { reader: "Reader", studio: "Studio", profile: "Profile", login: "Login", signout: "Sign Out" },
-  ko:  { reader: "리더", studio: "스튜디오", profile: "프로필", login: "로그인", signout: "로그아웃" },
-  mn:  { reader: "Уншигч", studio: "Студи", profile: "Профайл", login: "Нэвтрэх", signout: "Гарах" },
-  ja:  { reader: "リーダー", studio: "スタジオ", profile: "プロフィール", login: "ログイン", signout: "ログアウト" },
+  en:  { reader: "Reader", studio: "Studio", head: "Admin", profile: "Profile", login: "Login", signout: "Sign Out" },
+  ko:  { reader: "리더", studio: "스튜디오", head: "관리자", profile: "프로필", login: "로그인", signout: "로그아웃" },
+  mn:  { reader: "Уншигч", studio: "Студи", head: "Админ", profile: "Профайл", login: "Нэвтрэх", signout: "Гарах" },
+  ja:  { reader: "リーダー", studio: "スタジオ", head: "管理者", profile: "プロフィール", login: "ログイン", signout: "ログアウト" },
 } as const;
 
 export default function NavBar({ locale }: { locale: string }) {
@@ -48,22 +50,58 @@ export default function NavBar({ locale }: { locale: string }) {
 
   const supabase = useMemo(() => createClientComponentClient(), []);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<UserRole>("reader");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      if (data.session?.user) {
+        await fetchRole(data.session.user.id, data.session.user.email ?? "");
+      }
+    }
+
+    async function fetchRole(userId: string, email: string) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (profile?.role) {
+          setRole(profile.role as UserRole);
+        } else if (OWNER_EMAIL && email === OWNER_EMAIL) {
+          setRole("owner");
+        }
+      } catch {
+        if (OWNER_EMAIL && email === OWNER_EMAIL) setRole("owner");
+      }
+    }
+
+    loadSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
+      if (s?.user) {
+        await fetchRole(s.user.id, s.user.email ?? "");
+      } else {
+        setRole("reader");
+      }
     });
+
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  const isOwner = session && OWNER_EMAIL && session.user.email === OWNER_EMAIL;
+  // Also honour email fallback when profiles table has no owner set
+  const isOwner = role === "owner" || (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
 
   const mkHref = (nextLocale: SupportedLocale) =>
     restPath === "/" ? `/${nextLocale}` : `/${nextLocale}${restPath}`;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+    setRole("reader");
     router.replace(`/${currentLocale}/login`);
     router.refresh();
   }
@@ -97,6 +135,15 @@ export default function NavBar({ locale }: { locale: string }) {
               className="text-stone-700 transition hover:text-stone-950"
             >
               {t.studio}
+            </Link>
+          )}
+
+          {isOwner && (
+            <Link
+              href={`/${currentLocale}/head`}
+              className="text-stone-700 transition hover:text-stone-950"
+            >
+              {t.head}
             </Link>
           )}
         </div>
