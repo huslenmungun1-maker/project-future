@@ -107,119 +107,144 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-slate-100">
-      <main className="mx-auto max-w-sm px-4 py-10">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">
+    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ background: "var(--bg)" }}>
+      <main className="w-full max-w-sm space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
             {mode === "login" ? "Login" : "Sign Up"}
           </h1>
           <Link
             href={`/${locale}`}
-            className="text-xs text-emerald-300 hover:text-emerald-200"
+            className="text-xs transition hover:opacity-70"
+            style={{ color: "var(--muted)" }}
           >
-            ← Back to main
+            ← Back
           </Link>
         </div>
 
         {/* Mode tabs */}
-        <div className="mb-6 flex rounded-md border border-slate-700 p-0.5">
+        <div
+          className="flex rounded-2xl p-1 gap-1"
+          style={{ background: "rgba(233,230,223,0.72)", border: "1px solid var(--border)" }}
+        >
           <button
             type="button"
             onClick={() => switchMode("login")}
-            className={`flex-1 rounded py-1.5 text-sm font-medium transition-colors ${
-              mode === "login"
-                ? "bg-emerald-500 text-black"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            className="flex-1 rounded-xl py-1.5 text-sm font-medium transition"
+            style={{
+              background: mode === "login" ? "white" : "transparent",
+              color: mode === "login" ? "var(--text)" : "var(--muted)",
+              boxShadow: mode === "login" ? "var(--shadow-soft)" : "none",
+            }}
           >
             Login
           </button>
           <button
             type="button"
             onClick={() => switchMode("signup")}
-            className={`flex-1 rounded py-1.5 text-sm font-medium transition-colors ${
-              mode === "signup"
-                ? "bg-emerald-500 text-black"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            className="flex-1 rounded-xl py-1.5 text-sm font-medium transition"
+            style={{
+              background: mode === "signup" ? "white" : "transparent",
+              color: mode === "signup" ? "var(--text)" : "var(--muted)",
+              boxShadow: mode === "signup" ? "var(--shadow-soft)" : "none",
+            }}
           >
             Sign Up
           </button>
         </div>
 
         {successMsg ? (
-          <div className="rounded-md border border-emerald-700 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-300">
-            {successMsg}
+          <div className="space-y-5 text-center">
+            <div
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-2xl"
+              style={{ background: "rgba(94,99,87,0.12)", border: "1px solid rgba(94,99,87,0.2)" }}
+            >
+              ✉️
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>Check your email</h2>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.
+              </p>
+              <p className="text-xs" style={{ color: "var(--muted)", opacity: 0.7 }}>
+                Once confirmed, you'll be taken to a welcome screen automatically.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => switchMode("login")}
-              className="mt-3 block w-full rounded-md bg-emerald-500 py-2 text-sm font-semibold text-black hover:bg-emerald-400"
+              className="btn-ios-secondary w-full text-sm"
             >
-              Go to Login
+              Back to Login
             </button>
           </div>
         ) : (
-          <form
-            onSubmit={mode === "login" ? handleLogin : handleSignup}
-            className="space-y-4"
+          <div
+            className="rounded-[24px] p-6 space-y-4"
+            style={{
+              background: "rgba(255,255,255,0.6)",
+              border: "1px solid var(--border)",
+              boxShadow: "var(--shadow-soft)",
+            }}
           >
-            <div className="space-y-1">
-              <label className="text-xs text-slate-300">Email</label>
-              <input
-                type="email"
-                className="w-full rounded-md border border-slate-700 bg-black/40 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-300">Password</label>
-              <input
-                type="password"
-                className="w-full rounded-md border border-slate-700 bg-black/40 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {mode === "signup" && (
-              <div className="space-y-1">
-                <label className="text-xs text-slate-300">Confirm Password</label>
+            <form
+              onSubmit={mode === "login" ? handleLogin : handleSignup}
+              className="space-y-4"
+            >
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>Email</label>
                 <input
-                  type="password"
-                  className="w-full rounded-md border border-slate-700 bg-black/40 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  type="email"
+                  className="soft-input w-full"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
-            )}
 
-            {errorMsg && <p className="text-xs text-rose-300">{errorMsg}</p>}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>Password</label>
+                <input
+                  type="password"
+                  className="soft-input w-full"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-emerald-500 py-2 text-sm font-semibold text-black hover:bg-emerald-400 disabled:opacity-70"
-            >
-              {loading
-                ? mode === "login"
-                  ? "Logging in…"
-                  : "Creating account…"
-                : mode === "login"
-                ? "Login"
-                : "Create Account"}
-            </button>
+              {mode === "signup" && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>Confirm Password</label>
+                  <input
+                    type="password"
+                    className="soft-input w-full"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
-            {mode === "login" && explicitRedirect && (
-              <p className="text-[11px] text-slate-500">
-                After login → <span className="text-slate-300">{explicitRedirect}</span>
-              </p>
-            )}
-          </form>
+              {errorMsg && <p className="text-xs" style={{ color: "var(--danger)" }}>{errorMsg}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-ios w-full text-sm disabled:opacity-60"
+              >
+                {loading
+                  ? mode === "login" ? "Logging in…" : "Creating account…"
+                  : mode === "login" ? "Login" : "Create Account"}
+              </button>
+
+              {mode === "login" && explicitRedirect && (
+                <p className="text-[11px]" style={{ color: "var(--muted)" }}>
+                  After login → <span style={{ color: "var(--text)" }}>{explicitRedirect}</span>
+                </p>
+              )}
+            </form>
+          </div>
         )}
       </main>
     </div>
