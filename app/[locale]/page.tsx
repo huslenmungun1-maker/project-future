@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 type Params = { locale: string };
-
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
 
 function normalizeLocale(raw: string): SupportedLocale {
@@ -10,132 +9,80 @@ function normalizeLocale(raw: string): SupportedLocale {
 
 const UI_TEXT = {
   en: {
-    chip: "Enkhverse · Soft Editorial Build",
-    heroTitle: "Don’t hide your creativity. Let the world see it.",
-    heroBody:
-      "Read, create, and manage manga / comics in one place. This is the early build — functional first, elegant later.",
-    readChip: "Read",
-    readTitle: "Reader",
-    readBody: "Browse public series and start reading. No login required for now.",
-    readButton: "Go to Reader",
-    createChip: "Create",
-    createTitle: "Publisher Studio",
-    createBody:
-      "Create series, upload chapters, and manage your projects in one place.",
-    createButton: "Go to Publisher",
-    ownerChip: "Owner",
-    ownerTitle: "Head Page",
-    ownerBody: "Owner-only dashboard for stats, revenue, and system controls.",
-    ownerButton: "Go to Head Page",
-    moreTitle: "More (future pages)",
-    moreChip: "Early navigation",
-    profile: "Profile",
-    chat: "Chat (Core Assistant)",
-    ai: "AI Tools",
-    payments: "Payments",
-    login: "Login (for owner / creators)",
-    becomeCreatorChip: "Creators",
-    becomeCreatorTitle: "Want to publish on Enkhverse?",
-    becomeCreatorBody: "Apply to become a creator and share your manga, webtoons, or illustrations with readers worldwide.",
-    becomeCreatorButton: "Become a creator",
-    footerNote:
-      "If some links give 404 now, that's fine. We'll build them one by one.",
+    heroTitle: "Don't hide your creativity.",
+    heroTitleAccent: "Let the world see it.",
+    heroBody: "Read, create, and publish manga, webtoons, and comics — all in one place.",
+    readButton: "Browse Reader",
+    createButton: "Go to Studio",
+    becomeCreatorTitle: "Publish on Enkhverse",
+    becomeCreatorBody: "Apply to become a creator and share your work with readers worldwide.",
+    becomeCreatorButton: "Apply now",
+    navHome: "Home",
+    navReader: "Reader",
+    navStudio: "Studio",
+    navCreator: "Become a Creator",
+    navProfile: "Profile",
+    featuredTitle: "Featured",
+    newTitle: "New Releases",
+    comingSoon: "Content is on its way. Check back soon.",
+    footerEmail: "enkhverseglobal@gmail.com",
   },
   ko: {
-    chip: "Enkhverse · 소프트 에디토리얼 빌드",
-    heroTitle: "당신의 창의성을 숨기지 마세요. 세상이 보게 하세요.",
-    heroBody:
-      "한 곳에서 만화 / 코믹스를 읽고, 만들고, 관리하세요. 지금은 초기 빌드이며 먼저 작동하고, 나중에 더 우아해집니다.",
-    readChip: "읽기",
-    readTitle: "리더",
-    readBody: "공개된 시리즈를 둘러보고 바로 읽기 시작하세요. 지금은 로그인 없이도 됩니다.",
-    readButton: "리더로 가기",
-    createChip: "제작",
-    createTitle: "퍼블리셔 스튜디오",
-    createBody:
-      "시리즈를 만들고, 챕터를 업로드하고, 프로젝트를 한 곳에서 관리하세요.",
-    createButton: "퍼블리셔로 가기",
-    ownerChip: "오너",
-    ownerTitle: "헤드 페이지",
-    ownerBody: "통계, 수익, 시스템 제어를 위한 오너 전용 대시보드입니다.",
-    ownerButton: "헤드 페이지로 가기",
-    moreTitle: "더 보기 (예정된 페이지)",
-    moreChip: "초기 내비게이션",
-    profile: "프로필",
-    chat: "채팅 (코어 어시스턴트)",
-    ai: "AI 도구",
-    payments: "결제",
-    login: "로그인 (오너 / 크리에이터용)",
-    becomeCreatorChip: "크리에이터",
-    becomeCreatorTitle: "Enkhverse에 작품을 올리고 싶으신가요?",
-    becomeCreatorBody: "크리에이터 신청을 하고 전 세계 독자들에게 만화, 웹툰, 일러스트를 공유하세요.",
-    becomeCreatorButton: "크리에이터 되기",
-    footerNote:
-      "일부 링크가 지금 404여도 괜찮습니다. 하나씩 만들어 갈게요.",
+    heroTitle: "당신의 창의성을 숨기지 마세요.",
+    heroTitleAccent: "세상이 보게 하세요.",
+    heroBody: "만화, 웹툰, 코믹스를 한 곳에서 읽고, 만들고, 출판하세요.",
+    readButton: "리더 보기",
+    createButton: "스튜디오 가기",
+    becomeCreatorTitle: "Enkhverse에서 출판하기",
+    becomeCreatorBody: "크리에이터 신청을 통해 전 세계 독자들에게 작품을 공유하세요.",
+    becomeCreatorButton: "지금 신청",
+    navHome: "홈",
+    navReader: "리더",
+    navStudio: "스튜디오",
+    navCreator: "크리에이터 되기",
+    navProfile: "프로필",
+    featuredTitle: "추천",
+    newTitle: "신규 출시",
+    comingSoon: "콘텐츠가 곧 추가됩니다.",
+    footerEmail: "enkhverseglobal@gmail.com",
   },
   mn: {
-    chip: "Enkhverse · Зөөлөн редакцийн хувилбар",
-    heroTitle: "Бүтээлч байдлаа бүү нуу. Дэлхийд харуул.",
-    heroBody:
-      "Манга / комиксыг нэг дороос уншиж, бүтээж, удирдаарай. Энэ бол эхний хувилбар — эхлээд ажиллагаа, дараа нь илүү гоёмсог болно.",
-    readChip: "Унших",
-    readTitle: "Уншигч",
-    readBody: "Нийтийн цувралуудыг үзээд шууд уншиж эхлээрэй. Одоохондоо нэвтрэх шаардлагагүй.",
+    heroTitle: "Бүтээлч байдлаа бүү нуу.",
+    heroTitleAccent: "Дэлхийд харуул.",
+    heroBody: "Манга, вэбтун, комикс — нэг дороос уншиж, бүтээж, нийтлээрэй.",
     readButton: "Уншигч руу очих",
-    createChip: "Бүтээх",
-    createTitle: "Нийтлэгч студи",
-    createBody:
-      "Цуврал үүсгэж, бүлэг оруулж, төслүүдээ нэг дороос удирдаарай.",
-    createButton: "Нийтлэгч рүү очих",
-    ownerChip: "Эзэмшигч",
-    ownerTitle: "Удирдлагын хуудас",
-    ownerBody: "Статистик, орлого, системийн удирдлагад зориулсан эзэмшигчийн самбар.",
-    ownerButton: "Удирдлагын хуудас руу очих",
-    moreTitle: "Бусад (ирээдүйн хуудсууд)",
-    moreChip: "Эрт навигаци",
-    profile: "Профайл",
-    chat: "Чат (Үндсэн туслах)",
-    ai: "AI хэрэгслүүд",
-    payments: "Төлбөр",
-    login: "Нэвтрэх (эзэмшигч / бүтээгч)",
-    becomeCreatorChip: "Бүтээгчид",
-    becomeCreatorTitle: "Enkhverse дээр бүтээлээ нийтлэхийг хүсч байна уу?",
-    becomeCreatorBody: "Бүтээгч болохын тулд өргөдлөө гаргаж, манга, вэбтун эсвэл зурагт бүтээлүүдээ дэлхийн уншигчидтай хуваалцаарай.",
-    becomeCreatorButton: "Бүтээгч болох",
-    footerNote:
-      "Зарим холбоос одоохондоо 404 өгч байвал зүгээр. Бид нэг нэгээр нь бүтээнэ.",
+    createButton: "Студи руу очих",
+    becomeCreatorTitle: "Enkhverse дээр нийтлэх",
+    becomeCreatorBody: "Бүтээгч болохын тулд өргөдлөө гаргаж, дэлхийн уншигчидтай бүтээлээ хуваалцаарай.",
+    becomeCreatorButton: "Өргөдөл гаргах",
+    navHome: "Нүүр",
+    navReader: "Уншигч",
+    navStudio: "Студи",
+    navCreator: "Бүтээгч болох",
+    navProfile: "Профайл",
+    featuredTitle: "Онцлох",
+    newTitle: "Шинэ гарсан",
+    comingSoon: "Контент удахгүй нэмэгдэнэ.",
+    footerEmail: "enkhverseglobal@gmail.com",
   },
   ja: {
-    chip: "Enkhverse · ソフトエディトリアルビルド",
-    heroTitle: "あなたの創造性を隠さないで。世界に見せよう。",
-    heroBody:
-      "マンガ / コミックを一つの場所で読み、作り、管理できます。これは初期ビルドで、まずは機能、洗練はその後です。",
-    readChip: "読む",
-    readTitle: "リーダー",
-    readBody: "公開されたシリーズを見て、すぐに読み始めましょう。今のところログインは不要です。",
+    heroTitle: "あなたの創造性を隠さないで。",
+    heroTitleAccent: "世界に見せよう。",
+    heroBody: "マンガ、ウェブトゥーン、コミックを一つの場所で読み、作り、出版できます。",
     readButton: "リーダーへ",
-    createChip: "制作",
-    createTitle: "パブリッシャースタジオ",
-    createBody:
-      "シリーズを作成し、チャプターをアップロードし、プロジェクトを一か所で管理します。",
-    createButton: "パブリッシャーへ",
-    ownerChip: "オーナー",
-    ownerTitle: "ヘッドページ",
-    ownerBody: "統計、収益、システム管理のためのオーナー専用ダッシュボードです。",
-    ownerButton: "ヘッドページへ",
-    moreTitle: "その他（今後のページ）",
-    moreChip: "初期ナビゲーション",
-    profile: "プロフィール",
-    chat: "チャット（コアアシスタント）",
-    ai: "AIツール",
-    payments: "支払い",
-    login: "ログイン（オーナー / クリエイター用）",
-    becomeCreatorChip: "クリエイター",
-    becomeCreatorTitle: "Enkhverseで作品を公開しませんか？",
-    becomeCreatorBody: "クリエイター申請をして、マンガ、ウェブトゥーン、イラストを世界中の読者と共有しましょう。",
-    becomeCreatorButton: "クリエイターになる",
-    footerNote:
-      "一部のリンクが今は404でも大丈夫です。これから一つずつ作っていきます。",
+    createButton: "スタジオへ",
+    becomeCreatorTitle: "Enkhverseで出版する",
+    becomeCreatorBody: "クリエイター申請をして、世界中の読者に作品を届けましょう。",
+    becomeCreatorButton: "今すぐ申請",
+    navHome: "ホーム",
+    navReader: "リーダー",
+    navStudio: "スタジオ",
+    navCreator: "クリエイターになる",
+    navProfile: "プロフィール",
+    featuredTitle: "おすすめ",
+    newTitle: "新着",
+    comingSoon: "コンテンツは近日公開予定です。",
+    footerEmail: "enkhverseglobal@gmail.com",
   },
 } as const;
 
@@ -145,219 +92,182 @@ export default async function LocaleHomePage({
   params: Params | Promise<Params>;
 }) {
   const { locale } = await Promise.resolve(params);
-  const currentLocale = normalizeLocale(locale);
-  const t = UI_TEXT[currentLocale];
+  const l = normalizeLocale(locale);
+  const t = UI_TEXT[l];
+
+  const sidebarLinks = [
+    { href: `/${l}`, label: t.navHome, icon: "⊞" },
+    { href: `/${l}/reader`, label: t.navReader, icon: "📖" },
+    { href: `/${l}/studio`, label: t.navStudio, icon: "✏️" },
+    { href: `/${l}/creator/apply`, label: t.navCreator, icon: "🌟" },
+    { href: `/${l}/profile`, label: t.navProfile, icon: "👤" },
+  ];
 
   return (
-    <div className="min-h-screen theme-soft">
-      <main className="mx-auto w-full max-w-5xl px-6 py-12 md:px-8 md:py-16">
-        <section className="mb-10 space-y-4">
-          <div
-            className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide text-stone-700"
+    <div className="min-h-screen theme-soft" style={{ display: "flex", flexDirection: "column" }}>
+      <div className="flex flex-1">
+        {/* ── Left Sidebar ── */}
+        <aside
+          className="hidden md:flex flex-col gap-1 w-52 shrink-0 px-3 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto"
+          style={{ borderRight: "1px solid var(--border)" }}
+        >
+          {sidebarLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:opacity-90"
+              style={{
+                color: "var(--text)",
+              }}
+            >
+              <span className="text-base w-5 text-center">{link.icon}</span>
+              <span>{link.label}</span>
+            </Link>
+          ))}
+
+          {/* Divider */}
+          <div className="my-3 border-t" style={{ borderColor: "var(--border)" }} />
+
+          {/* Locale switcher in sidebar */}
+          <p className="px-3 text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--muted)" }}>
+            Language
+          </p>
+          {(["en", "ko", "mn", "ja"] as SupportedLocale[]).map((loc) => (
+            <Link
+              key={loc}
+              href={`/${loc}`}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition hover:opacity-90"
+              style={{
+                color: loc === l ? "var(--accent)" : "var(--muted)",
+                fontWeight: loc === l ? 600 : 400,
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ background: loc === l ? "var(--accent)" : "transparent", border: `1px solid ${loc === l ? "var(--accent)" : "var(--border)"}` }}
+              />
+              {loc.toUpperCase()}
+            </Link>
+          ))}
+        </aside>
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 min-w-0 px-6 py-8 md:px-10">
+
+          {/* Hero */}
+          <section
+            className="relative mb-10 overflow-hidden rounded-[28px] p-8 md:p-12"
             style={{
-              borderColor: "rgba(47,47,47,0.12)",
-              background: "rgba(233,230,223,0.72)",
+              background: "linear-gradient(135deg, rgba(94,99,87,0.13) 0%, rgba(233,230,223,0.88) 60%, rgba(255,255,255,0.6) 100%)",
+              border: "1px solid rgba(94,99,87,0.15)",
+              boxShadow: "var(--shadow-soft)",
             }}
           >
-            {t.chip}
-          </div>
+            <div className="max-w-xl space-y-5">
+              <h1 className="text-3xl font-bold leading-tight tracking-tight md:text-4xl" style={{ color: "var(--text)" }}>
+                {t.heroTitle}{" "}
+                <span style={{ color: "var(--accent)" }}>{t.heroTitleAccent}</span>
+              </h1>
+              <p className="text-base leading-7" style={{ color: "var(--muted)" }}>
+                {t.heroBody}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/${l}/reader`} className="btn-ios text-sm">
+                  {t.readButton}
+                </Link>
+                <Link href={`/${l}/studio`} className="btn-ios-secondary text-sm">
+                  {t.createButton}
+                </Link>
+              </div>
+            </div>
+          </section>
 
-          <div className="space-y-3">
-            <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight md:text-4xl">
-              {t.heroTitle}
-            </h1>
-
-            <p
-              className="max-w-3xl text-base leading-7"
+          {/* Featured section (placeholder) */}
+          <section className="mb-10 space-y-4">
+            <h2
+              className="text-sm font-semibold uppercase tracking-[0.18em]"
               style={{ color: "var(--muted)" }}
             >
-              {t.heroBody}
-            </p>
-          </div>
-        </section>
-
-        <section className="grid gap-5 md:grid-cols-3">
-          <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
-            <div className="space-y-3">
-              <div
-                className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
-                style={{
-                  background: "rgba(233,230,223,0.9)",
-                  border: "1px solid rgba(47,47,47,0.12)",
-                }}
-              >
-                {t.readChip}
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">{t.readTitle}</h2>
-                <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
-                  {t.readBody}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <Link
-                href={`/${currentLocale}/reader`}
-                className="btn-ios-secondary w-full"
-              >
-                {t.readButton}
-              </Link>
-            </div>
-          </div>
-
-          <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
-            <div className="space-y-3">
-              <div
-                className="inline-flex rounded-full px-3 py-1 text-xs font-medium text-white"
-                style={{
-                  background: "var(--accent)",
-                  border: "1px solid rgba(47,47,47,0.08)",
-                }}
-              >
-                {t.createChip}
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  {t.createTitle}
-                </h2>
-                <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
-                  {t.createBody}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <Link
-                href={`/${currentLocale}/publisher`}
-                className="btn-ios w-full"
-              >
-                {t.createButton}
-              </Link>
-            </div>
-          </div>
-
-          <div className="soft-card flex min-h-[240px] flex-col justify-between p-6">
-            <div className="space-y-3">
-              <div
-                className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
-                style={{
-                  background: "rgba(233,230,223,0.9)",
-                  border: "1px solid rgba(47,47,47,0.12)",
-                }}
-              >
-                {t.ownerChip}
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">{t.ownerTitle}</h2>
-                <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
-                  {t.ownerBody}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <Link
-                href={`/${currentLocale}/head`}
-                className="btn-ios-secondary w-full"
-              >
-                {t.ownerButton}
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="mt-8 flex flex-col gap-4 rounded-[24px] p-6 sm:flex-row sm:items-center sm:justify-between"
-          style={{
-            background: "linear-gradient(135deg, rgba(94,99,87,0.10), rgba(233,230,223,0.80))",
-            border: "1px solid rgba(94,99,87,0.18)",
-            boxShadow: "var(--shadow-soft)",
-          }}
-        >
-          <div className="space-y-2">
+              {t.featuredTitle}
+            </h2>
             <div
-              className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+              className="rounded-[24px] border px-6 py-10 text-center"
               style={{
-                background: "var(--accent)",
-                color: "#f8f7f3",
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.55)",
+                boxShadow: "var(--shadow-soft)",
               }}
             >
-              {t.becomeCreatorChip}
+              <div className="mb-3 text-3xl">📚</div>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>{t.comingSoon}</p>
+              <Link
+                href={`/${l}/reader`}
+                className="mt-4 inline-block text-xs font-medium transition hover:opacity-70"
+                style={{ color: "var(--accent)" }}
+              >
+                {t.readButton} →
+              </Link>
             </div>
-            <h2 className="text-lg font-semibold tracking-tight">{t.becomeCreatorTitle}</h2>
-            <p className="max-w-md text-sm leading-6" style={{ color: "var(--muted)" }}>
-              {t.becomeCreatorBody}
-            </p>
-          </div>
+          </section>
 
-          <div className="shrink-0">
-            <Link
-              href={`/${currentLocale}/creator/apply`}
-              className="btn-ios text-sm"
+          {/* New Releases section (placeholder) */}
+          <section className="mb-10 space-y-4">
+            <h2
+              className="text-sm font-semibold uppercase tracking-[0.18em]"
+              style={{ color: "var(--muted)" }}
             >
-              {t.becomeCreatorButton}
-            </Link>
-          </div>
-        </section>
-
-        <section className="soft-card mt-8 p-6">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h3 className="text-lg font-semibold tracking-tight">
-              {t.moreTitle}
-            </h3>
-
+              {t.newTitle}
+            </h2>
             <div
-              className="rounded-full px-3 py-1 text-xs font-medium"
+              className="rounded-[24px] border px-6 py-10 text-center"
               style={{
-                background: "rgba(233,230,223,0.9)",
-                border: "1px solid rgba(47,47,47,0.12)",
+                borderColor: "var(--border)",
+                background: "rgba(233,230,223,0.55)",
+                boxShadow: "var(--shadow-soft)",
               }}
             >
-              {t.moreChip}
+              <div className="mb-3 text-3xl">✨</div>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>{t.comingSoon}</p>
             </div>
-          </div>
+          </section>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            {[
-              { href: `/${currentLocale}/profile`, label: t.profile },
-              { href: `/${currentLocale}/chat`, label: t.chat },
-              { href: `/${currentLocale}/ai`, label: t.ai },
-              { href: `/${currentLocale}/payments`, label: t.payments },
-              { href: `/${currentLocale}/login`, label: t.login },
-            ].map((x) => (
-              <Link
-                key={x.href}
-                href={x.href}
-                className="rounded-2xl border px-4 py-3 text-sm transition hover:opacity-90"
-                style={{
-                  borderColor: "rgba(47,47,47,0.12)",
-                  background: "rgba(255,255,255,0.28)",
-                  color: "var(--text)",
-                }}
-              >
-                {x.label}
-              </Link>
-            ))}
-          </div>
-
-          <p className="mt-4 text-[11px]" style={{ color: "var(--muted)" }}>
-            {t.footerNote}
-          </p>
-        </section>
-
-        <footer className="mt-16 text-center text-sm text-stone-600">
-          <a
-            href="mailto:enkhverseglobal@gmail.com"
-            className="hover:underline"
+          {/* Become a Creator CTA */}
+          <section
+            className="flex flex-col gap-5 rounded-[24px] p-7 sm:flex-row sm:items-center sm:justify-between"
+            style={{
+              background: "linear-gradient(135deg, rgba(94,99,87,0.12), rgba(233,230,223,0.82))",
+              border: "1px solid rgba(94,99,87,0.18)",
+              boxShadow: "var(--shadow-soft)",
+            }}
           >
-            enkhverseglobal@gmail.com
-          </a>
-        </footer>
-      </main>
+            <div className="space-y-2">
+              <div
+                className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+                style={{ background: "var(--accent)", color: "#f8f7f3" }}
+              >
+                Creators
+              </div>
+              <h2 className="text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+                {t.becomeCreatorTitle}
+              </h2>
+              <p className="max-w-md text-sm leading-6" style={{ color: "var(--muted)" }}>
+                {t.becomeCreatorBody}
+              </p>
+            </div>
+            <div className="shrink-0">
+              <Link href={`/${l}/creator/apply`} className="btn-ios text-sm">
+                {t.becomeCreatorButton}
+              </Link>
+            </div>
+          </section>
+
+          <footer className="mt-16 text-center text-sm" style={{ color: "var(--muted)" }}>
+            <a href={`mailto:${t.footerEmail}`} className="hover:underline">
+              {t.footerEmail}
+            </a>
+          </footer>
+        </main>
+      </div>
     </div>
   );
 }
