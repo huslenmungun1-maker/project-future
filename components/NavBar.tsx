@@ -33,10 +33,10 @@ const LABEL: Record<SupportedLocale, string> = {
 };
 
 const UI_TEXT = {
-  en:  { reader: "Reader", studio: "Studio", publisher: "Publisher", profile: "Profile", login: "Login", signout: "Sign Out" },
-  ko:  { reader: "리더", studio: "스튜디오", publisher: "퍼블리셔", profile: "프로필", login: "로그인", signout: "로그아웃" },
-  mn:  { reader: "Уншигч", studio: "Студи", publisher: "Нийтлэгч", profile: "Профайл", login: "Нэвтрэх", signout: "Гарах" },
-  ja:  { reader: "リーダー", studio: "スタジオ", publisher: "パブリッシャー", profile: "プロフィール", login: "ログイン", signout: "ログアウト" },
+  en:  { reader: "Reader", studio: "Studio", profile: "Profile", login: "Login", signout: "Sign Out" },
+  ko:  { reader: "리더", studio: "스튜디오", profile: "프로필", login: "로그인", signout: "로그아웃" },
+  mn:  { reader: "Уншигч", studio: "Студи", profile: "Профайл", login: "Нэвтрэх", signout: "Гарах" },
+  ja:  { reader: "リーダー", studio: "スタジオ", profile: "プロフィール", login: "ログイン", signout: "ログアウト" },
 } as const;
 
 export default function NavBar({ locale }: { locale: string }) {
@@ -97,15 +97,6 @@ export default function NavBar({ locale }: { locale: string }) {
               className="text-stone-700 transition hover:text-stone-950"
             >
               {t.studio}
-            </Link>
-          )}
-
-          {isOwner && (
-            <Link
-              href={`/${currentLocale}/publisher`}
-              className="text-stone-700 transition hover:text-stone-950"
-            >
-              {t.publisher}
             </Link>
           )}
         </div>
