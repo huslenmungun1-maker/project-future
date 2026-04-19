@@ -102,7 +102,7 @@ export default function NavBar({ locale }: { locale: string }) {
 
           {isOwner && (
             <Link
-              href={`/${currentLocale}/publisher/books`}
+              href={`/${currentLocale}/publisher`}
               className="text-stone-700 transition hover:text-stone-950"
             >
               {t.publisher}

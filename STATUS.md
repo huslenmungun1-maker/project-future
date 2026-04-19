@@ -3,9 +3,10 @@
 ## Last updated: 2026-04-19
 
 ## In Progress
-- 1.1.3 Publisher nav locale prefix
+- 1.1.5 Reader page empty state
 
 ## Completed
+- 1.1.3 Publisher nav link already had locale prefix; corrected target from /publisher/books → /publisher for consistency
 - 1.1.2 Fixed creator apply page: combined auth+existing-check into single async init to eliminate race condition where form flashed before existing-application check completed
 
 ## Upcoming
