@@ -3,9 +3,10 @@
 ## Last updated: 2026-04-19
 
 ## In Progress
-- 1.1.5 Reader page empty state
+- 1.1.6 Merge Studio + Publisher nav
 
 ## Completed
+- 1.1.5 Added proper empty states to reader: unified empty view when nothing published, per-section empty states with icons and descriptive text
 - 1.1.3 Publisher nav link already had locale prefix; corrected target from /publisher/books → /publisher for consistency
 - 1.1.2 Fixed creator apply page: combined auth+existing-check into single async init to eliminate race condition where form flashed before existing-application check completed
 

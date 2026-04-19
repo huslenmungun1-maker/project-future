@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -60,6 +60,12 @@ const UI_TEXT = {
     backHome: "Back to home",
     untitledBook: "Untitled book",
     untitledSeries: "Untitled series",
+    emptySeriesTitle: "No series published yet",
+    emptySeriesBody: "Check back soon — stories are on their way.",
+    emptyBooksTitle: "No books published yet",
+    emptyBooksBody: "Nothing here yet. More content is coming.",
+    emptyAllTitle: "Nothing published yet",
+    emptyAllBody: "Enkhverse is just getting started. Check back soon for manga, webtoons, and more.",
   },
   mn: {
     chip: "Уншигч",
@@ -78,6 +84,12 @@ const UI_TEXT = {
     backHome: "Нүүр рүү буцах",
     untitledBook: "Нэргүй ном",
     untitledSeries: "Нэргүй цуврал",
+    emptySeriesTitle: "Цуврал нийтлэгдээгүй байна",
+    emptySeriesBody: "Удахгүй шинэ цувралууд гарах болно.",
+    emptyBooksTitle: "Ном нийтлэгдээгүй байна",
+    emptyBooksBody: "Одоохондоо юу ч алга. Контент удахгүй нэмэгдэнэ.",
+    emptyAllTitle: "Одоогоор нийтлэгдсэн зүйл алга",
+    emptyAllBody: "Enkhverse эхэлж байна. Удахгүй манга, вэбтун болон бусад контентуудтай болно.",
   },
   ko: {
     chip: "리더",
@@ -96,6 +108,12 @@ const UI_TEXT = {
     backHome: "홈으로",
     untitledBook: "제목 없는 책",
     untitledSeries: "제목 없는 시리즈",
+    emptySeriesTitle: "게시된 시리즈가 없습니다",
+    emptySeriesBody: "곧 새로운 이야기가 올라올 예정입니다.",
+    emptyBooksTitle: "게시된 책이 없습니다",
+    emptyBooksBody: "아직 아무것도 없습니다. 곧 콘텐츠가 추가될 예정입니다.",
+    emptyAllTitle: "아직 게시된 콘텐츠가 없습니다",
+    emptyAllBody: "Enkhverse가 막 시작되었습니다. 곧 만화, 웹툰 등 다양한 콘텐츠를 만나보세요.",
   },
   ja: {
     chip: "リーダー",
@@ -114,6 +132,12 @@ const UI_TEXT = {
     backHome: "ホームへ戻る",
     untitledBook: "無題の本",
     untitledSeries: "無題のシリーズ",
+    emptySeriesTitle: "シリーズはまだ公開されていません",
+    emptySeriesBody: "もうすぐ新しいストーリーが届きます。",
+    emptyBooksTitle: "本はまだ公開されていません",
+    emptyBooksBody: "まだ何もありません。コンテンツはまもなく追加されます。",
+    emptyAllTitle: "まだ公開されたコンテンツはありません",
+    emptyAllBody: "Enkhverseは始まったばかりです。マンガ、ウェブトゥーンなどを近日公開予定です。",
   },
 } as const;
 
@@ -128,12 +152,6 @@ export default function ReaderHomePage() {
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
 
-  const statusMessage = useMemo(() => {
-    if (status === "loading") return "";
-    if (status === "error") return t.supabaseError;
-    if (books.length === 0 && series.length === 0) return t.supabaseEmpty;
-    return t.supabaseOk;
-  }, [status, books.length, series.length, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -317,19 +335,44 @@ export default function ReaderHomePage() {
           </Link>
         </header>
 
-        <div className="mb-10">
-          <div
-            className="rounded-[24px] border p-4 text-xs"
+        {status === "error" && (
+          <div className="mb-10">
+            <div
+              className="rounded-[24px] border p-4 text-xs"
+              style={{
+                borderColor: "rgba(122,46,46,0.2)",
+                background: "rgba(233,230,223,0.72)",
+                color: "var(--danger)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
+              {t.supabaseError}
+            </div>
+          </div>
+        )}
+
+        {status === "ok" && books.length === 0 && series.length === 0 && (
+          <div className="mb-10 flex flex-col items-center justify-center rounded-[28px] border py-16 text-center"
             style={{
-              borderColor: status === "error" ? "rgba(122,46,46,0.2)" : "var(--border)",
-              background: "rgba(233,230,223,0.72)",
-              color: status === "error" ? "var(--danger)" : "var(--muted)",
+              borderColor: "var(--border)",
+              background: "linear-gradient(145deg, rgba(233,230,223,0.80), rgba(255,255,255,0.55))",
               boxShadow: "var(--shadow-soft)",
             }}
           >
-            {status === "loading" ? t.chip + "…" : statusMessage}
+            <div
+              className="mb-5 flex h-16 w-16 items-center justify-center rounded-full text-3xl"
+              style={{ background: "rgba(94,99,87,0.10)", border: "1px solid rgba(94,99,87,0.15)" }}
+            >
+              📖
+            </div>
+            <h2 className="mb-2 text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+              {t.emptyAllTitle}
+            </h2>
+            <p className="max-w-sm text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              {t.emptyAllBody}
+            </p>
           </div>
-        </div>
+        )}
 
         <section className="mb-12 space-y-5">
           <div className="flex items-center justify-between gap-4">
@@ -341,18 +384,20 @@ export default function ReaderHomePage() {
             </h2>
           </div>
 
-          {status !== "loading" && series.length === 0 ? (
+          {status === "ok" && series.length === 0 && books.length > 0 ? (
             <div
-              className="rounded-[24px] border p-5"
+              className="flex items-center gap-4 rounded-[20px] border px-5 py-4"
               style={{
                 borderColor: "var(--border)",
                 background: "rgba(233,230,223,0.66)",
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                {t.supabaseEmpty}
-              </p>
+              <span className="text-2xl">📚</span>
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{t.emptySeriesTitle}</p>
+                <p className="text-xs" style={{ color: "var(--muted)" }}>{t.emptySeriesBody}</p>
+              </div>
             </div>
           ) : null}
 
@@ -482,18 +527,20 @@ export default function ReaderHomePage() {
             </h2>
           </div>
 
-          {status !== "loading" && books.length === 0 ? (
+          {status === "ok" && books.length === 0 && series.length > 0 ? (
             <div
-              className="rounded-[24px] border p-5"
+              className="flex items-center gap-4 rounded-[20px] border px-5 py-4"
               style={{
                 borderColor: "var(--border)",
                 background: "rgba(233,230,223,0.66)",
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
-                {t.supabaseEmpty}
-              </p>
+              <span className="text-2xl">📖</span>
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{t.emptyBooksTitle}</p>
+                <p className="text-xs" style={{ color: "var(--muted)" }}>{t.emptyBooksBody}</p>
+              </div>
             </div>
           ) : null}
 
