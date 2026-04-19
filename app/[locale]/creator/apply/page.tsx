@@ -81,13 +81,12 @@ export default function CreatorApplyPage() {
   const locale = (params?.locale as string) || "en";
   const supabase = useMemo(() => createClientComponentClient(), []);
 
-  // Auth state
-  const [authChecked, setAuthChecked] = useState(false);
+  // Unified init state
+  const [initialized, setInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Existing application check
   const [existing, setExisting] = useState<ExistingApplication | null>(null);
-  const [checkingExisting, setCheckingExisting] = useState(false);
 
   // Form
   const [step, setStep] = useState(1);
@@ -99,38 +98,29 @@ export default function CreatorApplyPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  // ── Auth check ────────────────────────────────────────────
+  // ── Init: auth + existing application check ───────────────
 
   useEffect(() => {
-    async function checkAuth() {
+    async function init() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         router.replace(`/${locale}/login?redirect=/${locale}/creator/apply`);
         return;
       }
-      setUserId(session.user.id);
-      setAuthChecked(true);
-    }
-    checkAuth();
-  }, [locale, router, supabase]);
+      const uid = session.user.id;
+      setUserId(uid);
 
-  // ── Check for existing application ────────────────────────
-
-  useEffect(() => {
-    if (!userId) return;
-    async function checkExisting() {
-      setCheckingExisting(true);
       const { data } = await supabase
         .from("creator_applications")
         .select("id, status, display_name, created_at, review_notes")
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .maybeSingle();
 
       if (data) setExisting(data as ExistingApplication);
-      setCheckingExisting(false);
+      setInitialized(true);
     }
-    checkExisting();
-  }, [userId, supabase]);
+    init();
+  }, [locale, router, supabase]);
 
   // ── Field helpers ─────────────────────────────────────────
 
@@ -230,7 +220,7 @@ export default function CreatorApplyPage() {
   //  Loading / redirect states
   // ─────────────────────────────────────────────────────────
 
-  if (!authChecked || checkingExisting) {
+  if (!initialized) {
     return (
       <main className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
         <div className="mx-auto max-w-xl px-6 py-16 text-sm" style={{ color: "var(--muted)" }}>
