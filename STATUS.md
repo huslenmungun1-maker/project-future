@@ -3,9 +3,10 @@
 ## Last updated: 2026-04-19
 
 ## In Progress
-- 1.1.7 Head admin review panel
+- 1.1.8 Role system replacing hardcoded owner email
 
 ## Completed
+- 1.1.7 Built admin review panel at /head: lists all creator applications with filter tabs (pending/approved/rejected), expandable detail rows, approve/reject actions with optional review notes, toast feedback
 - 1.1.6 Merged Studio and Publisher into single Studio nav item; removed Publisher link from navbar
 - 1.1.5 Added proper empty states to reader: unified empty view when nothing published, per-section empty states with icons and descriptive text
 - 1.1.3 Publisher nav link already had locale prefix; corrected target from /publisher/books → /publisher for consistency
