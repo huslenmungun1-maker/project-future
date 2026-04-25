@@ -53,19 +53,56 @@ export default function HeadPage() {
   async function act(id: string, status: "approved" | "rejected") {
     setActing(id);
     const notes = reviewNotes[id]?.trim() || null;
+    const app = apps.find((a) => a.id === id);
+
     const { error } = await supabase
       .from("creator_applications")
       .update({ status, review_notes: notes })
       .eq("id", id);
 
-    if (!error) {
-      setApps((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status, review_notes: notes } : a))
-      );
-      showToast(status === "approved" ? "Application approved." : "Application rejected.");
-    } else {
+    if (error) {
       showToast("Error: " + error.message);
+      setActing(null);
+      return;
     }
+
+    if (status === "approved" && app) {
+      const { error: creatorsError } = await supabase
+        .from("creators")
+        .upsert(
+          {
+            id: app.user_id,
+            display_name: app.display_name,
+            bio: app.bio,
+            portfolio_url: app.portfolio_url,
+            application_id: app.id,
+            approved_at: new Date().toISOString(),
+          },
+          { onConflict: "id" }
+        );
+
+      if (creatorsError) {
+        showToast("Approved but failed to create creator row: " + creatorsError.message);
+        setActing(null);
+        return;
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ role: "creator" })
+        .eq("id", app.user_id);
+
+      if (profileError) {
+        showToast("Approved but failed to update profile role: " + profileError.message);
+        setActing(null);
+        return;
+      }
+    }
+
+    setApps((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status, review_notes: notes } : a))
+    );
+    showToast(status === "approved" ? "Application approved." : "Application rejected.");
     setActing(null);
   }
 
