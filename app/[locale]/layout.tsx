@@ -1,5 +1,4 @@
-import NavBar from "@/components/NavBar";
-import HoverSidebar from "@/components/HoverSidebar";
+import NavWithSidebar from "@/components/NavWithSidebar";
 
 type Params = { locale: string };
 
@@ -14,13 +13,7 @@ export default async function LocaleLayout({
 
   return (
     <div className="min-h-screen theme-soft">
-      <HoverSidebar locale={locale} />
-      <header className="w-full bg-white border-b border-stone-200">
-        <div className="mx-auto w-full max-w-5xl px-6">
-          <NavBar locale={locale} />
-        </div>
-      </header>
-
+      <NavWithSidebar locale={locale} />
       {children}
     </div>
   );
