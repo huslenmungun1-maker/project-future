@@ -198,7 +198,6 @@ export default async function LocaleHomePage({
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <div className="mb-3 text-3xl">📚</div>
               <p className="text-sm" style={{ color: "var(--muted)" }}>{t.comingSoon}</p>
               <Link
                 href={`/${l}/reader`}
@@ -226,7 +225,6 @@ export default async function LocaleHomePage({
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <div className="mb-3 text-3xl">✨</div>
               <p className="text-sm" style={{ color: "var(--muted)" }}>{t.comingSoon}</p>
             </div>
           </section>
