@@ -147,6 +147,9 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
           border: "none",
           cursor: "pointer",
           zIndex: 201,
+          opacity: open ? 0 : 1,
+          pointerEvents: open ? "none" : "auto",
+          transition: "opacity 0.2s ease",
         }}
       >
         {[0, 1, 2].map((i) => (
