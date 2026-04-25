@@ -359,12 +359,6 @@ export default function ReaderHomePage() {
               boxShadow: "var(--shadow-soft)",
             }}
           >
-            <div
-              className="mb-5 flex h-16 w-16 items-center justify-center rounded-full text-3xl"
-              style={{ background: "rgba(94,99,87,0.10)", border: "1px solid rgba(94,99,87,0.15)" }}
-            >
-              📖
-            </div>
             <h2 className="mb-2 text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
               {t.emptyAllTitle}
             </h2>
@@ -393,7 +387,6 @@ export default function ReaderHomePage() {
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <span className="text-2xl">📚</span>
               <div>
                 <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{t.emptySeriesTitle}</p>
                 <p className="text-xs" style={{ color: "var(--muted)" }}>{t.emptySeriesBody}</p>
@@ -536,7 +529,6 @@ export default function ReaderHomePage() {
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <span className="text-2xl">📖</span>
               <div>
                 <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{t.emptyBooksTitle}</p>
                 <p className="text-xs" style={{ color: "var(--muted)" }}>{t.emptyBooksBody}</p>

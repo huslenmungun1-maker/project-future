@@ -137,12 +137,12 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
           left: 0,
           top: 0,
           height: "64px",
-          width: "44px",
+          width: "56px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: "5px",
+          gap: "6px",
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -155,9 +155,10 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
             style={{
               display: "block",
               width: "20px",
-              height: "1.5px",
+              height: "1px",
               background: "#3a3a3a",
-              borderRadius: "2px",
+              borderRadius: "1px",
+              flexShrink: 0,
             }}
           />
         ))}
@@ -168,7 +169,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
         className="w-full bg-white border-b border-stone-200"
         style={{ position: "relative", zIndex: 10 }}
       >
-        <div className="mx-auto w-full max-w-5xl px-6">
+        <div className="mx-auto w-full max-w-5xl pl-16 pr-6">
           <nav className="flex h-16 items-center justify-between">
 
             {/* LEFT: logo → nav links */}
