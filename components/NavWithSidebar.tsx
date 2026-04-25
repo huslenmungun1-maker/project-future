@@ -102,6 +102,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
   const isOwner =
     role === "owner" ||
     (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
+  const isCreator = role === "creator" || isOwner;
 
   const mkHref = (next: SupportedLocale) =>
     restPath === "/" ? `/${next}` : `/${next}${restPath}`;
@@ -118,8 +119,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
   const navLinks = [
     { href: `/${l}`, label: t.home },
     { href: `/${l}/reader`, label: t.reader },
-    ...(isOwner ? [{ href: `/${l}/studio`, label: t.studio }] : []),
-    { href: `/${l}/creator/apply`, label: t.creator },
+    ...(isCreator ? [{ href: `/${l}/studio`, label: t.studio }] : []),
+    ...(!isCreator ? [{ href: `/${l}/creator/apply`, label: t.creator }] : []),
     ...(session ? [{ href: `/${l}/profile`, label: t.profile }] : []),
     ...(isOwner ? [{ href: `/${l}/head`, label: t.head }] : []),
   ];
@@ -192,7 +193,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
                 <Link href={`/${l}/reader`} className="text-stone-600 transition hover:text-stone-900">
                   {t.reader}
                 </Link>
-                {isOwner && (
+                {isCreator && (
                   <Link href={`/${l}/studio`} className="text-stone-600 transition hover:text-stone-900">
                     {t.studio}
                   </Link>

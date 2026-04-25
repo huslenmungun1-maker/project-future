@@ -66,8 +66,7 @@ export async function middleware(req: NextRequest) {
   const userEmail = session.user.email || "";
 
   // ---- Role check ----
-  // Primary: query profiles table. Fallback: owner email env var.
-  let isOwner = false;
+  let role: string = "reader";
   try {
     const { data: profile } = await supabase
       .from("profiles")
@@ -75,19 +74,18 @@ export async function middleware(req: NextRequest) {
       .eq("id", session.user.id)
       .maybeSingle();
 
-    if (profile?.role === "owner") {
-      isOwner = true;
-    } else if (!profile && OWNER_EMAIL && userEmail === OWNER_EMAIL) {
-      // Profiles table exists but no row yet — use email fallback
-      isOwner = true;
+    if (profile?.role) {
+      role = profile.role;
     }
   } catch {
-    // Profiles table may not exist yet — fall back to email
-    if (OWNER_EMAIL && userEmail === OWNER_EMAIL) isOwner = true;
+    // profiles table not ready yet
   }
 
-  // Also honour email fallback when profiles table has no owner set
-  if (!isOwner && OWNER_EMAIL && userEmail === OWNER_EMAIL) isOwner = true;
+  // Email fallback for owner
+  if (OWNER_EMAIL && userEmail === OWNER_EMAIL) role = "owner";
+
+  const isOwner = role === "owner";
+  const isCreator = role === "creator" || isOwner;
 
   // ---- Owner-only routes ----
   if (restPath.startsWith("/head")) {
@@ -99,8 +97,9 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // ---- Creator + owner routes ----
   if (restPath.startsWith("/studio")) {
-    if (!isOwner) {
+    if (!isCreator) {
       const url = req.nextUrl.clone();
       url.pathname = `/${locale}/profile`;
       return NextResponse.redirect(url);
