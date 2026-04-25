@@ -126,6 +126,43 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
 
   return (
     <>
+      {/* ── Hamburger — fixed to left wall, vertically centered in navbar ── */}
+      <button
+        ref={hamburgerRef}
+        onMouseEnter={() => setHovered(true)}
+        onClick={() => setLocked((v) => !v)}
+        aria-label="Toggle navigation"
+        style={{
+          position: "fixed",
+          left: 0,
+          top: 0,
+          height: "64px",
+          width: "44px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "5px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          zIndex: 201,
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              display: "block",
+              width: "20px",
+              height: "1.5px",
+              background: "#3a3a3a",
+              borderRadius: "2px",
+            }}
+          />
+        ))}
+      </button>
+
       {/* ── Navbar ── */}
       <header
         className="w-full bg-white border-b border-stone-200"
@@ -134,43 +171,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
         <div className="mx-auto w-full max-w-5xl px-6">
           <nav className="flex h-16 items-center justify-between">
 
-            {/* LEFT: hamburger → logo → nav links */}
+            {/* LEFT: logo → nav links */}
             <div className="flex items-center gap-5">
-
-              {/* Hamburger — far left, hover opens, click locks */}
-              <button
-                ref={hamburgerRef}
-                onMouseEnter={() => setHovered(true)}
-                onClick={() => setLocked((v) => !v)}
-                aria-label="Toggle navigation"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  gap: "5px",
-                  width: "32px",
-                  height: "32px",
-                  padding: "6px 4px",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  borderRadius: "6px",
-                  flexShrink: 0,
-                }}
-              >
-                {[0, 1, 2].map((i) => (
-                  <span
-                    key={i}
-                    style={{
-                      display: "block",
-                      width: "20px",
-                      height: "1.5px",
-                      background: "#3a3a3a",
-                      borderRadius: "2px",
-                    }}
-                  />
-                ))}
-              </button>
 
               {/* Logo */}
               <Link
