@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Session } from "@supabase/supabase-js";
@@ -11,7 +11,7 @@ type UserRole = "reader" | "creator" | "owner";
 
 const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
 const LOCALES: SupportedLocale[] = ["en", "ko", "mn", "ja"];
-const SIDEBAR_WIDTH = 260;
+const SIDEBAR_W = 260;
 
 function normalizeLocale(raw: string): SupportedLocale {
   return (LOCALES.includes(raw as SupportedLocale) ? raw : "en") as SupportedLocale;
@@ -35,7 +35,15 @@ const UI_TEXT = {
 } as const;
 
 export default function NavWithSidebar({ locale }: { locale: string }) {
-  const [open, setOpen] = useState(false);
+  // hovered: controlled purely by mouse enter/leave on the sidebar panel
+  // locked: toggled by clicking the hamburger, stays open until click outside
+  const [hovered, setHovered] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const open = hovered || locked;
+
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+
   const pathname = usePathname() || "/";
   const router = useRouter();
   const l = normalizeLocale(locale);
@@ -78,6 +86,19 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
+  // Close locked sidebar when clicking anywhere outside sidebar + hamburger
+  useEffect(() => {
+    if (!locked) return;
+    function handleOutsideClick(e: MouseEvent) {
+      const target = e.target as Node;
+      const inSidebar = sidebarRef.current?.contains(target);
+      const inHamburger = hamburgerRef.current?.contains(target);
+      if (!inSidebar && !inHamburger) setLocked(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [locked]);
+
   const isOwner =
     role === "owner" ||
     (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
@@ -88,6 +109,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
   async function handleSignOut() {
     await supabase.auth.signOut();
     setRole("reader");
+    setLocked(false);
+    setHovered(false);
     router.replace(`/${l}/login`);
     router.refresh();
   }
@@ -103,26 +126,36 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
 
   return (
     <>
-      {/* ── Top navbar ── */}
-      <header className="w-full bg-white border-b border-stone-200" style={{ position: "relative", zIndex: 10 }}>
+      {/* ── Navbar ── */}
+      <header
+        className="w-full bg-white border-b border-stone-200"
+        style={{ position: "relative", zIndex: 10 }}
+      >
         <div className="mx-auto w-full max-w-5xl px-6">
           <nav className="flex h-16 items-center justify-between">
 
-            {/* Left: hamburger + logo + links */}
-            <div className="flex items-center gap-6">
-              {/* Hamburger — hover opens sidebar */}
+            {/* LEFT: hamburger → logo → nav links */}
+            <div className="flex items-center gap-5">
+
+              {/* Hamburger — far left, hover opens, click locks */}
               <button
-                onMouseEnter={() => setOpen(true)}
-                aria-label="Open navigation"
+                ref={hamburgerRef}
+                onMouseEnter={() => setHovered(true)}
+                onClick={() => setLocked((v) => !v)}
+                aria-label="Toggle navigation"
                 style={{
                   display: "flex",
                   flexDirection: "column",
+                  justifyContent: "center",
                   gap: "5px",
-                  padding: "8px 4px",
+                  width: "32px",
+                  height: "32px",
+                  padding: "6px 4px",
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",
                   borderRadius: "6px",
+                  flexShrink: 0,
                 }}
               >
                 {[0, 1, 2].map((i) => (
@@ -132,9 +165,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
                       display: "block",
                       width: "20px",
                       height: "1.5px",
-                      background: "#444",
+                      background: "#3a3a3a",
                       borderRadius: "2px",
-                      transition: "background 0.15s ease",
                     }}
                   />
                 ))}
@@ -143,36 +175,39 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
               {/* Logo */}
               <Link
                 href={`/${l}`}
-                className="flex items-center gap-3 font-semibold tracking-tight text-stone-900 hover:opacity-80"
+                className="flex items-center gap-2 font-semibold tracking-tight text-stone-900 hover:opacity-80"
               >
-                <img
-                  src="/logo.png"
-                  alt="Enkhverse"
-                  className="h-18 w-auto object-contain mr-2"
-                />
+                <img src="/logo.png" alt="Enkhverse" className="h-8 w-auto object-contain" />
                 <span className="text-base text-stone-900">Enkhverse</span>
               </Link>
 
               {/* Nav links */}
-              <div className="flex items-center gap-6 text-sm">
-                <Link href={`/${l}/reader`} className="text-stone-700 transition hover:text-stone-950">
+              <div className="hidden sm:flex items-center gap-5 text-sm">
+                <Link href={`/${l}/reader`} className="text-stone-600 transition hover:text-stone-900">
                   {t.reader}
                 </Link>
                 {isOwner && (
-                  <Link href={`/${l}/studio`} className="text-stone-700 transition hover:text-stone-950">
+                  <Link href={`/${l}/studio`} className="text-stone-600 transition hover:text-stone-900">
                     {t.studio}
                   </Link>
                 )}
                 {isOwner && (
-                  <Link href={`/${l}/head`} className="text-stone-700 transition hover:text-stone-950">
+                  <Link href={`/${l}/head`} className="text-stone-600 transition hover:text-stone-900">
                     {t.head}
                   </Link>
                 )}
               </div>
             </div>
 
-            {/* Right: sign in only when logged out, nothing when logged in */}
-            {!session && (
+            {/* RIGHT: profile when logged in, sign in when logged out */}
+            {session ? (
+              <Link
+                href={`/${l}/profile`}
+                className="rounded-full border border-stone-300 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+              >
+                {t.profile}
+              </Link>
+            ) : (
               <Link
                 href={`/${l}/login`}
                 className="rounded-full border border-stone-900 bg-stone-900 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-stone-700"
@@ -184,24 +219,33 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
         </div>
       </header>
 
-      {/* ── Hover sidebar ── */}
+      {/* ── Sidebar overlay ── */}
+      {/* Invisible full-screen closer when locked, sits under the sidebar */}
+      {locked && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 99 }}
+          onClick={() => setLocked(false)}
+        />
+      )}
+
       <div
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        ref={sidebarRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           position: "fixed",
           left: 0,
           top: 0,
           height: "100vh",
-          width: `${SIDEBAR_WIDTH}px`,
-          transform: open ? "translateX(0)" : `translateX(-${SIDEBAR_WIDTH}px)`,
+          width: `${SIDEBAR_W}px`,
+          transform: open ? "translateX(0)" : `translateX(-${SIDEBAR_W}px)`,
           transition: "transform 0.38s cubic-bezier(0.32, 0, 0.15, 1), box-shadow 0.38s ease",
-          zIndex: 100,
+          zIndex: 200,
           background: "rgba(250,249,246,0.98)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderRight: "1px solid rgba(0,0,0,0.07)",
-          boxShadow: open ? "8px 0 40px rgba(0,0,0,0.12)" : "none",
+          boxShadow: open ? "8px 0 40px rgba(0,0,0,0.13)" : "none",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -215,8 +259,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
             padding: "28px 18px 24px",
             overflowY: "auto",
             opacity: open ? 1 : 0,
-            transition: "opacity 0.16s ease",
-            transitionDelay: open ? "0.1s" : "0s",
+            transition: "opacity 0.18s ease",
+            transitionDelay: open ? "0.12s" : "0s",
           }}
         >
           {/* Brand */}
@@ -229,6 +273,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
               marginBottom: "24px",
               textDecoration: "none",
             }}
+            onClick={() => setLocked(false)}
           >
             <img src="/logo.png" alt="Enkhverse" style={{ height: 28, width: "auto" }} />
             <span style={{ fontWeight: 700, fontSize: "15px", color: "var(--text)", letterSpacing: "-0.01em" }}>
@@ -250,7 +295,9 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
                   fontWeight: 500,
                   color: "var(--text)",
                   textDecoration: "none",
+                  transition: "background 0.15s ease",
                 }}
+                onClick={() => setLocked(false)}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
@@ -299,7 +346,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
             </div>
           </div>
 
-          {/* Auth */}
+          {/* Auth — sign out only here */}
           {session ? (
             <button
               onClick={handleSignOut}
@@ -316,7 +363,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
                 textAlign: "left",
                 transition: "background 0.15s ease",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.04)")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.05)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               {t.signout}
