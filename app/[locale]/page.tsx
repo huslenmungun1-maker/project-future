@@ -17,11 +17,6 @@ const UI_TEXT = {
     becomeCreatorTitle: "Publish on Enkhverse",
     becomeCreatorBody: "Apply to become a creator and share your work with readers worldwide.",
     becomeCreatorButton: "Apply now",
-    navHome: "Home",
-    navReader: "Reader",
-    navStudio: "Studio",
-    navCreator: "Become a Creator",
-    navProfile: "Profile",
     featuredTitle: "Featured",
     newTitle: "New Releases",
     comingSoon: "Content is on its way. Check back soon.",
@@ -36,11 +31,6 @@ const UI_TEXT = {
     becomeCreatorTitle: "Enkhverse에서 출판하기",
     becomeCreatorBody: "크리에이터 신청을 통해 전 세계 독자들에게 작품을 공유하세요.",
     becomeCreatorButton: "지금 신청",
-    navHome: "홈",
-    navReader: "리더",
-    navStudio: "스튜디오",
-    navCreator: "크리에이터 되기",
-    navProfile: "프로필",
     featuredTitle: "추천",
     newTitle: "신규 출시",
     comingSoon: "콘텐츠가 곧 추가됩니다.",
@@ -55,11 +45,6 @@ const UI_TEXT = {
     becomeCreatorTitle: "Enkhverse дээр нийтлэх",
     becomeCreatorBody: "Бүтээгч болохын тулд өргөдлөө гаргаж, дэлхийн уншигчидтай бүтээлээ хуваалцаарай.",
     becomeCreatorButton: "Өргөдөл гаргах",
-    navHome: "Нүүр",
-    navReader: "Уншигч",
-    navStudio: "Студи",
-    navCreator: "Бүтээгч болох",
-    navProfile: "Профайл",
     featuredTitle: "Онцлох",
     newTitle: "Шинэ гарсан",
     comingSoon: "Контент удахгүй нэмэгдэнэ.",
@@ -74,11 +59,6 @@ const UI_TEXT = {
     becomeCreatorTitle: "Enkhverseで出版する",
     becomeCreatorBody: "クリエイター申請をして、世界中の読者に作品を届けましょう。",
     becomeCreatorButton: "今すぐ申請",
-    navHome: "ホーム",
-    navReader: "リーダー",
-    navStudio: "スタジオ",
-    navCreator: "クリエイターになる",
-    navProfile: "プロフィール",
     featuredTitle: "おすすめ",
     newTitle: "新着",
     comingSoon: "コンテンツは近日公開予定です。",
@@ -95,64 +75,9 @@ export default async function LocaleHomePage({
   const l = normalizeLocale(locale);
   const t = UI_TEXT[l];
 
-  const sidebarLinks = [
-    { href: `/${l}`, label: t.navHome, icon: "⊞" },
-    { href: `/${l}/reader`, label: t.navReader, icon: "📖" },
-    { href: `/${l}/studio`, label: t.navStudio, icon: "✏️" },
-    { href: `/${l}/creator/apply`, label: t.navCreator, icon: "🌟" },
-    { href: `/${l}/profile`, label: t.navProfile, icon: "👤" },
-  ];
-
   return (
-    <div className="min-h-screen theme-soft" style={{ display: "flex", flexDirection: "column" }}>
-      <div className="flex flex-1">
-        {/* ── Left Sidebar ── */}
-        <aside
-          className="hidden md:flex flex-col gap-1 w-52 shrink-0 px-3 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto"
-          style={{ borderRight: "1px solid var(--border)" }}
-        >
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:opacity-90"
-              style={{
-                color: "var(--text)",
-              }}
-            >
-              <span className="text-base w-5 text-center">{link.icon}</span>
-              <span>{link.label}</span>
-            </Link>
-          ))}
-
-          {/* Divider */}
-          <div className="my-3 border-t" style={{ borderColor: "var(--border)" }} />
-
-          {/* Locale switcher in sidebar */}
-          <p className="px-3 text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--muted)" }}>
-            Language
-          </p>
-          {(["en", "ko", "mn", "ja"] as SupportedLocale[]).map((loc) => (
-            <Link
-              key={loc}
-              href={`/${loc}`}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition hover:opacity-90"
-              style={{
-                color: loc === l ? "var(--accent)" : "var(--muted)",
-                fontWeight: loc === l ? 600 : 400,
-              }}
-            >
-              <span
-                className="h-1.5 w-1.5 rounded-full shrink-0"
-                style={{ background: loc === l ? "var(--accent)" : "transparent", border: `1px solid ${loc === l ? "var(--accent)" : "var(--border)"}` }}
-              />
-              {loc.toUpperCase()}
-            </Link>
-          ))}
-        </aside>
-
-        {/* ── Main Content ── */}
-        <main className="flex-1 min-w-0 px-6 py-8 md:px-10">
+    <div className="min-h-screen theme-soft">
+      <main className="mx-auto max-w-4xl px-6 py-8 md:px-10">
 
           {/* Hero */}
           <section
@@ -264,8 +189,7 @@ export default async function LocaleHomePage({
               {t.footerEmail}
             </a>
           </footer>
-        </main>
-      </div>
+      </main>
     </div>
   );
 }

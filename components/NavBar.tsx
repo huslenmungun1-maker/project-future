@@ -27,12 +27,6 @@ function stripLeadingLocale(pathname: string) {
   return pathname;
 }
 
-const LABEL: Record<SupportedLocale, string> = {
-  en: "EN",
-  ko: "KO",
-  mn: "MN",
-  ja: "JA",
-};
 
 const UI_TEXT = {
   en:  { reader: "Reader", studio: "Studio", head: "Admin", profile: "Profile", login: "Login", signout: "Sign Out" },
@@ -46,8 +40,6 @@ export default function NavBar({ locale }: { locale: string }) {
   const router = useRouter();
   const currentLocale = normalizeLocale(locale);
   const t = UI_TEXT[currentLocale];
-  const restPath = stripLeadingLocale(pathname);
-
   const supabase = useMemo(() => createClientComponentClient(), []);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>("reader");
@@ -95,9 +87,6 @@ export default function NavBar({ locale }: { locale: string }) {
 
   // Also honour email fallback when profiles table has no owner set
   const isOwner = role === "owner" || (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
-
-  const mkHref = (nextLocale: SupportedLocale) =>
-    restPath === "/" ? `/${nextLocale}` : `/${nextLocale}${restPath}`;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -150,25 +139,6 @@ export default function NavBar({ locale }: { locale: string }) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Locale switcher */}
-        {(["en", "ko", "mn", "ja"] as SupportedLocale[]).map((l) => {
-          const active = l === currentLocale;
-          return (
-            <Link
-              key={l}
-              href={mkHref(l)}
-              className={
-                active
-                  ? "rounded-full border border-stone-900 bg-stone-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white"
-                  : "rounded-full border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
-              }
-              aria-current={active ? "page" : undefined}
-            >
-              {LABEL[l]}
-            </Link>
-          );
-        })}
-
         {/* Auth */}
         {session ? (
           <div className="ml-2 flex items-center gap-2">
