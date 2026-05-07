@@ -71,8 +71,8 @@ export default function LoginPage() {
       setLoading(false);
       router.replace(destination);
       router.refresh();
-    } catch (err: any) {
-      setErrorMsg(typeof err?.message === "string" ? err.message : "Login failed.");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Login failed.");
       setLoading(false);
     }
   }
@@ -103,8 +103,8 @@ export default function LoginPage() {
 
       setLoading(false);
       setSuccessMsg("Account created! Check your email to confirm your address, then log in.");
-    } catch (err: any) {
-      setErrorMsg(typeof err?.message === "string" ? err.message : "Sign up failed.");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Sign up failed.");
       setLoading(false);
     }
   }
@@ -170,7 +170,7 @@ export default function LoginPage() {
                 We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.
               </p>
               <p className="text-xs" style={{ color: "var(--muted)", opacity: 0.7 }}>
-                Once confirmed, you'll be taken to a welcome screen automatically.
+                Once confirmed, you will be redirected to a welcome screen automatically.
               </p>
             </div>
             <button

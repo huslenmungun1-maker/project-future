@@ -5,6 +5,14 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
+const BG      = "#0a0a0c";
+const SURFACE = "#111116";
+const SURFACE2= "#18181f";
+const BORDER  = "rgba(255,255,255,0.07)";
+const TEXT    = "#eceae4";
+const MUTED   = "#5e5e6e";
+const ACCENT  = "#b6a07c";
+
 type AppStatus = "pending" | "approved" | "rejected";
 
 type Application = {
@@ -23,6 +31,12 @@ type Application = {
   created_at: string;
 };
 
+const STATUS_CONFIG = {
+  pending:  { label: "Pending",       color: "#c8a840", bg: "rgba(200,168,64,0.1)",  border: "rgba(200,168,64,0.22)"  },
+  approved: { label: "Approved",      color: "#6ea880", bg: "rgba(110,168,128,0.1)", border: "rgba(110,168,128,0.22)" },
+  rejected: { label: "Not accepted",  color: "#c85252", bg: "rgba(200,82,82,0.1)",   border: "rgba(200,82,82,0.2)"   },
+} as const;
+
 export default function HeadPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
@@ -34,7 +48,7 @@ export default function HeadPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [acting, setActing] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -53,7 +67,7 @@ export default function HeadPage() {
   async function act(id: string, status: "approved" | "rejected") {
     setActing(id);
     const notes = reviewNotes[id]?.trim() || null;
-    const app = apps.find((a) => a.id === id);
+    const app   = apps.find((a) => a.id === id);
 
     const { error } = await supabase
       .from("creator_applications")
@@ -61,28 +75,26 @@ export default function HeadPage() {
       .eq("id", id);
 
     if (error) {
-      showToast("Error: " + error.message);
+      showToast(error.message, false);
       setActing(null);
       return;
     }
 
     if (status === "approved" && app) {
-      const { error: creatorsError } = await supabase
-        .from("creators")
-        .upsert(
-          {
-            id: app.user_id,
-            display_name: app.display_name,
-            bio: app.bio,
-            portfolio_url: app.portfolio_url,
-            application_id: app.id,
-            approved_at: new Date().toISOString(),
-          },
-          { onConflict: "id" }
-        );
+      const { error: creatorsError } = await supabase.from("creators").upsert(
+        {
+          id: app.user_id,
+          display_name: app.display_name,
+          bio: app.bio,
+          portfolio_url: app.portfolio_url,
+          application_id: app.id,
+          approved_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
 
       if (creatorsError) {
-        showToast("Approved but failed to create creator row: " + creatorsError.message);
+        showToast("Approved, but failed to create creator row: " + creatorsError.message, false);
         setActing(null);
         return;
       }
@@ -93,7 +105,7 @@ export default function HeadPage() {
         .eq("id", app.user_id);
 
       if (profileError) {
-        showToast("Approved but failed to update profile role: " + profileError.message);
+        showToast("Approved, but failed to update profile: " + profileError.message, false);
         setActing(null);
         return;
       }
@@ -102,152 +114,239 @@ export default function HeadPage() {
     setApps((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status, review_notes: notes } : a))
     );
-    showToast(status === "approved" ? "Application approved." : "Application rejected.");
+    showToast(status === "approved" ? "Application approved." : "Application rejected.", true);
     setActing(null);
   }
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+  function showToast(msg: string, ok: boolean) {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3500);
   }
 
   const visible = apps.filter((a) => filter === "all" || a.status === filter);
   const counts = {
-    all: apps.length,
-    pending: apps.filter((a) => a.status === "pending").length,
+    all:      apps.length,
+    pending:  apps.filter((a) => a.status === "pending").length,
     approved: apps.filter((a) => a.status === "approved").length,
     rejected: apps.filter((a) => a.status === "rejected").length,
   };
 
-  const statusStyle = (s: AppStatus) => ({
-    pending:  { bg: "rgba(255,200,80,0.15)", border: "rgba(200,160,0,0.25)", color: "#7a6000", label: "Pending" },
-    approved: { bg: "rgba(94,99,87,0.15)",  border: "rgba(94,99,87,0.3)",   color: "var(--accent)", label: "Approved" },
-    rejected: { bg: "rgba(122,46,46,0.10)", border: "rgba(122,46,46,0.2)",  color: "var(--danger)", label: "Rejected" },
-  }[s]);
-
   return (
-    <main className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
+    <div style={{ background: BG }} className="min-h-screen">
+
+      {/* Toast */}
       {toast && (
         <div
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg"
-          style={{ background: "var(--accent)", color: "#fff" }}
+          style={{
+            position: "fixed",
+            bottom: 28,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 50,
+            padding: "10px 20px",
+            borderRadius: 9999,
+            fontSize: 13,
+            fontWeight: 500,
+            background: toast.ok ? "rgba(110,168,128,0.15)" : "rgba(200,82,82,0.15)",
+            border: `1px solid ${toast.ok ? "rgba(110,168,128,0.35)" : "rgba(200,82,82,0.3)"}`,
+            color: toast.ok ? "#6ea880" : "#c85252",
+            backdropFilter: "blur(12px)",
+            whiteSpace: "nowrap",
+          }}
         >
-          {toast}
+          {toast.msg}
         </div>
       )}
 
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-8">
+      <div style={{ maxWidth: 840, margin: "0 auto", padding: "52px 24px 80px", color: TEXT }}>
+
         {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div
-              className="inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
-              style={{ background: "rgba(94,99,87,0.12)", color: "var(--accent)" }}
-            >
-              Owner Only
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">Creator Applications</h1>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 36 }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>
+              Admin
+            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: TEXT }}>
+              Creator Applications
+            </h1>
           </div>
           <Link
             href={`/${locale}`}
-            className="text-xs transition hover:opacity-70"
-            style={{ color: "var(--muted)" }}
+            style={{ fontSize: 12, color: MUTED, textDecoration: "none" }}
           >
             ← Home
           </Link>
         </div>
 
-        {/* Stat chips */}
-        <div className="flex flex-wrap gap-2">
-          {(["all", "pending", "approved", "rejected"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
-              style={{
-                background: filter === f ? "var(--accent)" : "rgba(255,255,255,0.7)",
-                border: `1px solid ${filter === f ? "var(--accent)" : "var(--border)"}`,
-                color: filter === f ? "#f8f7f3" : "var(--muted)",
-              }}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}{" "}
-              <span className="opacity-70">({counts[f]})</span>
-            </button>
-          ))}
+        {/* Filter tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: 4,
+            background: SURFACE,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 12,
+            marginBottom: 20,
+            width: "fit-content",
+          }}
+        >
+          {(["all", "pending", "approved", "rejected"] as const).map((f) => {
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  border: "none",
+                  transition: "all 120ms ease",
+                  background: active ? "rgba(255,255,255,0.07)" : "transparent",
+                  color: active ? TEXT : MUTED,
+                }}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+                <span style={{ marginLeft: 6, opacity: 0.6, fontSize: 11 }}>
+                  {counts[f]}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* List */}
         {loading ? (
-          <p className="text-sm" style={{ color: "var(--muted)" }}>Loading applications…</p>
+          <div style={{ padding: "40px 0", textAlign: "center" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.4, margin: "0 auto" }} />
+          </div>
         ) : visible.length === 0 ? (
           <div
-            className="rounded-[24px] border p-8 text-center"
-            style={{ borderColor: "var(--border)", background: "rgba(233,230,223,0.66)" }}
+            style={{
+              padding: "48px 24px",
+              textAlign: "center",
+              background: SURFACE,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 16,
+            }}
           >
-            <p className="text-sm" style={{ color: "var(--muted)" }}>No {filter === "all" ? "" : filter} applications.</p>
+            <p style={{ fontSize: 13, color: MUTED }}>
+              No {filter === "all" ? "" : filter} applications.
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {visible.map((app) => {
-              const style = statusStyle(app.status);
+              const cfg   = STATUS_CONFIG[app.status];
               const isOpen = expanded === app.id;
+
               return (
                 <div
                   key={app.id}
-                  className="rounded-[20px] border overflow-hidden"
                   style={{
-                    borderColor: "var(--border)",
-                    background: "rgba(255,255,255,0.55)",
-                    boxShadow: "var(--shadow-soft)",
+                    background: SURFACE,
+                    border: `1px solid ${isOpen ? "rgba(255,255,255,0.1)" : BORDER}`,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    transition: "border-color 120ms ease",
                   }}
                 >
-                  {/* Row */}
+                  {/* Row header */}
                   <button
-                    className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left transition hover:opacity-80"
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: "14px 18px",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
                     onClick={() => setExpanded(isOpen ? null : app.id)}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                       <span
-                        className="inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                        style={{ background: style.bg, border: `1px solid ${style.border}`, color: style.color }}
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          padding: "3px 10px",
+                          borderRadius: 9999,
+                          flexShrink: 0,
+                          background: cfg.bg,
+                          border: `1px solid ${cfg.border}`,
+                          color: cfg.color,
+                        }}
                       >
-                        {style.label}
+                        {cfg.label}
                       </span>
-                      <span className="truncate text-sm font-semibold" style={{ color: "var(--text)" }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {app.display_name}
                       </span>
-                      <span className="hidden sm:inline text-xs truncate" style={{ color: "var(--muted)" }}>
-                        {app.content_types?.join(", ")}
-                      </span>
+                      {app.content_types?.length > 0 && (
+                        <span style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "none" }}
+                          className="sm:block"
+                        >
+                          {app.content_types.join(", ")}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs" style={{ color: "var(--muted)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+                      <span style={{ fontSize: 11, color: "#4a4a56" }}>
                         {new Date(app.created_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}
                       </span>
-                      <span className="text-xs" style={{ color: "var(--muted)" }}>{isOpen ? "▲" : "▼"}</span>
+                      <span style={{ fontSize: 10, color: MUTED }}>
+                        {isOpen ? "▲" : "▼"}
+                      </span>
                     </div>
                   </button>
 
                   {/* Expanded detail */}
                   {isOpen && (
-                    <div className="border-t px-5 py-5 space-y-4" style={{ borderColor: "var(--border)" }}>
+                    <div
+                      style={{
+                        borderTop: `1px solid ${BORDER}`,
+                        padding: "20px 18px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 16,
+                        background: SURFACE2,
+                      }}
+                    >
                       <DetailRow label="Bio">{app.bio}</DetailRow>
-                      <DetailRow label="Content types">{app.content_types?.join(", ")}</DetailRow>
+                      <DetailRow label="Content types">
+                        {app.content_types?.join(", ") || "—"}
+                      </DetailRow>
                       {app.content_description && (
                         <DetailRow label="Description">{app.content_description}</DetailRow>
                       )}
                       {app.portfolio_url && (
                         <DetailRow label="Portfolio">
-                          <a href={app.portfolio_url} target="_blank" rel="noreferrer"
-                            className="underline text-xs" style={{ color: "var(--accent)" }}>
+                          <a
+                            href={app.portfolio_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: ACCENT, fontSize: 12, textDecoration: "none" }}
+                          >
                             {app.portfolio_url}
                           </a>
                         </DetailRow>
                       )}
                       {app.sample_work_url && (
                         <DetailRow label="Sample work">
-                          <a href={app.sample_work_url} target="_blank" rel="noreferrer"
-                            className="underline text-xs" style={{ color: "var(--accent)" }}>
+                          <a
+                            href={app.sample_work_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: ACCENT, fontSize: 12, textDecoration: "none" }}
+                          >
                             {app.sample_work_url}
                           </a>
                         </DetailRow>
@@ -255,10 +354,10 @@ export default function HeadPage() {
                       <DetailRow label="Motivation">{app.motivation}</DetailRow>
 
                       {app.status === "pending" && (
-                        <div className="space-y-3 pt-2">
-                          <div className="space-y-1">
-                            <label className="block text-[11px] font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-                              Review notes (optional, shown on rejection)
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED }}>
+                              Review notes (optional)
                             </label>
                             <textarea
                               value={reviewNotes[app.id] || ""}
@@ -267,22 +366,35 @@ export default function HeadPage() {
                               }
                               rows={2}
                               placeholder="Reason for rejection, or leave blank for approval…"
-                              className="soft-input w-full resize-none text-sm"
+                              className="dark-input"
+                              style={{ resize: "none" }}
                             />
                           </div>
-                          <div className="flex gap-3">
+                          <div style={{ display: "flex", gap: 8 }}>
                             <button
                               disabled={acting === app.id}
                               onClick={() => act(app.id, "approved")}
-                              className="btn-ios text-sm disabled:opacity-60"
+                              className="btn-dark text-sm"
                             >
                               {acting === app.id ? "…" : "Approve"}
                             </button>
                             <button
                               disabled={acting === app.id}
                               onClick={() => act(app.id, "rejected")}
-                              className="btn-ios-secondary text-sm disabled:opacity-60"
-                              style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "8px 20px",
+                                borderRadius: 9999,
+                                background: "rgba(200,82,82,0.1)",
+                                border: "1px solid rgba(200,82,82,0.25)",
+                                color: "#c85252",
+                                fontSize: 13,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                transition: "opacity 120ms ease",
+                              }}
                             >
                               {acting === app.id ? "…" : "Reject"}
                             </button>
@@ -292,14 +404,19 @@ export default function HeadPage() {
 
                       {app.status !== "pending" && app.review_notes && (
                         <div
-                          className="rounded-2xl px-4 py-3 text-xs"
                           style={{
-                            background: "rgba(94,99,87,0.06)",
-                            border: "1px solid var(--border)",
-                            color: "var(--muted)",
+                            padding: "12px 14px",
+                            borderRadius: 10,
+                            background: "rgba(255,255,255,0.03)",
+                            border: `1px solid ${BORDER}`,
                           }}
                         >
-                          <span className="font-semibold">Notes: </span>{app.review_notes}
+                          <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>
+                            Notes
+                          </p>
+                          <p style={{ fontSize: 13, color: "#a0a0ac", lineHeight: 1.6 }}>
+                            {app.review_notes}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -310,19 +427,19 @@ export default function HeadPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-0.5">
-      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>
         {label}
       </p>
-      <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
+      <div style={{ fontSize: 13, color: "#a8a8b4", lineHeight: 1.65 }}>
         {children}
-      </p>
+      </div>
     </div>
   );
 }

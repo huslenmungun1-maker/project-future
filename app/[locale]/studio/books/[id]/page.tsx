@@ -120,7 +120,7 @@ type SupportedLang = keyof typeof UI_TEXT;
 export default function BookDetailPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
-  const bookId = (params as any)?.id as string;
+  const bookId = (params as Record<string, string>)?.id;
 
   const [book, setBook] = useState<BookRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);

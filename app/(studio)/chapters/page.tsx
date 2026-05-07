@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { deleteChapterAction } from './actions';
 
@@ -27,12 +28,12 @@ export default async function ChaptersPage() {
 
   return (
     <div className="p-6 space-y-4">
-        <a
-  href="/"
-  className="inline-block mb-4 text-sm px-3 py-1 border border-neutral-400 rounded hover:bg-neutral-200 transition"
->
-  ← Back to Home
-</a>
+        <Link
+          href="/"
+          className="inline-block mb-4 text-sm px-3 py-1 border border-neutral-400 rounded hover:bg-neutral-200 transition"
+        >
+          ← Back to Home
+        </Link>
       <h1 className="text-2xl font-bold">Chapters</h1>
 
       <ul className="space-y-2">

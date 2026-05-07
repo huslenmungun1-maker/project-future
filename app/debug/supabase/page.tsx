@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type DebugResult = {
-  data: any;
-  error: any;
+  data: unknown;
+  error: unknown;
 };
 
 export default function SupabaseDebugPage() {

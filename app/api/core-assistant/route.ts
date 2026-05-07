@@ -76,10 +76,10 @@ Be practical and concrete. Examples:
     const reply = data.choices?.[0]?.message?.content ?? "";
 
     return NextResponse.json({ reply });
-  } catch (err: any) {
+  } catch (err) {
     console.error("core-assistant route error:", err);
     return NextResponse.json(
-      { error: "Server error", details: String(err?.message ?? err) },
+      { error: "Server error", details: err instanceof Error ? err.message : String(err) },
       { status: 500 }
     );
   }

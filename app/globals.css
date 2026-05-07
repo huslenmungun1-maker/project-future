@@ -142,3 +142,69 @@ body {
   color: var(--muted);
   opacity: 0.6;
 }
+
+/* ============================= */
+/*  Dark Creator / Admin Theme   */
+/* ============================= */
+
+.dark-input {
+  display: block;
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  color: #eceae4;
+  outline: none;
+  transition: border-color 120ms ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.dark-input:focus {
+  border-color: rgba(182,160,124,0.55);
+}
+
+.dark-input::placeholder {
+  color: rgba(94,94,110,0.9);
+}
+
+.btn-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.4rem;
+  border-radius: 9999px;
+  background: #b6a07c;
+  color: #0a0a0c;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  border: none;
+  cursor: pointer;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.btn-dark:hover { opacity: 0.88; }
+.btn-dark:active { transform: scale(0.97); }
+.btn-dark:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-dark-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.4rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #eceae4;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.btn-dark-ghost:hover { opacity: 0.75; }
+.btn-dark-ghost:active { transform: scale(0.97); }
+.btn-dark-ghost:disabled { opacity: 0.35; cursor: not-allowed; }

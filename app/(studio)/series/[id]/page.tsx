@@ -152,7 +152,7 @@ type SupportedLang = keyof typeof UI_TEXT;
 
 export default function SeriesDetailPage() {
   const params = useParams();
-  const seriesId = (params as any)?.id as string;
+  const seriesId = (params as Record<string, string>)?.id;
 
   const [series, setSeries] = useState<SeriesRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);

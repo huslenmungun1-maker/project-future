@@ -83,9 +83,9 @@ export function CoreAssistantPanel() {
         reply ||
           "I tried to answer but got an empty reply from the server."
       );
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Something went wrong talking to the core assistant.");
+      setError(err instanceof Error ? err.message : "Something went wrong talking to the core assistant.");
       addMessage(
         "assistant",
         "I couldn’t reach my brain (the API). Check the OPENAI_API_KEY and /api/core-assistant route."
@@ -98,7 +98,7 @@ export function CoreAssistantPanel() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit(e as React.FormEvent);
     }
   };
 

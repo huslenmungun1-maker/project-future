@@ -225,7 +225,10 @@ export default function PublisherBooksPage() {
   const [status, setStatus] = useState<BookStatus>("draft");
 
   const [contentType, setContentType] = useState("novel");
-  const [mainGenre, setMainGenre] = useState("");
+  const [mainGenre, setMainGenre] = useState(() => {
+    const vals = getRecommendedGenresFromContentType("novel");
+    return MAIN_GENRES.find((g) => vals.includes(g.value))?.value ?? "";
+  });
   const [audience, setAudience] = useState("all_ages");
   const [readingFormat, setReadingFormat] = useState("chapter_based");
   const [subgenre, setSubgenre] = useState("");
@@ -250,11 +253,6 @@ export default function PublisherBooksPage() {
     return MAIN_GENRES.filter((g) => values.includes(g.value));
   }, [contentType]);
 
-  useEffect(() => {
-    if (!mainGenre && recommendedGenres.length > 0) {
-      setMainGenre(recommendedGenres[0].value);
-    }
-  }, [recommendedGenres, mainGenre]);
 
   function formatBookValue(
     value: string | null | undefined,
@@ -287,10 +285,7 @@ export default function PublisherBooksPage() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        const msg =
-          typeof (error as any)?.message === "string"
-            ? (error as any).message
-            : "Unknown Supabase error";
+        const msg = error.message ?? "Unknown Supabase error";
         setMessage(t.errorLoading + msg);
       } else {
         setBooks((data || []) as Book[]);
@@ -342,10 +337,7 @@ export default function PublisherBooksPage() {
       .single();
 
     if (error) {
-      const msg =
-        typeof (error as any)?.message === "string"
-          ? (error as any).message
-          : "Unknown Supabase error";
+      const msg = error.message ?? "Unknown Supabase error";
       setMessage(t.errorSaving + msg);
       setSaving(false);
       return;
@@ -358,7 +350,7 @@ export default function PublisherBooksPage() {
     setDescription("");
     setStatus("draft");
     setContentType("novel");
-    setMainGenre("");
+    setMainGenre(MAIN_GENRES.find((g) => getRecommendedGenresFromContentType("novel").includes(g.value))?.value ?? "");
     setAudience("all_ages");
     setReadingFormat("chapter_based");
     setSubgenre("");
@@ -382,10 +374,7 @@ export default function PublisherBooksPage() {
       .eq("id", bookId);
 
     if (error) {
-      const msg =
-        typeof (error as any)?.message === "string"
-          ? (error as any).message
-          : "Unknown Supabase error";
+      const msg = error.message ?? "Unknown Supabase error";
       setMessage(t.errorUpdating + msg);
       return;
     }
@@ -445,7 +434,12 @@ export default function PublisherBooksPage() {
                 locale={locale as Locale}
                 options={CONTENT_TYPES}
                 value={contentType}
-                onChange={setContentType}
+                onChange={(v) => {
+                    setContentType(v);
+                    const vals = getRecommendedGenresFromContentType(v);
+                    const first = MAIN_GENRES.find((g) => vals.includes(g.value));
+                    if (first) setMainGenre(first.value);
+                  }}
                 placeholder={t.searchContentType}
               />
 

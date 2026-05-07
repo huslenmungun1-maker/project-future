@@ -415,8 +415,8 @@ export default function SeriesDetailPage() {
       setDraftDescription((s as SeriesRow).description ?? "");
       setChapters((c as ChapterRow[]) || []);
       setLoading(false);
-    } catch (e: any) {
-      setPageError(e?.message || "Unknown load error.");
+    } catch (e) {
+      setPageError(e instanceof Error ? e.message : "Unknown load error.");
       setLoading(false);
     }
   }, [checkAccess, seriesId, supabase, t.projectNotFound, t.seriesIdMissing]);
@@ -470,8 +470,8 @@ export default function SeriesDetailPage() {
       setSeries(data as SeriesRow);
       setActionMsg("Saved ✅");
       setEditingMeta(false);
-    } catch (e: any) {
-      setActionMsg(e?.message || `${t.saveFailed}unknown error.`);
+    } catch (e) {
+      setActionMsg(e instanceof Error ? e.message : `${t.saveFailed}unknown error.`);
     } finally {
       setSavingMeta(false);
     }
@@ -618,8 +618,8 @@ export default function SeriesDetailPage() {
       setActionMsg(t.added);
 
       await reloadAll();
-    } catch (e: any) {
-      setCreateError(e?.message || t.insertFailed);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : t.insertFailed);
     } finally {
       setCreating(false);
     }
