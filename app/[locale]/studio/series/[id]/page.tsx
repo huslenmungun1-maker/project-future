@@ -251,8 +251,6 @@ const UI_TEXT = {
 
 type Lang = keyof typeof UI_TEXT;
 
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
-
 /* ================= PAGE ================= */
 
 export default function SeriesDetailPage() {
@@ -334,11 +332,17 @@ export default function SeriesDetailPage() {
       return null;
     }
 
-    const email = user.email?.toLowerCase() ?? "";
-    if (email !== OWNER_EMAIL.toLowerCase()) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const role = profile?.role ?? "reader";
+    if (role !== "creator" && role !== "owner") {
       setPageError(t.ownerOnly);
       setAccessChecked(true);
-      router.replace(`/${locale}`);
+      router.replace(`/${locale}/profile`);
       return null;
     }
 

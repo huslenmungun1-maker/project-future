@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { CoreAssistantPanel } from "./CoreAssistantPanel";
-
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
 
 export default function StudioPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
+    const supabase = createClientComponentClient();
+
     async function checkAccess() {
       const {
         data: { session },
@@ -24,9 +24,14 @@ export default function StudioPage() {
         return;
       }
 
-      const email = user.email?.toLowerCase();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      if (email !== OWNER_EMAIL.toLowerCase()) {
+      const role = profile?.role ?? "reader";
+      if (role !== "creator" && role !== "owner") {
         router.replace("/");
         return;
       }

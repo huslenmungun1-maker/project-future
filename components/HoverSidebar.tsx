@@ -9,7 +9,6 @@ import type { Session } from "@supabase/supabase-js";
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
 type UserRole = "reader" | "creator" | "owner";
 
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
 const LOCALES: SupportedLocale[] = ["en", "ko", "mn", "ja"];
 const WIDTH = 260;
 const PEEK = 44;
@@ -51,10 +50,10 @@ export default function HoverSidebar({ locale }: { locale: string }) {
     async function load() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
-      if (data.session?.user) fetchRole(data.session.user.id, data.session.user.email ?? "");
+      if (data.session?.user) fetchRole(data.session.user.id);
     }
 
-    async function fetchRole(userId: string, email: string) {
+    async function fetchRole(userId: string) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
@@ -62,9 +61,8 @@ export default function HoverSidebar({ locale }: { locale: string }) {
           .eq("id", userId)
           .maybeSingle();
         if (profile?.role) setRole(profile.role as UserRole);
-        else if (OWNER_EMAIL && email === OWNER_EMAIL) setRole("owner");
       } catch {
-        if (OWNER_EMAIL && email === OWNER_EMAIL) setRole("owner");
+        // profiles unavailable, stay as reader
       }
     }
 
@@ -72,16 +70,15 @@ export default function HoverSidebar({ locale }: { locale: string }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
       setSession(s);
-      if (s?.user) fetchRole(s.user.id, s.user.email ?? "");
+      if (s?.user) fetchRole(s.user.id);
       else setRole("reader");
     });
 
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  const isOwner =
-    role === "owner" ||
-    (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
+  const isOwner = role === "owner";
+  const isCreator = role === "creator" || isOwner;
 
   const mkHref = (next: SupportedLocale) =>
     restPath === "/" ? `/${next}` : `/${next}${restPath}`;
@@ -96,8 +93,8 @@ export default function HoverSidebar({ locale }: { locale: string }) {
   const navLinks = [
     { href: `/${l}`, label: t.home },
     { href: `/${l}/reader`, label: t.reader },
-    ...(isOwner ? [{ href: `/${l}/studio`, label: t.studio }] : []),
-    { href: `/${l}/creator/apply`, label: t.creator },
+    ...(isCreator ? [{ href: `/${l}/studio`, label: t.studio }] : []),
+    ...(!isCreator ? [{ href: `/${l}/creator/apply`, label: t.creator }] : []),
     ...(session ? [{ href: `/${l}/profile`, label: t.profile }] : []),
     ...(isOwner ? [{ href: `/${l}/head`, label: t.head }] : []),
   ];

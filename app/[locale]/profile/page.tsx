@@ -3,8 +3,6 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabaseServer";
 import SignOutButton from "@/components/SignOutButton";
 
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
-
 export default async function ProfilePage({
   params,
 }: {
@@ -22,7 +20,16 @@ export default async function ProfilePage({
 
   const email = session.user.email ?? "";
   const initials = email.slice(0, 2).toUpperCase();
-  const isOwner = OWNER_EMAIL && email === OWNER_EMAIL;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .maybeSingle();
+  const role = profile?.role ?? "reader";
+  const isOwner = role === "owner";
+  const isCreator = role === "creator" || isOwner;
+
   const joinedAt = new Date(session.user.created_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -54,10 +61,12 @@ export default async function ProfilePage({
                 className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                   isOwner
                     ? "bg-amber-500/20 text-amber-300"
+                    : isCreator
+                    ? "bg-emerald-500/20 text-emerald-300"
                     : "bg-slate-700 text-slate-300"
                 }`}
               >
-                {isOwner ? "Owner" : "Reader"}
+                {isOwner ? "Owner" : isCreator ? "Creator" : "Reader"}
               </span>
               <span className="text-xs text-slate-500">Joined {joinedAt}</span>
             </div>
@@ -66,7 +75,7 @@ export default async function ProfilePage({
 
         {/* Actions */}
         <div className="space-y-3">
-          {isOwner && (
+          {isCreator && (
             <Link
               href={`/${locale}/studio`}
               className="flex items-center justify-between rounded-lg border border-slate-700 px-4 py-3 text-sm transition hover:border-emerald-600 hover:bg-emerald-950/30"
@@ -76,7 +85,7 @@ export default async function ProfilePage({
             </Link>
           )}
 
-          {!isOwner && (
+          {!isCreator && (
             <Link
               href={`/${locale}/creator/apply`}
               className="flex items-center justify-between rounded-lg border border-slate-700 px-4 py-3 text-sm transition hover:border-emerald-600 hover:bg-emerald-950/30"

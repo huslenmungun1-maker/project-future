@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function StudioHome() {
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
+    const supabase = createClientComponentClient();
+
     async function check() {
       const {
         data: { session },
@@ -23,7 +23,14 @@ export default function StudioHome() {
         return;
       }
 
-      if (user.email?.toLowerCase() !== OWNER_EMAIL) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const role = profile?.role ?? "reader";
+      if (role !== "creator" && role !== "owner") {
         router.replace("/");
         return;
       }

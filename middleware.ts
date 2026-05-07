@@ -9,9 +9,6 @@ function isLocale(x: string): x is Locale {
   return (LOCALES as readonly string[]).includes(x);
 }
 
-// Fallback email check while transitioning to role-based system
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -63,8 +60,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const userEmail = session.user.email || "";
-
   // ---- Role check ----
   let role: string = "reader";
   try {
@@ -80,9 +75,6 @@ export async function middleware(req: NextRequest) {
   } catch {
     // profiles table not ready yet
   }
-
-  // Email fallback for owner
-  if (OWNER_EMAIL && userEmail === OWNER_EMAIL) role = "owner";
 
   const isOwner = role === "owner";
   const isCreator = role === "creator" || isOwner;

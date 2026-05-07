@@ -9,7 +9,6 @@ import type { Session } from "@supabase/supabase-js";
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
 type UserRole = "reader" | "creator" | "owner";
 
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
 const LOCALES: SupportedLocale[] = ["en", "ko", "mn", "ja"];
 const SIDEBAR_W = 260;
 
@@ -58,10 +57,10 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
     async function load() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
-      if (data.session?.user) fetchRole(data.session.user.id, data.session.user.email ?? "");
+      if (data.session?.user) fetchRole(data.session.user.id);
     }
 
-    async function fetchRole(userId: string, email: string) {
+    async function fetchRole(userId: string) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
@@ -69,9 +68,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
           .eq("id", userId)
           .maybeSingle();
         if (profile?.role) setRole(profile.role as UserRole);
-        else if (OWNER_EMAIL && email === OWNER_EMAIL) setRole("owner");
       } catch {
-        if (OWNER_EMAIL && email === OWNER_EMAIL) setRole("owner");
+        // profiles unavailable, stay as reader
       }
     }
 
@@ -79,7 +77,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
       setSession(s);
-      if (s?.user) fetchRole(s.user.id, s.user.email ?? "");
+      if (s?.user) fetchRole(s.user.id);
       else setRole("reader");
     });
 
@@ -99,9 +97,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [locked]);
 
-  const isOwner =
-    role === "owner" ||
-    (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
+  const isOwner = role === "owner";
   const isCreator = role === "creator" || isOwner;
 
   const mkHref = (next: SupportedLocale) =>

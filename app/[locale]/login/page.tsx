@@ -5,8 +5,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
-
 type Mode = "login" | "signup";
 
 export default function LoginPage() {
@@ -60,10 +58,15 @@ export default function LoginPage() {
         return;
       }
 
-      const isOwner = OWNER_EMAIL && data.session.user.email === OWNER_EMAIL;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+      const role = profile?.role ?? "reader";
       const destination =
         explicitRedirect ||
-        (isOwner ? `/${locale}/studio` : `/${locale}/profile`);
+        (role === "creator" || role === "owner" ? `/${locale}/studio` : `/${locale}/profile`);
 
       setLoading(false);
       router.replace(destination);

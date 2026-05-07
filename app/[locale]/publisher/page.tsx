@@ -18,8 +18,6 @@ type SeriesRow = {
   published_at: string | null;
 };
 
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
-
 const UI_TEXT = {
   en: {
     title: "Publisher",
@@ -157,8 +155,12 @@ export default function PublisherPage() {
         return;
       }
 
-      const isOwner =
-        (user.email?.toLowerCase() ?? "") === OWNER_EMAIL.toLowerCase();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      const isOwner = profile?.role === "owner";
 
       if (!cancelled) {
         setIsAuthed(true);

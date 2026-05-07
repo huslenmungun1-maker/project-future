@@ -167,13 +167,13 @@ create policy "Owners can update any application"
 --     run this block once in the SQL editor.
 -- ─────────────────────────────────────────
 
--- update public.profiles
--- set role = 'owner'
--- where id = (
---   select id from auth.users
---   where email = 'your-owner-email@example.com'
---   limit 1
--- );
+update public.profiles
+set role = 'owner'
+where id = (
+  select id from auth.users
+  where email = 'huslen.mungun1@gmail.com'
+  limit 1
+);
 
 
 -- ─────────────────────────────────────────

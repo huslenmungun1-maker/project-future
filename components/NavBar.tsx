@@ -9,9 +9,6 @@ import type { Session } from "@supabase/supabase-js";
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
 type UserRole = "reader" | "creator" | "owner";
 
-// Fallback while transitioning to role-based system
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
-
 function normalizeLocale(raw: string): SupportedLocale {
   return (["en", "ko", "mn", "ja"].includes(raw) ? raw : "en") as SupportedLocale;
 }
@@ -49,11 +46,11 @@ export default function NavBar({ locale }: { locale: string }) {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       if (data.session?.user) {
-        await fetchRole(data.session.user.id, data.session.user.email ?? "");
+        await fetchRole(data.session.user.id);
       }
     }
 
-    async function fetchRole(userId: string, email: string) {
+    async function fetchRole(userId: string) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
@@ -63,11 +60,9 @@ export default function NavBar({ locale }: { locale: string }) {
 
         if (profile?.role) {
           setRole(profile.role as UserRole);
-        } else if (OWNER_EMAIL && email === OWNER_EMAIL) {
-          setRole("owner");
         }
       } catch {
-        if (OWNER_EMAIL && email === OWNER_EMAIL) setRole("owner");
+        // profiles unavailable, stay as reader
       }
     }
 
@@ -76,7 +71,7 @@ export default function NavBar({ locale }: { locale: string }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s?.user) {
-        await fetchRole(s.user.id, s.user.email ?? "");
+        await fetchRole(s.user.id);
       } else {
         setRole("reader");
       }
@@ -85,8 +80,8 @@ export default function NavBar({ locale }: { locale: string }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // Also honour email fallback when profiles table has no owner set
-  const isOwner = role === "owner" || (!!session && !!OWNER_EMAIL && session.user.email === OWNER_EMAIL);
+  const isOwner = role === "owner";
+  const isCreator = role === "creator" || isOwner;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -118,7 +113,7 @@ export default function NavBar({ locale }: { locale: string }) {
             {t.reader}
           </Link>
 
-          {isOwner && (
+          {isCreator && (
             <Link
               href={`/${currentLocale}/studio`}
               className="text-stone-700 transition hover:text-stone-950"

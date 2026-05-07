@@ -6,8 +6,6 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type InsertedSeries = { id: string };
 
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
-
 export default function NewSeriesPage() {
   const router = useRouter();
   const params = useParams();
@@ -40,10 +38,15 @@ export default function NewSeriesPage() {
         return;
       }
 
-      const email = user.email?.toLowerCase() ?? "";
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      if (email !== OWNER_EMAIL.toLowerCase()) {
-        router.replace(`/${locale}`);
+      const role = profile?.role ?? "reader";
+      if (role !== "creator" && role !== "owner") {
+        router.replace(`/${locale}/profile`);
         return;
       }
 

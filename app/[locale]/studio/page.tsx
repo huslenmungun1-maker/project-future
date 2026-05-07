@@ -15,14 +15,12 @@ type SeriesRow = {
   user_id?: string | null;
 };
 
-const OWNER_EMAIL = "huslen.mungun1@gmail.com";
-
 const UI_TEXT = {
   en: {
     chip: "Studio",
     title: "Studio",
     subtitle:
-      "Owner-only studio. Manage your series, chapters, covers, and languages.",
+      "Your studio. Manage your series, chapters, covers, and languages.",
     checkingAccess: "Checking access…",
     retry: "Retry",
     createNew: "+ Create new series",
@@ -45,7 +43,7 @@ const UI_TEXT = {
     chip: "Studio",
     title: "Studio",
     subtitle:
-      "Зөвхөн эзэмшигчийн studio. Цуврал, бүлэг, ковер, хэлээ удирдана.",
+      "Таны studio. Цуврал, бүлэг, ковер, хэлээ удирдана.",
     checkingAccess: "Хандах эрхийг шалгаж байна…",
     retry: "Дахин оролдох",
     createNew: "+ Шинэ цуврал үүсгэх",
@@ -68,7 +66,7 @@ const UI_TEXT = {
     chip: "스튜디오",
     title: "Studio",
     subtitle:
-      "오너 전용 스튜디오입니다. 시리즈, 챕터, 표지, 언어를 관리합니다.",
+      "나의 스튜디오입니다. 시리즈, 챕터, 표지, 언어를 관리합니다.",
     checkingAccess: "접근 권한 확인 중…",
     retry: "다시 시도",
     createNew: "+ 새 시리즈 만들기",
@@ -91,7 +89,7 @@ const UI_TEXT = {
     chip: "スタジオ",
     title: "Studio",
     subtitle:
-      "オーナー専用スタジオです。シリーズ、チャプター、表紙、言語を管理します。",
+      "あなたのスタジオです。シリーズ、チャプター、表紙、言語を管理します。",
     checkingAccess: "アクセスを確認中…",
     retry: "再試行",
     createNew: "+ 新しいシリーズを作成",
@@ -247,11 +245,16 @@ export default function StudioHomePage() {
         return;
       }
 
-      const email = user.email?.toLowerCase() ?? "";
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      if (email !== OWNER_EMAIL.toLowerCase()) {
+      const role = profile?.role ?? "reader";
+      if (role !== "creator" && role !== "owner") {
         setCheckingAccess(false);
-        router.replace(`/${locale}`);
+        router.replace(`/${locale}/profile`);
         return;
       }
 
