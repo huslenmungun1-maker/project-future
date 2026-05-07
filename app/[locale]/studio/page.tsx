@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 type SeriesRow = {
   id: string;
@@ -124,7 +124,7 @@ export default function StudioHomePage() {
   const locale = normalizeLocale((params?.locale as string) || "en");
   const t = UI_TEXT[locale];
 
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [allowed, setAllowed] = useState(false);

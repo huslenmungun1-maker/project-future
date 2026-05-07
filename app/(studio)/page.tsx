@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { CoreAssistantPanel } from "./CoreAssistantPanel";
 
 export default function StudioPage() {
@@ -10,7 +10,7 @@ export default function StudioPage() {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const supabase = createClientComponentClient();
+    const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
     async function checkAccess() {
       const {

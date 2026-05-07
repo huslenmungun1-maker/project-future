@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 const BORDER = "rgba(255,255,255,0.08)";
 const SURFACE = "rgba(255,255,255,0.03)";
@@ -18,7 +18,7 @@ type PageRow = {
 };
 
 export default function ChapterPagesEditor({ chapterId }: { chapterId: string }) {
-  const supabase = createClientComponentClient();
+  const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const [pages, setPages] = useState<PageRow[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);

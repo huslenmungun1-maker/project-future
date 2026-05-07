@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 type Mode = "login" | "signup";
 
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const locale = (params?.locale as string) || "en";
   const explicitRedirect = search.get("redirect");
 
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");

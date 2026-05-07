@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import ChapterPagesEditor from "@/components/studio/ChapterPagesEditor";
 
 const BG = "#0a0a0c";
@@ -37,7 +37,7 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 export default function ChapterEditorPage() {
   const params = useParams();
   const router = useRouter();
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const locale = (params?.locale as string) || "en";
   const seriesId = (params?.id as string) || "";

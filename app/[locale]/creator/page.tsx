@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 type AppStatus = "pending" | "approved" | "rejected";
 
@@ -27,7 +27,7 @@ export default function CreatorPage() {
   const params = useParams();
   const router = useRouter();
   const locale = (params?.locale as string) || "en";
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const [loading, setLoading] = useState(true);
   const [application, setApplication] = useState<ApplicationData | null>(null);

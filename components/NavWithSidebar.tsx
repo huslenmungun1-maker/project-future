@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import type { Session } from "@supabase/supabase-js";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -50,7 +50,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
   const t = UI_TEXT[l];
   const restPath = stripLeadingLocale(pathname);
 
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>("reader");
 

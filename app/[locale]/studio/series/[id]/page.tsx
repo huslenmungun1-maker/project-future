@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
 /* ================= TYPES ================= */
@@ -257,7 +257,7 @@ type Lang = keyof typeof UI_TEXT;
 export default function SeriesDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const seriesId =
     (params?.id as string) ||

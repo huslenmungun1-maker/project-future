@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 type SeriesRow = {
   id: string;
@@ -20,7 +20,7 @@ export default function AdminHomePage() {
   const locale = (params?.locale as string) || "en";
 
   // ✅ cookie-aware client (required for admin RPC)
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);

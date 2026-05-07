@@ -9,7 +9,11 @@
       "Bash(git commit *)",
       "Bash(npx next *)",
       "Bash(npm run *)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(supabase --version)",
+      "Bash(printenv)",
+      "Bash(npx vercel *)",
+      "Bash(timeout 12)"
     ],
     "defaultMode": "acceptEdits"
   }

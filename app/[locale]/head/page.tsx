@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 const BG      = "#0a0a0c";
 const SURFACE = "#111116";
@@ -40,7 +40,7 @@ const STATUS_CONFIG = {
 export default function HeadPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
 
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
