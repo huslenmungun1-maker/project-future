@@ -11,24 +11,24 @@ export default async function ProfilePage({
   const { locale } = await params;
   const supabase = await supabaseServer();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) redirect(`/${locale}/login`);
+  if (!user) redirect(`/${locale}/login`);
 
-  const email = session.user.email ?? "";
+  const email = user.email ?? "";
   const initials = email.slice(0, 2).toUpperCase();
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .maybeSingle();
   const role = profile?.role ?? "reader";
   const isOwner = role === "owner";
   const isCreator = role === "creator" || isOwner;
 
-  const joinedAt = new Date(session.user.created_at).toLocaleDateString("en-US", {
+  const joinedAt = new Date(user.created_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",

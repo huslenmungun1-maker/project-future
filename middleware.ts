@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 
 const LOCALES = ["en", "mn", "ko", "ja"] as const;
@@ -46,14 +46,32 @@ export async function middleware(req: NextRequest) {
   }
 
   // ---- Auth check ----
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  let res = NextResponse.next({ request: req });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          res = NextResponse.next({ request: req });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     const url = req.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     url.searchParams.set("redirect", pathname);
@@ -65,14 +83,14 @@ export async function middleware(req: NextRequest) {
 
   // Owner email always gets owner access regardless of DB state
   const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
-  if (ownerEmail && session.user.email === ownerEmail) {
+  if (ownerEmail && user.email === ownerEmail) {
     role = "owner";
   } else {
     try {
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .maybeSingle();
 
       if (profile?.role) {
