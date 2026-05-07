@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -31,6 +31,7 @@ type SeriesRow = {
   published?: boolean | null;
   published_at?: string | null;
   views?: number | null;
+  project_type?: string | null;
 };
 
 type TranslationRow = {
@@ -151,6 +152,8 @@ export default function ReaderHomePage() {
   const [status, setStatus] = useState<Status>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeType, setActiveType] = useState<string>("all");
 
 
   useEffect(() => {
@@ -172,7 +175,7 @@ export default function ReaderHomePage() {
         supabase
           .from("series")
           .select(
-            "id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views"
+            "id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views, project_type"
           )
           .or("published.eq.true,published_at.not.is.null")
           .order("views", { ascending: false })
@@ -289,6 +292,22 @@ export default function ReaderHomePage() {
   const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url || "";
   const getBookCover = (item: BookRow) => item.cover_url || "";
 
+  const filteredSeries = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return series.filter(s => {
+      const matchesSearch = !q || s.title?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q);
+      const matchesType = activeType === "all" || s.project_type === activeType;
+      return matchesSearch && matchesType;
+    });
+  }, [series, searchQuery, activeType]);
+
+  const filteredBooks = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return books.filter(b =>
+      !q || b.title?.toLowerCase().includes(q) || b.description?.toLowerCase().includes(q)
+    );
+  }, [books, searchQuery]);
+
   return (
     <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -335,6 +354,39 @@ export default function ReaderHomePage() {
           </Link>
         </header>
 
+        {/* Search + filters */}
+        <div className="mb-8 space-y-3">
+          <input
+            type="search"
+            placeholder="Search by title…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full rounded-2xl px-5 py-3 text-sm outline-none"
+            style={{
+              background: "rgba(255,255,255,0.72)",
+              border: "1px solid rgba(47,47,47,0.12)",
+              color: "var(--text)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          />
+          <div className="flex flex-wrap gap-2">
+            {(["all","novel","manga","webtoon","comic","artbook"] as const).map(type => (
+              <button
+                key={type}
+                onClick={() => setActiveType(type)}
+                className="rounded-full border px-4 py-1.5 text-[11px] font-semibold capitalize transition"
+                style={{
+                  borderColor: activeType === type ? "rgba(94,99,87,0.4)" : "var(--border)",
+                  background: activeType === type ? "rgba(94,99,87,0.14)" : "rgba(255,255,255,0.5)",
+                  color: activeType === type ? "var(--accent)" : "var(--muted)",
+                }}
+              >
+                {type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {status === "error" && (
           <div className="mb-10">
             <div
@@ -378,7 +430,7 @@ export default function ReaderHomePage() {
             </h2>
           </div>
 
-          {status === "ok" && series.length === 0 && books.length > 0 ? (
+          {status === "ok" && filteredSeries.length === 0 && books.length > 0 ? (
             <div
               className="flex items-center gap-4 rounded-[20px] border px-5 py-4"
               style={{
@@ -394,14 +446,14 @@ export default function ReaderHomePage() {
             </div>
           ) : null}
 
-          {series.length > 0 ? (
+          {filteredSeries.length > 0 ? (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
-              {series.map((item) => {
+              {filteredSeries.map((item) => {
                 const coverSrc = getSeriesCover(item);
 
                 return (
                   <article key={item.id} className="group">
-                    <Link href={`/${locale}/reader/series/${item.id}/1`} className="block">
+                    <Link href={`/${locale}/reader/series/${item.id}`} className="block">
                       <div
                         className="relative overflow-hidden rounded-[24px] border transition duration-300 group-hover:-translate-y-1"
                         style={{
@@ -451,13 +503,25 @@ export default function ReaderHomePage() {
 
                       <div className="mt-3 space-y-2">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3
                               className="line-clamp-2 text-sm font-semibold"
                               style={{ color: "var(--text)" }}
                             >
                               {item.title || t.untitledSeries}
                             </h3>
+                            {item.project_type && (
+                              <span
+                                className="rounded-full border px-2 py-0.5 text-[10px] capitalize"
+                                style={{
+                                  borderColor: "rgba(94,99,87,0.25)",
+                                  background: "rgba(94,99,87,0.1)",
+                                  color: "var(--accent)",
+                                }}
+                              >
+                                {item.project_type}
+                              </span>
+                            )}
                             {item.language ? (
                               <span
                                 className="rounded-full border px-2 py-0.5 text-[10px]"
@@ -520,7 +584,7 @@ export default function ReaderHomePage() {
             </h2>
           </div>
 
-          {status === "ok" && books.length === 0 && series.length > 0 ? (
+          {status === "ok" && filteredBooks.length === 0 && series.length > 0 ? (
             <div
               className="flex items-center gap-4 rounded-[20px] border px-5 py-4"
               style={{
@@ -536,9 +600,9 @@ export default function ReaderHomePage() {
             </div>
           ) : null}
 
-          {books.length > 0 ? (
+          {filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
-              {books.map((item) => {
+              {filteredBooks.map((item) => {
                 const coverSrc = getBookCover(item);
 
                 return (

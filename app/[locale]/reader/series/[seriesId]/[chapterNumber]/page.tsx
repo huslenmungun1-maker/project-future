@@ -312,6 +312,21 @@ export default function ReaderSeriesChapterPage() {
       );
       setChapterTranslations(trMap);
 
+      // Save read progress
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase
+            .from("read_progress")
+            .upsert(
+              { user_id: session.user.id, series_id: seriesId, chapter_id: foundCurrent.id, updated_at: new Date().toISOString() },
+              { onConflict: "user_id,series_id" }
+            );
+        }
+      } catch {
+        // non-critical, ignore
+      }
+
       setStatus("ok");
     };
 
