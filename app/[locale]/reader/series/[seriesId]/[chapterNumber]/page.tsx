@@ -19,6 +19,13 @@ type SeriesBaseRow = {
   title?: string | null;
   description?: string | null;
   views?: number | null;
+  project_type?: string | null;
+};
+
+type ChapterPageRow = {
+  id: string;
+  order_index: number;
+  image_url: string;
 };
 
 type SeriesTranslationRow = {
@@ -188,6 +195,7 @@ export default function ReaderSeriesChapterPage() {
   >(new Map());
 
   const [views, setViews] = useState<number>(0);
+  const [chapterPages, setChapterPages] = useState<ChapterPageRow[]>([]);
 
   const localeForDate = useMemo(() => {
     return locale === "mn"
@@ -227,6 +235,7 @@ export default function ReaderSeriesChapterPage() {
       setChapters([]);
       setChapterTranslations(new Map());
       setViews(0);
+      setChapterPages([]);
 
       if (!seriesId) {
         setStatus("error");
@@ -237,7 +246,7 @@ export default function ReaderSeriesChapterPage() {
       const { data: s, error: sErr } = await supabase
         .from("series")
         .select(
-          "id, created_at, cover_url, cover_image_url, published, published_at, default_locale, title, description, views"
+          "id, created_at, cover_url, cover_image_url, published, published_at, default_locale, title, description, views, project_type"
         )
         .eq("id", seriesId)
         .maybeSingle();
@@ -311,6 +320,17 @@ export default function ReaderSeriesChapterPage() {
         locale
       );
       setChapterTranslations(trMap);
+
+      // Load manga pages if applicable
+      const projectType = (s as SeriesBaseRow).project_type;
+      if (projectType === "manga" || projectType === "webtoon" || projectType === "comic") {
+        const { data: pages } = await supabase
+          .from("chapter_pages")
+          .select("id, order_index, image_url")
+          .eq("chapter_id", foundCurrent.id)
+          .order("order_index", { ascending: true });
+        setChapterPages((pages as ChapterPageRow[]) || []);
+      }
 
       // Save read progress
       try {
@@ -589,30 +609,47 @@ export default function ReaderSeriesChapterPage() {
               </div>
             </header>
 
-            <article
-              className="rounded-[30px] border p-8 md:p-12"
-              style={{
-                borderColor: "var(--border)",
-                background:
-                  "linear-gradient(to bottom, rgba(255,255,255,0.96), rgba(233,230,223,0.92))",
-                boxShadow: "0 24px 70px rgba(0,0,0,0.12)",
-              }}
-            >
-              {chapterText ? (
-                <div className="mx-auto max-w-3xl">
-                  <pre
-                    className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8"
-                    style={{ color: "var(--text)" }}
-                  >
-                    {chapterText}
-                  </pre>
-                </div>
-              ) : (
-                <p className="text-sm" style={{ color: "var(--muted)" }}>
-                  {t.noContent}
-                </p>
-              )}
-            </article>
+            {chapterPages.length > 0 ? (
+              /* ── Manga / vertical scroll reader ── */
+              <div className="flex flex-col items-center gap-0">
+                {chapterPages.map((page, i) => (
+                  <img
+                    key={page.id}
+                    src={page.image_url}
+                    alt={`Page ${i + 1}`}
+                    className="w-full max-w-2xl"
+                    style={{ display: "block", margin: "0 auto" }}
+                    loading={i < 3 ? "eager" : "lazy"}
+                  />
+                ))}
+              </div>
+            ) : (
+              /* ── Prose reader ── */
+              <article
+                className="rounded-[30px] border p-8 md:p-12"
+                style={{
+                  borderColor: "var(--border)",
+                  background:
+                    "linear-gradient(to bottom, rgba(255,255,255,0.96), rgba(233,230,223,0.92))",
+                  boxShadow: "0 24px 70px rgba(0,0,0,0.12)",
+                }}
+              >
+                {chapterText ? (
+                  <div className="mx-auto max-w-3xl">
+                    <pre
+                      className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8"
+                      style={{ color: "var(--text)" }}
+                    >
+                      {chapterText}
+                    </pre>
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: "var(--muted)" }}>
+                    {t.noContent}
+                  </p>
+                )}
+              </article>
+            )}
 
             <div className="flex items-center justify-between gap-3">
               {prevHref ? (
