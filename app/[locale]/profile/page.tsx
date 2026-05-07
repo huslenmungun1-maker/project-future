@@ -9,7 +9,7 @@ export default async function ProfilePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
   const {
     data: { session },
   } = await supabase.auth.getSession();
