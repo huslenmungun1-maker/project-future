@@ -62,18 +62,25 @@ export async function middleware(req: NextRequest) {
 
   // ---- Role check ----
   let role: string = "reader";
-  try {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
-      .maybeSingle();
 
-    if (profile?.role) {
-      role = profile.role;
+  // Owner email always gets owner access regardless of DB state
+  const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
+  if (ownerEmail && session.user.email === ownerEmail) {
+    role = "owner";
+  } else {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.role) {
+        role = profile.role;
+      }
+    } catch {
+      // profiles table not ready yet
     }
-  } catch {
-    // profiles table not ready yet
   }
 
   const isOwner = role === "owner";
