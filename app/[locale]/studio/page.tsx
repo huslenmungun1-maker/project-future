@@ -13,6 +13,8 @@ type SeriesRow = {
   cover_image_url: string | null;
   language: string | null;
   user_id?: string | null;
+  views?: number | null;
+  published?: boolean | null;
 };
 
 const UI_TEXT = {
@@ -132,6 +134,8 @@ export default function StudioHomePage() {
   const [seriesList, setSeriesList] = useState<SeriesRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [totalViews, setTotalViews] = useState(0);
+  const [followerCount, setFollowerCount] = useState(0);
 
   const localeForDate = useMemo(() => {
     return locale === "mn"
@@ -152,7 +156,7 @@ export default function StudioHomePage() {
     try {
       const { data, error } = await supabase
         .from("series")
-        .select("id, title, description, created_at, cover_image_url, language, user_id")
+        .select("id, title, description, created_at, cover_image_url, language, user_id, views, published")
         .eq("user_id", ownerUserId)
         .order("created_at", { ascending: false });
 
@@ -169,7 +173,20 @@ export default function StudioHomePage() {
         return;
       }
 
-      setSeriesList((data as SeriesRow[]) || []);
+      const rows = (data as SeriesRow[]) || [];
+      setSeriesList(rows);
+
+      // Compute total views
+      const views = rows.reduce((sum, s) => sum + (Number((s as SeriesRow & { views?: number }).views) || 0), 0);
+      setTotalViews(views);
+
+      // Fetch follower count
+      const { count: fc } = await supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("followed_id", ownerUserId);
+      setFollowerCount(fc ?? 0);
+
       setLoading(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error while loading series.");
@@ -374,6 +391,32 @@ export default function StudioHomePage() {
           </div>
         </header>
 
+        {/* Stats bar */}
+        {!loading && (
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Series", value: seriesList.length },
+              { label: "Total views", value: totalViews },
+              { label: "Followers", value: followerCount },
+            ].map(stat => (
+              <div
+                key={stat.label}
+                className="rounded-[20px] border p-4"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "rgba(233,230,223,0.72)",
+                  boxShadow: "var(--shadow-soft)",
+                }}
+              >
+                <div className="text-2xl font-bold" style={{ color: "var(--text)" }}>
+                  {stat.value.toLocaleString()}
+                </div>
+                <div className="text-xs mt-1" style={{ color: "var(--muted)" }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {error && (
           <div
             className="rounded-[24px] border p-5"
@@ -504,12 +547,19 @@ export default function StudioHomePage() {
                       ) : null}
                     </div>
 
-                    <p className="text-[10px]" style={{ color: "var(--muted)" }}>
-                      {new Date(s.created_at).toLocaleString(localeForDate, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px]" style={{ color: "var(--muted)" }}>
+                        {new Date(s.created_at).toLocaleString(localeForDate, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                      {s.views != null && s.views > 0 && (
+                        <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+                          {s.views.toLocaleString()} views
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex items-center justify-end pt-1">
                       <button

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Session } from "@supabase/supabase-js";
+import NotificationBell from "@/components/NotificationBell";
 
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
 type UserRole = "reader" | "creator" | "owner";
@@ -202,22 +203,25 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
               </div>
             </div>
 
-            {/* RIGHT: profile when logged in, sign in when logged out */}
-            {session ? (
-              <Link
-                href={`/${l}/profile`}
-                className="rounded-full border border-stone-300 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
-              >
-                {t.profile}
-              </Link>
-            ) : (
-              <Link
-                href={`/${l}/login`}
-                className="rounded-full border border-stone-900 bg-stone-900 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-stone-700"
-              >
-                {t.signin}
-              </Link>
-            )}
+            {/* RIGHT: notification bell + profile/sign-in */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {session && <NotificationBell />}
+              {session ? (
+                <Link
+                  href={`/${l}/profile`}
+                  className="rounded-full border border-stone-300 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+                >
+                  {t.profile}
+                </Link>
+              ) : (
+                <Link
+                  href={`/${l}/login`}
+                  className="rounded-full border border-stone-900 bg-stone-900 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-stone-700"
+                >
+                  {t.signin}
+                </Link>
+              )}
+            </div>
           </nav>
         </div>
       </header>

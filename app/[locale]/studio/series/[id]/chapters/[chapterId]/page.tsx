@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import ChapterPagesEditor from "@/components/studio/ChapterPagesEditor";
 
 const BG = "#0a0a0c";
 const SURFACE = "rgba(255,255,255,0.03)";
@@ -21,12 +22,14 @@ type ChapterRow = {
   chapter_number: number;
   content: string | null;
   is_published: boolean | null;
+  scheduled_at: string | null;
   created_at: string;
 };
 
 type SeriesRow = {
   id: string;
   title: string;
+  project_type: string | null;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -48,6 +51,8 @@ export default function ChapterEditorPage() {
   const [series, setSeries] = useState<SeriesRow | null>(null);
   const [chapter, setChapter] = useState<ChapterRow | null>(null);
   const [title, setTitle] = useState("");
+  const [activeTab, setActiveTab] = useState<"text" | "pages">("text");
+  const [scheduledAt, setScheduledAt] = useState<string>("");
   const [content, setContent] = useState("");
   const [isPublished, setIsPublished] = useState(false);
 
@@ -74,7 +79,7 @@ export default function ChapterEditorPage() {
       if (role !== "creator" && role !== "owner") { router.replace(`/${locale}/profile`); return; }
 
       const { data: s } = await supabase
-        .from("series").select("id, title")
+        .from("series").select("id, title, project_type")
         .eq("id", seriesId).eq("user_id", session.user.id).maybeSingle();
       if (!alive) return;
 
@@ -86,7 +91,7 @@ export default function ChapterEditorPage() {
 
       const { data: c, error: cErr } = await supabase
         .from("chapters")
-        .select("id, series_id, title, chapter_number, content, is_published, created_at")
+        .select("id, series_id, title, chapter_number, content, is_published, scheduled_at, created_at")
         .eq("id", chapterId).eq("series_id", seriesId).maybeSingle();
       if (!alive) return;
 
@@ -102,6 +107,7 @@ export default function ChapterEditorPage() {
       setTitle(row.title || "");
       setContent(row.content || "");
       setIsPublished(Boolean(row.is_published));
+      setScheduledAt(row.scheduled_at ? row.scheduled_at.slice(0, 16) : "");
       setLoadStatus("ok");
     }
 
@@ -124,9 +130,10 @@ export default function ChapterEditorPage() {
         title: titleTrim,
         content: contentTrim,
         is_published: isPublished,
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       })
       .eq("id", chapter.id)
-      .select("id, series_id, title, chapter_number, content, is_published, created_at")
+      .select("id, series_id, title, chapter_number, content, is_published, scheduled_at, created_at")
       .maybeSingle();
 
     if (saveErr || !data) {
@@ -264,7 +271,28 @@ export default function ChapterEditorPage() {
               />
             </div>
 
-            {/* Content */}
+            {/* Tab switcher: Text vs Pages (for manga/comic/webtoon) */}
+            {(series?.project_type === "manga" || series?.project_type === "webtoon" || series?.project_type === "comic") && (
+              <div style={{ display: "flex", gap: 4, padding: 4, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12 }}>
+                {(["text", "pages"] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={{
+                      flex: 1, padding: "8px 0", borderRadius: 9, fontWeight: 600,
+                      fontSize: 12, border: "none", cursor: "pointer", transition: "all 0.15s",
+                      background: activeTab === tab ? ACCENT : "transparent",
+                      color: activeTab === tab ? "#0a0a0c" : MUTED,
+                    }}
+                  >
+                    {tab === "text" ? "Script" : "Pages"}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Content: text tab */}
+            {activeTab === "text" && (
             <div
               style={{
                 background: SURFACE, border: `1px solid ${BORDER}`,
@@ -272,7 +300,7 @@ export default function ChapterEditorPage() {
               }}
             >
               <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                Content
+                {series?.project_type === "manga" || series?.project_type === "webtoon" || series?.project_type === "comic" ? "Script / Notes" : "Content"}
               </label>
               <textarea
                 value={content}
@@ -293,6 +321,12 @@ export default function ChapterEditorPage() {
                 </span>
               </div>
             </div>
+            )}
+
+            {/* Pages tab */}
+            {activeTab === "pages" && chapter && (
+              <ChapterPagesEditor chapterId={chapter.id} />
+            )}
           </div>
 
           {/* Sidebar */}
@@ -344,6 +378,30 @@ export default function ChapterEditorPage() {
                   />
                 </div>
               </label>
+
+              {/* Schedule */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Schedule publish
+                </label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={e => setScheduledAt(e.target.value)}
+                  style={{
+                    width: "100%", background: "rgba(255,255,255,0.04)",
+                    border: `1px solid ${BORDER}`, borderRadius: 10,
+                    padding: "8px 12px", fontSize: 12, color: TEXT,
+                    outline: "none", boxSizing: "border-box",
+                    colorScheme: "dark",
+                  }}
+                />
+                {scheduledAt && (
+                  <p style={{ fontSize: 10, color: MUTED, marginTop: 4 }}>
+                    Will auto-publish on {new Date(scheduledAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
 
               <button
                 onClick={handleSave}
