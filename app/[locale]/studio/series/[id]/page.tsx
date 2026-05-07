@@ -26,6 +26,7 @@ type ChapterRow = {
   title: string;
   chapter_number: number;
   content: string | null;
+  is_published: boolean | null;
   created_at: string;
 };
 
@@ -398,7 +399,7 @@ export default function SeriesDetailPage() {
 
       const { data: c, error: cErr } = await supabase
         .from("chapters")
-        .select("*")
+        .select("id, series_id, title, chapter_number, content, is_published, created_at")
         .eq("series_id", seriesId)
         .order("chapter_number", { ascending: true });
 
@@ -586,6 +587,7 @@ export default function SeriesDetailPage() {
           chapter_number: num,
           title: titleTrim,
           content: scriptTrim || null,
+          is_published: false,
         })
         .select("id")
         .maybeSingle();
@@ -1104,10 +1106,22 @@ export default function SeriesDetailPage() {
                   }}
                 >
                   <div className="flex items-start justify-between gap-3 px-4 py-4">
-                    <Link href={`/chapters/${c.id}`} className="block min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-[var(--text)]">
-                        #{c.chapter_number} · {c.title}
-                      </p>
+                    <Link href={`/${locale}/studio/series/${seriesId}/chapters/${c.id}`} className="block min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-[var(--text)]">
+                          #{c.chapter_number} · {c.title}
+                        </p>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                          style={{
+                            background: c.is_published ? "rgba(94,99,87,0.12)" : "rgba(255,255,255,0.3)",
+                            border: "1px solid rgba(47,47,47,0.12)",
+                            color: c.is_published ? "var(--accent)" : "var(--muted)",
+                          }}
+                        >
+                          {c.is_published ? "Live" : "Draft"}
+                        </span>
+                      </div>
 
                       {c.content?.trim() && (
                         <p
