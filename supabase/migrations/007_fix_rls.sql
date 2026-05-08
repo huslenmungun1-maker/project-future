@@ -14,7 +14,7 @@ create policy "platform_earnings_owner_read" on public.platform_earnings
   using (
     exists (
       select 1 from public.profiles
-      where id = auth.uid() and role = 'owner'
+      where user_id = auth.uid() and role = 'owner'
     )
   );
 

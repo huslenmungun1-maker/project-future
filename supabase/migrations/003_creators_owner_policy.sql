@@ -12,7 +12,7 @@ create policy "Owners can insert creators"
   with check (
     exists (
       select 1 from public.profiles
-      where id = auth.uid() and role = 'owner'
+      where user_id = auth.uid() and role = 'owner'
     )
   );
 
@@ -21,6 +21,6 @@ create policy "Owners can update creators"
   using (
     exists (
       select 1 from public.profiles
-      where id = auth.uid() and role = 'owner'
+      where user_id = auth.uid() and role = 'owner'
     )
   );
