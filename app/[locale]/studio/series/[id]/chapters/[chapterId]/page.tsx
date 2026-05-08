@@ -24,6 +24,7 @@ type ChapterRow = {
   is_published: boolean | null;
   scheduled_at: string | null;
   created_at: string;
+  price: number | null;
 };
 
 type SeriesRow = {
@@ -55,6 +56,7 @@ export default function ChapterEditorPage() {
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [content, setContent] = useState("");
   const [isPublished, setIsPublished] = useState(false);
+  const [price, setPrice] = useState<string>("0");
 
   const backHref = `/${locale}/studio/series/${seriesId}`;
 
@@ -91,7 +93,7 @@ export default function ChapterEditorPage() {
 
       const { data: c, error: cErr } = await supabase
         .from("chapters")
-        .select("id, series_id, title, chapter_number, content, is_published, scheduled_at, created_at")
+        .select("id, series_id, title, chapter_number, content, is_published, scheduled_at, created_at, price")
         .eq("id", chapterId).eq("series_id", seriesId).maybeSingle();
       if (!alive) return;
 
@@ -108,6 +110,7 @@ export default function ChapterEditorPage() {
       setContent(row.content || "");
       setIsPublished(Boolean(row.is_published));
       setScheduledAt(row.scheduled_at ? row.scheduled_at.slice(0, 16) : "");
+      setPrice(String(row.price ?? 0));
       setLoadStatus("ok");
     }
 
@@ -124,6 +127,8 @@ export default function ChapterEditorPage() {
     const titleTrim = title.trim() || "Untitled";
     const contentTrim = content.trim() || null;
 
+    const parsedPrice = Math.max(0, parseFloat(price) || 0);
+
     const { data, error: saveErr } = await supabase
       .from("chapters")
       .update({
@@ -131,9 +136,10 @@ export default function ChapterEditorPage() {
         content: contentTrim,
         is_published: isPublished,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        price: parsedPrice,
       })
       .eq("id", chapter.id)
-      .select("id, series_id, title, chapter_number, content, is_published, scheduled_at, created_at")
+      .select("id, series_id, title, chapter_number, content, is_published, scheduled_at, created_at, price")
       .maybeSingle();
 
     if (saveErr || !data) {
@@ -149,7 +155,9 @@ export default function ChapterEditorPage() {
         { onConflict: "chapter_id,locale" }
       );
 
-    setChapter(data as ChapterRow);
+    const saved = data as ChapterRow;
+    setChapter(saved);
+    setPrice(String(saved.price ?? 0));
     setSaveStatus("saved");
     setTimeout(() => setSaveStatus("idle"), 2500);
   }
@@ -401,6 +409,32 @@ export default function ChapterEditorPage() {
                     Will auto-publish on {new Date(scheduledAt).toLocaleString()}
                   </p>
                 )}
+              </div>
+
+              {/* Price */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Price (USD)
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: MUTED, pointerEvents: "none" }}>$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    style={{
+                      width: "100%", background: "rgba(255,255,255,0.04)",
+                      border: `1px solid ${BORDER}`, borderRadius: 10,
+                      padding: "8px 12px 8px 24px", fontSize: 13, color: TEXT,
+                      outline: "none", boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+                <p style={{ fontSize: 10, color: MUTED, marginTop: 4 }}>
+                  {parseFloat(price) > 0 ? `Readers pay $${parseFloat(price).toFixed(2)} · you earn $${(parseFloat(price) * 0.85).toFixed(2)}` : "Free — anyone can read"}
+                </p>
               </div>
 
               <button

@@ -28,10 +28,10 @@ function stripLeadingLocale(pathname: string) {
 }
 
 const UI_TEXT = {
-  en: { home: "Home", reader: "Reader", studio: "Studio", creator: "Become a Creator", profile: "Profile", head: "Admin", signout: "Sign Out", signin: "Sign In", language: "Language" },
-  ko: { home: "홈", reader: "리더", studio: "스튜디오", creator: "크리에이터 되기", profile: "프로필", head: "관리자", signout: "로그아웃", signin: "로그인", language: "언어" },
-  mn: { home: "Нүүр", reader: "Уншигч", studio: "Студи", creator: "Бүтээгч болох", profile: "Профайл", head: "Админ", signout: "Гарах", signin: "Нэвтрэх", language: "Хэл" },
-  ja: { home: "ホーム", reader: "リーダー", studio: "スタジオ", creator: "クリエイターになる", profile: "プロフィール", head: "管理者", signout: "ログアウト", signin: "ログイン", language: "言語" },
+  en: { home: "Home", reader: "Reader", studio: "Studio", creator: "Become a Creator", profile: "Profile", wallet: "Wallet", head: "Admin", signout: "Sign Out", signin: "Sign In", language: "Language" },
+  ko: { home: "홈", reader: "리더", studio: "스튜디오", creator: "크리에이터 되기", profile: "프로필", wallet: "지갑", head: "관리자", signout: "로그아웃", signin: "로그인", language: "언어" },
+  mn: { home: "Нүүр", reader: "Уншигч", studio: "Студи", creator: "Бүтээгч болох", profile: "Профайл", wallet: "Хэтэвч", head: "Админ", signout: "Гарах", signin: "Нэвтрэх", language: "Хэл" },
+  ja: { home: "ホーム", reader: "リーダー", studio: "スタジオ", creator: "クリエイターになる", profile: "プロフィール", wallet: "ウォレット", head: "管理者", signout: "ログアウト", signin: "ログイン", language: "言語" },
 } as const;
 
 export default function NavWithSidebar({ locale }: { locale: string }) {
@@ -118,6 +118,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
     { href: `/${l}/reader`, label: t.reader },
     ...(isCreator ? [{ href: `/${l}/studio`, label: t.studio }] : []),
     ...(!isCreator ? [{ href: `/${l}/creator/apply`, label: t.creator }] : []),
+    ...(session ? [{ href: `/${l}/wallet`, label: t.wallet }] : []),
     ...(session ? [{ href: `/${l}/profile`, label: t.profile }] : []),
     ...(isOwner ? [{ href: `/${l}/head`, label: t.head }] : []),
   ];
@@ -203,9 +204,17 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
               </div>
             </div>
 
-            {/* RIGHT: notification bell + profile/sign-in */}
+            {/* RIGHT: notification bell + wallet + profile/sign-in */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {session && <NotificationBell />}
+              {session && (
+                <Link
+                  href={`/${l}/wallet`}
+                  className="rounded-full border border-stone-300 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+                >
+                  {t.wallet}
+                </Link>
+              )}
               {session ? (
                 <Link
                   href={`/${l}/profile`}
