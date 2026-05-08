@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 type Params = { locale: string };
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
@@ -74,6 +75,19 @@ export default async function LocaleHomePage({
   const { locale } = await Promise.resolve(params);
   const l = normalizeLocale(locale);
   const t = UI_TEXT[l];
+
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  let isCreator = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const r = profile?.role;
+    isCreator = r === "creator" || r === "owner";
+  }
 
   return (
     <div className="min-h-screen theme-soft">
@@ -154,8 +168,8 @@ export default async function LocaleHomePage({
             </div>
           </section>
 
-          {/* Become a Creator CTA */}
-          <section
+          {/* Become a Creator CTA — readers only */}
+          {!isCreator && <section
             className="flex flex-col gap-5 rounded-[24px] p-7 sm:flex-row sm:items-center sm:justify-between"
             style={{
               background: "linear-gradient(135deg, rgba(94,99,87,0.12), rgba(233,230,223,0.82))",
@@ -182,7 +196,7 @@ export default async function LocaleHomePage({
                 {t.becomeCreatorButton}
               </Link>
             </div>
-          </section>
+          </section>}
 
           <footer className="mt-16 text-center text-sm" style={{ color: "var(--muted)" }}>
             <a href={`mailto:${t.footerEmail}`} className="hover:underline">

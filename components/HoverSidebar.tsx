@@ -94,8 +94,6 @@ export default function HoverSidebar({ locale }: { locale: string }) {
     { href: `/${l}`, label: t.home },
     { href: `/${l}/reader`, label: t.reader },
     ...(isCreator ? [{ href: `/${l}/studio`, label: t.studio }] : []),
-    ...(!isCreator ? [{ href: `/${l}/creator/apply`, label: t.creator }] : []),
-    ...(session ? [{ href: `/${l}/profile`, label: t.profile }] : []),
     ...(isOwner ? [{ href: `/${l}/head`, label: t.head }] : []),
   ];
 

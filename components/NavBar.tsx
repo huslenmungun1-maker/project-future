@@ -26,10 +26,10 @@ function stripLeadingLocale(pathname: string) {
 
 
 const UI_TEXT = {
-  en:  { reader: "Reader", studio: "Studio", head: "Admin", profile: "Profile", wallet: "Wallet", login: "Login", signout: "Sign Out" },
-  ko:  { reader: "리더", studio: "스튜디오", head: "관리자", profile: "프로필", wallet: "지갑", login: "로그인", signout: "로그아웃" },
-  mn:  { reader: "Уншигч", studio: "Студи", head: "Админ", profile: "Профайл", wallet: "Хэтэвч", login: "Нэвтрэх", signout: "Гарах" },
-  ja:  { reader: "リーダー", studio: "スタジオ", head: "管理者", profile: "プロフィール", wallet: "ウォレット", login: "ログイン", signout: "ログアウト" },
+  en:  { reader: "Reader", studio: "Studio", head: "Admin", profile: "Profile", login: "Login", signout: "Sign Out" },
+  ko:  { reader: "리더", studio: "스튜디오", head: "관리자", profile: "프로필", login: "로그인", signout: "로그아웃" },
+  mn:  { reader: "Уншигч", studio: "Студи", head: "Админ", profile: "Профайл", login: "Нэвтрэх", signout: "Гарах" },
+  ja:  { reader: "リーダー", studio: "スタジオ", head: "管理者", profile: "プロフィール", login: "ログイン", signout: "ログアウト" },
 } as const;
 
 export default function NavBar({ locale }: { locale: string }) {
@@ -137,12 +137,6 @@ export default function NavBar({ locale }: { locale: string }) {
         {/* Auth */}
         {session ? (
           <div className="ml-2 flex items-center gap-2">
-            <Link
-              href={`/${currentLocale}/wallet`}
-              className="rounded-full border border-stone-300 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
-            >
-              {t.wallet}
-            </Link>
             <Link
               href={`/${currentLocale}/profile`}
               className="rounded-full border border-stone-300 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
