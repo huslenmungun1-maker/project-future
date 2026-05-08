@@ -169,7 +169,7 @@ create policy "kid_content_self_read" on public.kid_content_submissions
       where ka.kid_user_id = kid_content_submissions.kid_user_id
         and (ka.created_by = auth.uid() or ka.linked_teacher_id = auth.uid())
     )
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'owner')
+    or exists (select 1 from public.profiles where profiles.id = auth.uid() and role = 'owner')
   );
 
 create policy "kid_content_self_insert" on public.kid_content_submissions
@@ -183,7 +183,7 @@ create policy "kid_content_parent_update" on public.kid_content_submissions
       where ka.kid_user_id = kid_content_submissions.kid_user_id
         and (ka.created_by = auth.uid() or ka.linked_teacher_id = auth.uid())
     )
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'owner')
+    or exists (select 1 from public.profiles where profiles.id = auth.uid() and role = 'owner')
   );
 
 -- ─────────────────────────────────────────
@@ -350,12 +350,12 @@ alter table public.kids_blocked_keywords enable row level security;
 
 create policy "kids_blocked_keywords_owner_read" on public.kids_blocked_keywords
   for select using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'owner')
+    exists (select 1 from public.profiles where profiles.id = auth.uid() and role = 'owner')
   );
 
 create policy "kids_blocked_keywords_owner_write" on public.kids_blocked_keywords
   for all using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'owner')
+    exists (select 1 from public.profiles where profiles.id = auth.uid() and role = 'owner')
   );
 
 -- Seed basic blocked keywords
