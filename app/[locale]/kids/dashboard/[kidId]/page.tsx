@@ -2,6 +2,40 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 
+function KidAvatarIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function FlagIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M4 4h12l-2 5 2 5H4V4z" />
+      <rect x="3" y="4" width="2" height="17" rx="1" />
+    </svg>
+  );
+}
+
+function CheckIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function DotIcon({ size = 10 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10">
+      <circle cx="5" cy="5" r="4" fill="currentColor" />
+    </svg>
+  );
+}
+
 const LABELS: Record<string, Record<string, string>> = {
   en: {
     back: "← Back",
@@ -197,9 +231,9 @@ export default function KidsDashboardPage({ params }: { params: Promise<{ locale
           width: 52, height: 52, borderRadius: "50%",
           background: "linear-gradient(135deg, #b8dff8, #c9a0e0)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "1.5rem",
+          color: "rgba(255,255,255,0.9)",
         }}>
-          👦
+          <KidAvatarIcon />
         </div>
         <div>
           <div style={{ fontWeight: 800, fontSize: "1.15rem", color: "var(--kids-text, #2a3a52)" }}>
@@ -316,7 +350,9 @@ export default function KidsDashboardPage({ params }: { params: Promise<{ locale
                   {m.sender_id === kidId ? "Kid" : "Other"}
                 </div>
                 {m.is_flagged && (
-                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#e07070" }}>⚑ Flagged</span>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#e07070", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                    <FlagIcon size={11} /> Flagged
+                  </span>
                 )}
                 <div style={{ fontSize: "0.7rem", color: "var(--kids-muted, #7a9ab8)" }}>
                   {new Date(m.created_at).toLocaleDateString()}
@@ -339,8 +375,8 @@ export default function KidsDashboardPage({ params }: { params: Promise<{ locale
             }}>
               <div style={{ fontSize: "0.875rem", color: "var(--kids-text, #2a3a52)" }}>{f.message}</div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: f.resolved ? "#7ec8a4" : "#e07070" }}>
-                  {f.resolved ? "✓ Resolved" : "● Open"}
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: f.resolved ? "#7ec8a4" : "#e07070", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  {f.resolved ? <><CheckIcon /> Resolved</> : <><DotIcon /> Open</>}
                 </span>
                 <div style={{ fontSize: "0.7rem", color: "var(--kids-muted, #7a9ab8)" }}>
                   {new Date(f.created_at).toLocaleDateString()}

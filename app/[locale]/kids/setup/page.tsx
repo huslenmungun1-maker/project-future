@@ -2,25 +2,51 @@
 import { use, useState } from "react";
 import Link from "next/link";
 
+function UsersIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function TeacherIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ size = 52 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  );
+}
+
 const LABELS: Record<string, Record<string, string>> = {
   en: {
     title: "Set Up a Child Account",
     subtitle: "Create a safe space for your child to read and create.",
     stepOf: "Step {n} of 4",
-    // Step 1: verification
     step1Title: "Who are you?",
     step1Sub: "We need to verify your relationship with the child.",
     roleParent: "Parent / Guardian",
     roleParentDesc: "I am the parent or legal guardian of this child.",
     roleTeacher: "Teacher / Educator",
     roleTeacherDesc: "I am a teacher or educator responsible for this child.",
-    // Step 2: legal consent
     step2Title: "Please read and agree",
     consent1: "I confirm I am an adult (18+) responsible for this child.",
     consent2: "I understand this platform monitors all content for child safety.",
     consent3: "I agree that the child's activity, reading history, and messages may be reviewed by me and platform moderators.",
     consent4: "I understand AI features require approval from both parent AND teacher before they are enabled for the child.",
-    // Step 3: child info
     step3Title: "Child's Information",
     nameLabel: "Child's Name *",
     namePlaceholder: "First name or nickname",
@@ -35,7 +61,6 @@ const LABELS: Record<string, Record<string, string>> = {
     earningsLabel: "Earnings go to",
     earningsParent: "My wallet",
     earningsKid: "Child's wallet",
-    // Step 4: confirm
     step4Title: "Almost done!",
     step4Sub: "Review the information and create the account.",
     relationship: "Relationship",
@@ -43,14 +68,12 @@ const LABELS: Record<string, Record<string, string>> = {
     age: "Age",
     email: "Email",
     earnings: "Earnings",
-    // Actions
-    next: "Next →",
-    back: "← Back",
+    next: "Next",
+    back: "Back",
     create: "Create Account",
     creating: "Creating...",
     success: "Account created! {name} can now log in.",
     viewDashboard: "Go to Dashboard",
-    // Errors
     selectRole: "Please select your role.",
     agreeAll: "Please agree to all items.",
     missingFields: "Please fill in all required fields.",
@@ -93,8 +116,8 @@ const LABELS: Record<string, Record<string, string>> = {
     age: "Нас",
     email: "Имэйл",
     earnings: "Орлого",
-    next: "Дараах →",
-    back: "← Буцах",
+    next: "Дараах",
+    back: "Буцах",
     create: "Бүртгэл үүсгэх",
     creating: "Үүсгэж байна...",
     success: "{name}-ийн бүртгэл үүслээ! Одоо нэвтрэх боломжтой.",
@@ -141,8 +164,8 @@ const LABELS: Record<string, Record<string, string>> = {
     age: "나이",
     email: "이메일",
     earnings: "수익",
-    next: "다음 →",
-    back: "← 뒤로",
+    next: "다음",
+    back: "뒤로",
     create: "계정 만들기",
     creating: "만드는 중...",
     success: "{name}의 계정이 만들어졌어요! 이제 로그인할 수 있어요.",
@@ -189,8 +212,8 @@ const LABELS: Record<string, Record<string, string>> = {
     age: "年齢",
     email: "メール",
     earnings: "収益",
-    next: "次へ →",
-    back: "← 戻る",
+    next: "次へ",
+    back: "戻る",
     create: "アカウントを作成",
     creating: "作成中...",
     success: "{name}のアカウントが作成されました！ログインできます。",
@@ -298,7 +321,9 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
   if (createdKidId) {
     return (
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 20px", textAlign: "center" }}>
-        <div style={{ fontSize: "3rem", marginBottom: 16 }}>🎉</div>
+        <div style={{ color: "#7ec8a4", display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <CheckCircleIcon size={52} />
+        </div>
         <div style={{ fontWeight: 800, fontSize: "1.4rem", color: "var(--kids-text, #2a3a52)", marginBottom: 8 }}>
           {t.success.replace("{name}", name)}
         </div>
@@ -312,6 +337,11 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
       </div>
     );
   }
+
+  const roleOptions: { val: "parent_guardian" | "teacher"; label: string; desc: string; icon: React.ReactNode }[] = [
+    { val: "parent_guardian", label: t.roleParent,  desc: t.roleParentDesc,  icon: <UsersIcon   size={26} /> },
+    { val: "teacher",         label: t.roleTeacher, desc: t.roleTeacherDesc, icon: <TeacherIcon size={26} /> },
+  ];
 
   return (
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 40px" }}>
@@ -361,10 +391,7 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
           <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--kids-text, #2a3a52)", marginBottom: 6 }}>{t.step1Title}</div>
           <div style={{ fontSize: "0.875rem", color: "var(--kids-muted, #7a9ab8)", marginBottom: 20 }}>{t.step1Sub}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { val: "parent_guardian" as const, label: t.roleParent, desc: t.roleParentDesc, icon: "👨‍👩‍👧" },
-              { val: "teacher" as const, label: t.roleTeacher, desc: t.roleTeacherDesc, icon: "👩‍🏫" },
-            ].map(opt => (
+            {roleOptions.map(opt => (
               <button
                 key={opt.val}
                 onClick={() => setRole(opt.val)}
@@ -380,7 +407,15 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
                 }}
               >
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <span style={{ fontSize: "1.6rem" }}>{opt.icon}</span>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                    background: role === opt.val ? "rgba(247,168,74,0.15)" : "rgba(100,160,220,0.1)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: role === opt.val ? "var(--kids-accent, #f7a84a)" : "var(--kids-muted, #7a9ab8)",
+                    transition: "all 140ms ease",
+                  }}>
+                    {opt.icon}
+                  </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--kids-text, #2a3a52)" }}>{opt.label}</div>
                     <div style={{ fontSize: "0.8rem", color: "var(--kids-muted, #7a9ab8)", marginTop: 2 }}>{opt.desc}</div>
@@ -485,10 +520,10 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[
               { label: t.relationship, value: role === "parent_guardian" ? t.roleParent : t.roleTeacher },
-              { label: t.name, value: name },
-              { label: t.age, value: age },
-              { label: t.email, value: email },
-              { label: t.earnings, value: earningsReceiver === "parent" ? t.earningsParent : t.earningsKid },
+              { label: t.name,         value: name },
+              { label: t.age,          value: age },
+              { label: t.email,        value: email },
+              { label: t.earnings,     value: earningsReceiver === "parent" ? t.earningsParent : t.earningsKid },
             ].map(row => (
               <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--kids-border, rgba(100,160,220,0.15))" }}>
                 <span style={{ fontSize: "0.85rem", color: "var(--kids-muted, #7a9ab8)" }}>{row.label}</span>

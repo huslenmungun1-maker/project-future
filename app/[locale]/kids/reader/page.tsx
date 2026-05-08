@@ -19,6 +19,63 @@ interface Book {
   status: string;
 }
 
+function IconManga({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
+function IconWebnovel({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <line x1="9" y1="7" x2="15" y2="7" />
+      <line x1="9" y1="11" x2="15" y2="11" />
+    </svg>
+  );
+}
+
+function IconComic({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function IconArtbook({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <rect x="7" y="7" width="10" height="10" rx="1" />
+    </svg>
+  );
+}
+
+function ContentTypeIcon({ type, size = 22 }: { type: string; size?: number }) {
+  switch (type) {
+    case "manga":    return <IconManga    size={size} />;
+    case "webnovel": return <IconWebnovel size={size} />;
+    case "comic":    return <IconComic    size={size} />;
+    case "artbook":  return <IconArtbook  size={size} />;
+    default:         return <IconWebnovel size={size} />;
+  }
+}
+
+function LoadingSpinner() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </svg>
+  );
+}
+
 export default function KidsReaderPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
   const t = LABELS[locale] ?? LABELS.en;
@@ -49,13 +106,6 @@ export default function KidsReaderPage({ params }: { params: Promise<{ locale: s
     !search || b.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const typeEmoji: Record<string, string> = {
-    manga: "🎨",
-    webnovel: "📖",
-    comic: "💬",
-    artbook: "🖼️",
-  };
-
   return (
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 24px" }}>
       <div style={{ marginBottom: 28 }}>
@@ -84,7 +134,7 @@ export default function KidsReaderPage({ params }: { params: Promise<{ locale: s
 
       {loading ? (
         <div style={{ textAlign: "center", color: "var(--kids-muted, #7a9ab8)", padding: 40 }}>
-          <div style={{ fontSize: "2rem" }}>📚</div>
+          <LoadingSpinner />
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", color: "var(--kids-muted, #7a9ab8)", padding: 40 }}>
@@ -124,9 +174,9 @@ export default function KidsReaderPage({ params }: { params: Promise<{ locale: s
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "2.5rem",
+                  color: "rgba(255,255,255,0.9)",
                 }}>
-                  {typeEmoji[book.content_type] ?? "📖"}
+                  <ContentTypeIcon type={book.content_type} size={40} />
                 </div>
               )}
               <div style={{ padding: "10px 12px 14px" }}>
@@ -135,7 +185,7 @@ export default function KidsReaderPage({ params }: { params: Promise<{ locale: s
                   fontWeight: 700,
                   color: "var(--kids-text, #2a3a52)",
                   lineHeight: 1.3,
-                  marginBottom: 4,
+                  marginBottom: 6,
                   overflow: "hidden",
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -144,6 +194,9 @@ export default function KidsReaderPage({ params }: { params: Promise<{ locale: s
                   {book.title}
                 </div>
                 <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
                   fontSize: "0.7rem",
                   background: "rgba(126,200,164,0.18)",
                   color: "#4a9a7c",
@@ -151,7 +204,8 @@ export default function KidsReaderPage({ params }: { params: Promise<{ locale: s
                   padding: "2px 8px",
                   fontWeight: 600,
                 }}>
-                  {typeEmoji[book.content_type]} {book.content_type}
+                  <ContentTypeIcon type={book.content_type} size={12} />
+                  {book.content_type}
                 </span>
               </div>
             </Link>

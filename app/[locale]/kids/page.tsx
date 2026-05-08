@@ -3,9 +3,29 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 
+function BookIcon({ size = 36 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <line x1="12" y1="6" x2="16" y2="6" />
+      <line x1="12" y1="10" x2="16" y2="10" />
+    </svg>
+  );
+}
+
+function PencilIcon({ size = 36 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L4 16v4" />
+      <line x1="13.5" y1="6.5" x2="17.5" y2="10.5" />
+    </svg>
+  );
+}
+
 const LABELS: Record<string, Record<string, string>> = {
   en: {
-    greeting: "Hello! 👋",
+    greeting: "Hello!",
     subtitle: "What do you want to do today?",
     read: "Read a Story",
     readSub: "Discover books & manga",
@@ -14,7 +34,7 @@ const LABELS: Record<string, Record<string, string>> = {
     noKidAccount: "Ask a parent or teacher to set up your Kids account.",
   },
   mn: {
-    greeting: "Сайн уу! 👋",
+    greeting: "Сайн уу!",
     subtitle: "Өнөөдөр юу хийх вэ?",
     read: "Үлгэр унших",
     readSub: "Ном, манга олдог",
@@ -23,7 +43,7 @@ const LABELS: Record<string, Record<string, string>> = {
     noKidAccount: "Эцэг эх эсвэл багш таны Kids бүртгэлийг тохируулах хэрэгтэй.",
   },
   ko: {
-    greeting: "안녕하세요! 👋",
+    greeting: "안녕하세요!",
     subtitle: "오늘은 무엇을 할까요?",
     read: "이야기 읽기",
     readSub: "책과 만화 찾기",
@@ -32,7 +52,7 @@ const LABELS: Record<string, Record<string, string>> = {
     noKidAccount: "부모님이나 선생님께 Kids 계정 설정을 부탁하세요.",
   },
   ja: {
-    greeting: "こんにちは！ 👋",
+    greeting: "こんにちは！",
     subtitle: "今日は何をする？",
     read: "お話を読む",
     readSub: "本やマンガを探そう",
@@ -62,7 +82,7 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
       const { data: profile } = await supabase
         .from("profiles")
         .select("display_name, account_type")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       setDisplayName(profile?.display_name ?? null);
@@ -99,7 +119,7 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
       {/* Greeting */}
       <div style={{ marginBottom: 36, textAlign: "center" }}>
         <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--kids-text, #2a3a52)", lineHeight: 1.2 }}>
-          {t.greeting} {displayName ? displayName : ""}
+          {t.greeting}{displayName ? ` ${displayName}` : ""}
         </div>
         <div style={{ fontSize: "1rem", color: "var(--kids-muted, #7a9ab8)", marginTop: 6 }}>
           {t.subtitle}
@@ -129,7 +149,9 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
           onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
           onMouseLeave={e => (e.currentTarget.style.transform = "")}
         >
-          <div style={{ fontSize: "2.2rem" }}>📚</div>
+          <div style={{ color: "#7ec8a4" }}>
+            <BookIcon size={36} />
+          </div>
           <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--kids-text, #2a3a52)" }}>{t.read}</div>
           <div style={{ fontSize: "0.875rem", color: "var(--kids-muted, #7a9ab8)" }}>{t.readSub}</div>
         </Link>
@@ -141,7 +163,9 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
             onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
             onMouseLeave={e => (e.currentTarget.style.transform = "")}
           >
-            <div style={{ fontSize: "2.2rem" }}>✏️</div>
+            <div style={{ color: "#f7a84a" }}>
+              <PencilIcon size={36} />
+            </div>
             <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--kids-text, #2a3a52)" }}>{t.create}</div>
             <div style={{ fontSize: "0.875rem", color: "var(--kids-muted, #7a9ab8)" }}>{t.createSub}</div>
           </Link>
