@@ -13,7 +13,9 @@
       "Bash(supabase --version)",
       "Bash(printenv)",
       "Bash(npx vercel *)",
-      "Bash(timeout 12)"
+      "Bash(timeout 12)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)"
     ],
     "defaultMode": "acceptEdits"
   }
