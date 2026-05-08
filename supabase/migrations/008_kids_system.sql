@@ -39,6 +39,10 @@ create index if not exists idx_kid_accounts_teacher_id   on public.kid_accounts(
 
 alter table public.kid_accounts enable row level security;
 
+drop policy if exists "kid_accounts_parent_read"   on public.kid_accounts;
+drop policy if exists "kid_accounts_parent_insert" on public.kid_accounts;
+drop policy if exists "kid_accounts_parent_update" on public.kid_accounts;
+
 create policy "kid_accounts_parent_read" on public.kid_accounts
   for select using (auth.uid() = created_by or auth.uid() = kid_user_id or auth.uid() = linked_teacher_id);
 
@@ -62,6 +66,9 @@ create table if not exists public.kid_permissions (
 );
 
 alter table public.kid_permissions enable row level security;
+
+drop policy if exists "kid_permissions_read"          on public.kid_permissions;
+drop policy if exists "kid_permissions_parent_update" on public.kid_permissions;
 
 create policy "kid_permissions_read" on public.kid_permissions
   for select
@@ -101,6 +108,9 @@ create index if not exists idx_kid_chat_receiver on public.kid_chat_messages(rec
 create index if not exists idx_kid_chat_created  on public.kid_chat_messages(created_at desc);
 
 alter table public.kid_chat_messages enable row level security;
+
+drop policy if exists "kid_chat_read"   on public.kid_chat_messages;
+drop policy if exists "kid_chat_insert" on public.kid_chat_messages;
 
 -- Kid, parent, or teacher can read messages involving the kid
 create policy "kid_chat_read" on public.kid_chat_messages
@@ -160,6 +170,10 @@ create index if not exists idx_kid_content_status on public.kid_content_submissi
 
 alter table public.kid_content_submissions enable row level security;
 
+drop policy if exists "kid_content_self_read"       on public.kid_content_submissions;
+drop policy if exists "kid_content_self_insert"     on public.kid_content_submissions;
+drop policy if exists "kid_content_parent_update"   on public.kid_content_submissions;
+
 create policy "kid_content_self_read" on public.kid_content_submissions
   for select
   using (
@@ -203,6 +217,8 @@ create index if not exists idx_kid_earnings_kid_id on public.kid_earnings(kid_us
 
 alter table public.kid_earnings enable row level security;
 
+drop policy if exists "kid_earnings_read" on public.kid_earnings;
+
 create policy "kid_earnings_read" on public.kid_earnings
   for select
   using (
@@ -233,6 +249,10 @@ create index if not exists idx_adult_flags_flagged_to on public.adult_flags(flag
 
 alter table public.adult_flags enable row level security;
 
+drop policy if exists "adult_flags_involved_read" on public.adult_flags;
+drop policy if exists "adult_flags_insert"        on public.adult_flags;
+drop policy if exists "adult_flags_resolve"       on public.adult_flags;
+
 create policy "adult_flags_involved_read" on public.adult_flags
   for select using (auth.uid() = flagged_by or auth.uid() = flagged_to);
 
@@ -258,6 +278,9 @@ create index if not exists idx_kid_read_history_kid on public.kid_read_history(k
 create index if not exists idx_kid_read_history_at  on public.kid_read_history(read_at desc);
 
 alter table public.kid_read_history enable row level security;
+
+drop policy if exists "kid_read_history_read"   on public.kid_read_history;
+drop policy if exists "kid_read_history_insert" on public.kid_read_history;
 
 create policy "kid_read_history_read" on public.kid_read_history
   for select
@@ -347,6 +370,9 @@ create table if not exists public.kids_blocked_keywords (
 );
 
 alter table public.kids_blocked_keywords enable row level security;
+
+drop policy if exists "kids_blocked_keywords_owner_read"  on public.kids_blocked_keywords;
+drop policy if exists "kids_blocked_keywords_owner_write" on public.kids_blocked_keywords;
 
 create policy "kids_blocked_keywords_owner_read" on public.kids_blocked_keywords
   for select using (

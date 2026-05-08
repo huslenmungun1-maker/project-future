@@ -77,13 +77,18 @@ create policy "Owners can update creators"
   );
 
 -- ─── 007: platform_earnings owner read ──────────────────────
-drop policy if exists "platform_earnings_owner_read" on public.platform_earnings;
-
-create policy "platform_earnings_owner_read" on public.platform_earnings
-  for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where user_id = auth.uid() and role = 'owner'
-    )
-  );
+do $$ begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'platform_earnings') then
+    drop policy if exists "platform_earnings_owner_read" on public.platform_earnings;
+    execute $pol$
+      create policy "platform_earnings_owner_read" on public.platform_earnings
+        for select
+        using (
+          exists (
+            select 1 from public.profiles
+            where user_id = auth.uid() and role = 'owner'
+          )
+        )
+    $pol$;
+  end if;
+end $$;
