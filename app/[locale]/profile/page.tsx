@@ -21,12 +21,21 @@ export default async function ProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, account_type")
     .eq("id", user.id)
     .maybeSingle();
   const role = profile?.role ?? "reader";
+  const isKid = profile?.account_type === "kid";
   const isOwner = role === "owner";
   const isCreator = role === "creator" || isOwner;
+
+  // Kids accounts linked to this adult
+  const { data: kidAccounts } = await supabase
+    .from("kid_accounts")
+    .select("kid_user_id, age, relationship, profiles:kid_user_id ( display_name )")
+    .or(`created_by.eq.${user.id},linked_teacher_id.eq.${user.id}`)
+    .order("created_at", { ascending: false })
+    .limit(10);
 
   const joinedAt = new Date(user.created_at).toLocaleDateString("en-US", {
     year: "numeric",
@@ -178,6 +187,74 @@ export default async function ProfilePage({
             <span style={{ color: "#5e5e6e", fontSize: 12 }}>→</span>
           </Link>
         </div>
+
+        {/* Kids section — shown for non-kid adults */}
+        {!isKid && (
+          <div
+            style={{
+              background: "#111116",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 16,
+              overflow: "hidden",
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ padding: "12px 20px 8px", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#4a4a56" }}>
+              My Kids
+            </div>
+            {(kidAccounts ?? []).map((ka) => {
+              const displayName = (ka.profiles as { display_name?: string } | null)?.display_name ?? "Child";
+              return (
+                <Link
+                  key={ka.kid_user_id}
+                  href={`/${locale}/kids/dashboard/${ka.kid_user_id}`}
+                  className="flex items-center justify-between px-5 py-3 text-[13px] font-medium transition hover:bg-white/[0.03] border-t border-white/[0.05]"
+                  style={{ color: "#eceae4", textDecoration: "none" }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>👦</span>
+                    {displayName}
+                    <span style={{ fontSize: 11, color: "#4a4a56" }}>age {ka.age}</span>
+                  </span>
+                  <span style={{ color: "#5e5e6e", fontSize: 12 }}>→</span>
+                </Link>
+              );
+            })}
+            <Link
+              href={`/${locale}/kids/setup`}
+              className="flex items-center justify-between px-5 py-3.5 text-[13px] font-medium transition hover:bg-white/[0.03] border-t border-white/[0.05]"
+              style={{ color: "#7ec8a4", textDecoration: "none" }}
+            >
+              + Add a child account
+              <span style={{ color: "#5e5e6e", fontSize: 12 }}>→</span>
+            </Link>
+          </div>
+        )}
+
+        {/* Kids portal link — shown for kid accounts */}
+        {isKid && (
+          <div style={{ marginBottom: 12 }}>
+            <Link
+              href={`/${locale}/kids`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 20px",
+                borderRadius: 16,
+                background: "rgba(184,223,248,0.08)",
+                border: "1px solid rgba(100,160,220,0.2)",
+                color: "#b8dff8",
+                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Go to Kids Portal
+              <span style={{ fontSize: 12, opacity: 0.7 }}>→</span>
+            </Link>
+          </div>
+        )}
 
         {/* Sign out */}
         <div style={{ paddingTop: 8 }}>

@@ -18,6 +18,7 @@ type SeriesRow = {
   language: string | null;
   published: boolean;
   published_at: string | null;
+  audience: "all" | "kids" | "adults";
 };
 
 type ChapterRow = {
@@ -507,6 +508,24 @@ export default function SeriesDetailPage() {
     setSeries(data as SeriesRow);
   }
 
+  async function updateAudience(value: "all" | "kids" | "adults") {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, audience: value });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ audience: value })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      setSeries(prev);
+      setActionMsg(error ? error.message : t.projectNotFound);
+      return;
+    }
+    setSeries(data as SeriesRow);
+  }
+
   async function togglePublish() {
     if (!series || togglingPublish) return;
 
@@ -823,6 +842,21 @@ export default function SeriesDetailPage() {
                   <option value="mn">Монгол</option>
                   <option value="ko">한국어</option>
                   <option value="ja">日本語</option>
+                </select>
+
+                <select
+                  value={series.audience ?? "all"}
+                  onChange={(e) => updateAudience(e.target.value as "all" | "kids" | "adults")}
+                  className="rounded-full px-4 py-2 text-xs outline-none"
+                  style={{
+                    background: "rgba(255,255,255,0.7)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <option value="all">All ages</option>
+                  <option value="kids">Kids only</option>
+                  <option value="adults">Adults only</option>
                 </select>
 
                 <button

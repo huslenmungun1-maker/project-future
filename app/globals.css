@@ -208,3 +208,116 @@ body {
 .btn-dark-ghost:hover { opacity: 0.75; }
 .btn-dark-ghost:active { transform: scale(0.97); }
 .btn-dark-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ============================= */
+/*  Kids Theme — Day Mode        */
+/* ============================= */
+
+.theme-kids {
+  --kids-bg-top:    #b8dff8;
+  --kids-bg-bottom: #e8f6ff;
+  --kids-panel:     rgba(255,255,255,0.82);
+  --kids-border:    rgba(100,160,220,0.22);
+  --kids-text:      #2a3a52;
+  --kids-muted:     #7a9ab8;
+  --kids-accent:    #f7a84a;
+  --kids-accent2:   #7ec8a4;
+  --kids-accent3:   #c9a0e0;
+  --kids-radius:    24px;
+  --kids-shadow:    0 4px 20px rgba(100,160,220,0.18);
+  background: linear-gradient(180deg, var(--kids-bg-top) 0%, var(--kids-bg-bottom) 100%);
+  color: var(--kids-text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ============================= */
+/*  Kids Theme — Night Mode      */
+/* ============================= */
+
+.theme-kids-night {
+  --kids-bg-top:    #1a1040;
+  --kids-bg-bottom: #2e1c6a;
+  --kids-panel:     rgba(40,28,80,0.88);
+  --kids-border:    rgba(180,140,255,0.2);
+  --kids-text:      #e8e0ff;
+  --kids-muted:     #a090d0;
+  --kids-accent:    #f7c84a;
+  --kids-accent2:   #7ec8e8;
+  --kids-accent3:   #e0a0ff;
+  --kids-radius:    24px;
+  --kids-shadow:    0 4px 24px rgba(100,60,200,0.28);
+  background: linear-gradient(180deg, var(--kids-bg-top) 0%, var(--kids-bg-bottom) 100%);
+  color: var(--kids-text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ============================= */
+/*  Kids UI Components           */
+/* ============================= */
+
+.kids-card {
+  background: var(--kids-panel);
+  border: 2px solid var(--kids-border);
+  border-radius: var(--kids-radius);
+  box-shadow: var(--kids-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.btn-kids {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.6rem;
+  border-radius: 9999px;
+  background: var(--kids-accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(247,168,74,0.38);
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+.btn-kids:hover  { opacity: 0.92; }
+.btn-kids:active { transform: scale(0.96); }
+.btn-kids:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-kids-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.6rem;
+  border-radius: 9999px;
+  background: var(--kids-panel);
+  border: 2px solid var(--kids-border);
+  color: var(--kids-text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+.btn-kids-secondary:hover  { opacity: 0.88; }
+.btn-kids-secondary:active { transform: scale(0.96); }
+
+.kids-input {
+  display: block;
+  width: 100%;
+  background: rgba(255,255,255,0.9);
+  border: 2px solid var(--kids-border);
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--kids-text);
+  outline: none;
+  transition: border-color 140ms ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.kids-input:focus {
+  border-color: var(--kids-accent);
+}
+.kids-input::placeholder {
+  color: var(--kids-muted);
+}

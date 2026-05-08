@@ -134,6 +134,11 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // Kids portal — any logged-in user (kids + adults)
+  if (restPath.startsWith("/kids")) {
+    return res;
+  }
+
   return res;
 }
 

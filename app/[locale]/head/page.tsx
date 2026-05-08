@@ -22,6 +22,17 @@ type EarningRow = {
   created_at: string;
 };
 
+type KidsSubmission = {
+  id: string;
+  kid_user_id: string;
+  title: string;
+  content_type: string;
+  status: string;
+  description: string | null;
+  content: string | null;
+  created_at: string;
+};
+
 type Application = {
   id: string;
   user_id: string;
@@ -60,6 +71,9 @@ export default function HeadPage() {
   const [earnings, setEarnings] = useState<{ total: number; rows: EarningRow[] } | null>(null);
   const [earningsLoading, setEarningsLoading] = useState(true);
   const [earningsTab, setEarningsTab] = useState(false);
+  const [kidsTab, setKidsTab] = useState(false);
+  const [kidsContent, setKidsContent] = useState<KidsSubmission[]>([]);
+  const [kidsLoading, setKidsLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -147,6 +161,23 @@ export default function HeadPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
+  async function loadKidsContent() {
+    setKidsLoading(true);
+    const { data } = await supabase
+      .from("kid_content_submissions")
+      .select("id, kid_user_id, title, content_type, status, description, content, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setKidsContent((data as KidsSubmission[]) ?? []);
+    setKidsLoading(false);
+  }
+
+  async function adminRejectKids(id: string) {
+    await supabase.from("kid_content_submissions").update({ status: "rejected" }).eq("id", id);
+    setKidsContent(prev => prev.map(s => s.id === id ? { ...s, status: "rejected" } : s));
+    showToast("Submission rejected.", true);
+  }
+
   const visible = apps.filter((a) => filter === "all" || a.status === filter);
   const counts = {
     all:      apps.length,
@@ -191,7 +222,7 @@ export default function HeadPage() {
               Admin
             </p>
             <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: TEXT }}>
-              {earningsTab ? "Platform Earnings" : "Creator Applications"}
+              {kidsTab ? "Kids Content Review" : earningsTab ? "Platform Earnings" : "Creator Applications"}
             </h1>
           </div>
           <Link
@@ -216,14 +247,19 @@ export default function HeadPage() {
           }}
         >
           {[
-            { key: false, label: "Applications" },
-            { key: true,  label: "Earnings" },
+            { key: "apps",     label: "Applications" },
+            { key: "earnings", label: "Earnings" },
+            { key: "kids",     label: "Kids" },
           ].map(({ key, label }) => {
-            const active = earningsTab === key;
+            const active = key === "kids" ? kidsTab : key === "earnings" ? (earningsTab && !kidsTab) : (!earningsTab && !kidsTab);
             return (
               <button
-                key={String(key)}
-                onClick={() => setEarningsTab(key)}
+                key={key}
+                onClick={() => {
+                  if (key === "kids") { setKidsTab(true); setEarningsTab(false); loadKidsContent(); }
+                  else if (key === "earnings") { setEarningsTab(true); setKidsTab(false); }
+                  else { setEarningsTab(false); setKidsTab(false); }
+                }}
                 style={{
                   padding: "6px 18px",
                   borderRadius: 8,
@@ -242,7 +278,50 @@ export default function HeadPage() {
           })}
         </div>
 
-        {earningsTab ? (
+        {kidsTab ? (
+          /* ── Kids content panel ── */
+          kidsLoading ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.4, margin: "0 auto" }} />
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {kidsContent.length === 0 ? (
+                <div style={{ padding: "48px 24px", textAlign: "center", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16 }}>
+                  <p style={{ fontSize: 13, color: MUTED }}>No kids content submissions yet.</p>
+                </div>
+              ) : kidsContent.map(s => {
+                const statusColor: Record<string, string> = { pending: "#c8a840", both_approved: "#6ea880", parent_approved: "#b0c86a", teacher_approved: "#6ac8c8", rejected: "#c85252" };
+                const col = statusColor[s.status] ?? MUTED;
+                return (
+                  <div key={s.id} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: TEXT }}>{s.title}</div>
+                        <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>{s.content_type} · {new Date(s.created_at).toLocaleDateString()}</div>
+                        {s.description && <div style={{ fontSize: 12, color: MUTED, marginTop: 6, fontStyle: "italic" }}>{s.description}</div>}
+                        {s.content && <div style={{ fontSize: 12, color: "#999", marginTop: 6, maxHeight: 80, overflow: "hidden", lineHeight: 1.5 }}>{s.content}</div>}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: col, background: `${col}18`, borderRadius: 999, padding: "3px 10px" }}>
+                          {s.status}
+                        </span>
+                        {s.status !== "rejected" && (
+                          <button
+                            onClick={() => adminRejectKids(s.id)}
+                            style={{ fontSize: 11, padding: "4px 12px", borderRadius: 999, border: "1px solid rgba(200,82,82,0.35)", background: "transparent", color: "#c85252", cursor: "pointer" }}
+                          >
+                            Reject
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : earningsTab ? (
           /* ── Earnings panel ── */
           earningsLoading ? (
             <div style={{ padding: "40px 0", textAlign: "center" }}>
