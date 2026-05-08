@@ -118,10 +118,8 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
 
   const navLinks = [
     { href: `/${l}`, label: t.home },
-    { href: `/${l}/reader`, label: t.reader },
     ...(isCreator ? [{ href: `/${l}/studio`, label: t.studio }] : []),
     ...(!isCreator ? [{ href: `/${l}/creator/apply`, label: t.creator }] : []),
-    ...(session ? [{ href: `/${l}/wallet`, label: t.wallet }] : []),
     ...(session ? [{ href: `/${l}/profile`, label: t.profile }] : []),
     ...(isOwner ? [{ href: `/${l}/head`, label: t.head }] : []),
   ];
@@ -191,9 +189,6 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
 
               {/* Nav links */}
               <div className="hidden sm:flex items-center gap-5 text-sm">
-                <Link href={`/${l}/reader`} className="text-stone-600 transition hover:text-stone-900">
-                  {t.reader}
-                </Link>
                 {isCreator && (
                   <Link href={`/${l}/studio`} className="text-stone-600 transition hover:text-stone-900">
                     {t.studio}
@@ -282,24 +277,6 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
             transitionDelay: open ? "0.12s" : "0s",
           }}
         >
-          {/* Brand */}
-          <Link
-            href={`/${l}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "24px",
-              textDecoration: "none",
-            }}
-            onClick={() => setLocked(false)}
-          >
-            <img src="/logo.png" alt="Enkhverse" style={{ height: 28, width: "auto" }} />
-            <span style={{ fontWeight: 700, fontSize: "15px", color: "var(--text)", letterSpacing: "-0.01em" }}>
-              Enkhverse
-            </span>
-          </Link>
-
           {/* Nav links */}
           <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             {navLinks.map((link) => (

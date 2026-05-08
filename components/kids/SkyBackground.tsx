@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef } from "react";
 
 interface Props {
   night?: boolean;
-  spaceZone?: number; // px; must match layout's SPACE_ZONE
 }
 
 function seededRand(seed: number) {
@@ -14,7 +13,9 @@ function seededRand(seed: number) {
 const DUR  = "2.6s";
 const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-export default function SkyBackground({ night = false, spaceZone = 400 }: Props) {
+const SPACE_AT = 300; // px of scroll to reach full space
+
+export default function SkyBackground({ night = false }: Props) {
   const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
 
@@ -45,8 +46,8 @@ export default function SkyBackground({ night = false, spaceZone = 400 }: Props)
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        // p = 0 at sky position (scrollY = spaceZone), 1 at full space (scrollY = 0)
-        const p = Math.max(0, Math.min(1, 1 - window.scrollY / spaceZone));
+        // p = 0 at top (sky), 1 when scrolled SPACE_AT px down (full space)
+        const p = Math.min(1, window.scrollY / SPACE_AT);
         if (earthRef.current) {
           earthRef.current.style.transform = `translateY(${p * 60}%)`;
           earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
@@ -57,9 +58,9 @@ export default function SkyBackground({ night = false, spaceZone = 400 }: Props)
       });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll(); // sync on mount (handles page already scrolled to spaceZone)
+    onScroll();
     return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
-  }, [spaceZone]);
+  }, []);
 
   return (
     <div
@@ -105,26 +106,28 @@ export default function SkyBackground({ night = false, spaceZone = 400 }: Props)
           </div>
         ))}
 
-        {/* Sun — LEFT side, day only */}
+        {/* Sun — LEFT side, day only; fades out first when going to night */}
         <div style={{
-          position: "absolute", left: "8%",
+          position: "absolute", left: "8%", top: "6%",
           width: 72, height: 72, borderRadius: "50%",
           background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
           boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
-          top: night ? "110%" : "6%",
           opacity: night ? 0 : 1,
-          transition: `top ${DUR} ${EASE}, opacity ${DUR} ${EASE}, box-shadow ${DUR} ${EASE}`,
+          transition: night
+            ? `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`
+            : `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`,
         }} />
 
-        {/* Moon — LEFT side, night only */}
+        {/* Moon — LEFT side, night only; fades in after sun is gone */}
         <div style={{
-          position: "absolute", left: "8%",
+          position: "absolute", left: "8%", top: "8%",
           width: 64, height: 64, borderRadius: "50%",
           background: "#f7e8a0",
           boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
-          top: night ? "8%" : "110%",
           opacity: night ? 1 : 0,
-          transition: `top ${DUR} ${EASE}, opacity ${DUR} ${EASE}, box-shadow ${DUR} ${EASE}`,
+          transition: night
+            ? `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`
+            : `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`,
         }} />
 
         {/* Clouds */}
