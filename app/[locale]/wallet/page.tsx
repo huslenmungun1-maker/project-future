@@ -170,7 +170,10 @@ export default function WalletPage() {
   }
 
   useEffect(() => {
-    fetchWallet();
+    async function init() {
+      await fetchWallet();
+    }
+    init();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleTopup() {
