@@ -381,21 +381,21 @@ export default function ReaderSeriesChapterPage() {
 
       // Save read progress + check unlock for paid chapters
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await supabase
+        const { data: { user } } = await authClient.auth.getUser();
+        if (user) {
+          await authClient
             .from("read_progress")
             .upsert(
-              { user_id: session.user.id, series_id: seriesId, chapter_id: foundCurrent.id, updated_at: new Date().toISOString() },
+              { user_id: user.id, series_id: seriesId, chapter_id: foundCurrent.id, updated_at: new Date().toISOString() },
               { onConflict: "user_id,series_id" }
             );
 
           const chapterPrice = Number(foundCurrent.price ?? 0);
           if (chapterPrice > 0) {
-            const { data: unlock } = await supabase
+            const { data: unlock } = await authClient
               .from("chapter_unlocks")
               .select("id")
-              .eq("user_id", session.user.id)
+              .eq("user_id", user.id)
               .eq("chapter_id", foundCurrent.id)
               .maybeSingle();
             setIsUnlocked(!!unlock);

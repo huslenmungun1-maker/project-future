@@ -396,7 +396,7 @@ export default function ReaderChapterPage() {
       if (chapterPrice > 0) {
         const { data: { user } } = await authClient.auth.getUser();
         if (user && currentCh) {
-          const { data: unlock } = await supabase
+          const { data: unlock } = await authClient
             .from("chapter_unlocks")
             .select("id")
             .eq("user_id", user.id)
