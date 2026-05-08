@@ -13,6 +13,7 @@ const EASE     = "cubic-bezier(0.4, 0, 0.2, 1)";
 const SPACE_AT = 500; // scrollY px where space is fully visible
 
 export default function SkyBackground({ night = false }: Props) {
+  const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
 
   const skyStars = useMemo(() =>
@@ -37,13 +38,20 @@ export default function SkyBackground({ night = false }: Props) {
       glow:         i % 12 === 0,
     })), []);
 
+  // Scroll: earth slides down, space fades in
   useEffect(() => {
     let raf: number;
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const p = Math.min(1, window.scrollY / SPACE_AT);
-        if (spaceRef.current) spaceRef.current.style.opacity = String(p);
+        if (earthRef.current) {
+          earthRef.current.style.transform = `translateY(${p * 60}%)`;
+          earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
+        }
+        if (spaceRef.current) {
+          spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
+        }
       });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -54,96 +62,99 @@ export default function SkyBackground({ night = false }: Props) {
   return (
     <div
       className={`kids-sky-root${night ? " kids-sky--night" : ""}`}
-      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 0,
+        pointerEvents: "none", overflow: "hidden",
+        background: "#020010",
+      }}
     >
-      {/* Day sky */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 50%, #e8f6ff 100%)",
-        opacity: night ? 0 : 1,
-        transition: `opacity ${DUR} ${EASE}`,
-      }} />
+      {/* ══ EARTH LAYER — slides down + fades on scroll ══ */}
+      <div ref={earthRef} style={{ position: "absolute", inset: 0 }}>
 
-      {/* Night sky */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(180deg, #1a1040 0%, #2e1c6a 60%, #3d1a5a 100%)",
-        opacity: night ? 1 : 0,
-        transition: `opacity ${DUR} ${EASE}`,
-      }} />
-
-      {/* Night stars — nested divs: outer fades, inner twinkles */}
-      {skyStars.map((s, i) => (
-        <div key={i} style={{
-          position: "absolute",
-          top: `${s.top}%`, left: `${s.left}%`,
-          opacity: night ? 1 : 0,
-          transition: night ? `opacity 1.4s ease ${s.fadeDelay.toFixed(2)}s` : "opacity 0.7s ease",
-        }}>
-          <div style={{
-            width: s.big ? 3 : 2, height: s.big ? 3 : 2,
-            borderRadius: "50%", background: "#fff", opacity: s.opacity,
-            animation: `twinkle ${s.twinkleDur.toFixed(1)}s ease-in-out infinite ${s.twinkleDelay.toFixed(2)}s`,
-          }} />
-        </div>
-      ))}
-
-      {/* Sun */}
-      <div style={{
-        position: "absolute", right: "10%",
-        width: 72, height: 72, borderRadius: "50%",
-        background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
-        boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
-        top: night ? "110%" : "6%", opacity: night ? 0 : 1,
-        transition: `top ${DUR} ${EASE}, opacity ${DUR} ${EASE}, box-shadow ${DUR} ${EASE}`,
-      }} />
-
-      {/* Moon */}
-      <div style={{
-        position: "absolute", right: "12%",
-        width: 64, height: 64, borderRadius: "50%",
-        background: "#f7e8a0",
-        boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
-        top: night ? "8%" : "110%", opacity: night ? 1 : 0,
-        transition: `top ${DUR} ${EASE}, opacity ${DUR} ${EASE}, box-shadow ${DUR} ${EASE}`,
-      }} />
-
-      {/* Clouds */}
-      <div className="kids-cloud kids-cloud--1" />
-      <div className="kids-cloud kids-cloud--2" />
-      <div className="kids-cloud kids-cloud--3" />
-
-      {/* Hills */}
-      <svg
-        style={{
-          position: "absolute", bottom: 0, left: 0, width: "100%", height: 120,
-          opacity: night ? 0 : 1,
-          transition: `opacity ${DUR} ${EASE}`,
-        }}
-        viewBox="0 0 1440 120" preserveAspectRatio="none"
-      >
-        <ellipse cx="300"  cy="140" rx="400" ry="120" fill="rgba(126,200,164,0.45)" />
-        <ellipse cx="900"  cy="150" rx="500" ry="130" fill="rgba(126,200,164,0.35)" />
-        <ellipse cx="1300" cy="145" rx="320" ry="115" fill="rgba(126,200,164,0.5)"  />
-      </svg>
-
-      {/* ── SPACE LAYER (fades in as user scrolls down) ── */}
-      <div ref={spaceRef} style={{ position: "absolute", inset: 0, opacity: 0 }}>
-
-        {/* Deep space gradient */}
+        {/* Day sky */}
         <div style={{
           position: "absolute", inset: 0,
-          background: "linear-gradient(180deg, #020010 0%, #0a001e 30%, #12003a 60%, #1a0635 100%)",
+          background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 50%, #e8f6ff 100%)",
+          opacity: night ? 0 : 1,
+          transition: `opacity ${DUR} ${EASE}`,
         }} />
 
-        {/* Nebulae */}
-        <div style={{ position: "absolute", top: "8%",    left: "4%",   width: "58%", height: "44%", borderRadius: "50%", background: "radial-gradient(ellipse, rgba(190,80,255,0.18) 0%, transparent 70%)",  filter: "blur(70px)" }} />
-        <div style={{ position: "absolute", top: "32%",   right: "4%",  width: "50%", height: "40%", borderRadius: "50%", background: "radial-gradient(ellipse, rgba(70,120,255,0.22) 0%, transparent 70%)",   filter: "blur(60px)" }} />
-        <div style={{ position: "absolute", top: "4%",    right: "18%", width: "34%", height: "28%", borderRadius: "50%", background: "radial-gradient(ellipse, rgba(255,80,160,0.13) 0%, transparent 70%)",  filter: "blur(50px)" }} />
-        <div style={{ position: "absolute", bottom: "12%", left: "22%", width: "44%", height: "34%", borderRadius: "50%", background: "radial-gradient(ellipse, rgba(40,60,200,0.22) 0%, transparent 70%)",   filter: "blur(65px)" }} />
-        <div style={{ position: "absolute", top: "52%",   left: "48%",  width: "32%", height: "26%", borderRadius: "50%", background: "radial-gradient(ellipse, rgba(180,100,255,0.16) 0%, transparent 70%)", filter: "blur(45px)" }} />
+        {/* Night sky */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, #1a1040 0%, #2e1c6a 60%, #3d1a5a 100%)",
+          opacity: night ? 1 : 0,
+          transition: `opacity ${DUR} ${EASE}`,
+        }} />
 
-        {/* Space stars */}
+        {/* Night stars */}
+        {skyStars.map((s, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            top: `${s.top}%`, left: `${s.left}%`,
+            opacity: night ? 1 : 0,
+            transition: night ? `opacity 1.4s ease ${s.fadeDelay.toFixed(2)}s` : "opacity 0.7s ease",
+          }}>
+            <div style={{
+              width: s.big ? 3 : 2, height: s.big ? 3 : 2,
+              borderRadius: "50%", background: "#fff", opacity: s.opacity,
+              animation: `twinkle ${s.twinkleDur.toFixed(1)}s ease-in-out infinite ${s.twinkleDelay.toFixed(2)}s`,
+            }} />
+          </div>
+        ))}
+
+        {/* Sun — LEFT side, day only */}
+        <div style={{
+          position: "absolute", left: "8%",
+          width: 72, height: 72, borderRadius: "50%",
+          background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
+          boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
+          top: night ? "110%" : "6%",
+          opacity: night ? 0 : 1,
+          transition: `top ${DUR} ${EASE}, opacity ${DUR} ${EASE}, box-shadow ${DUR} ${EASE}`,
+        }} />
+
+        {/* Moon — LEFT side, night only */}
+        <div style={{
+          position: "absolute", left: "8%",
+          width: 64, height: 64, borderRadius: "50%",
+          background: "#f7e8a0",
+          boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
+          top: night ? "8%" : "110%",
+          opacity: night ? 1 : 0,
+          transition: `top ${DUR} ${EASE}, opacity ${DUR} ${EASE}, box-shadow ${DUR} ${EASE}`,
+        }} />
+
+        {/* Clouds */}
+        <div className="kids-cloud kids-cloud--1" />
+        <div className="kids-cloud kids-cloud--2" />
+        <div className="kids-cloud kids-cloud--3" />
+
+        {/* Hills */}
+        <svg
+          style={{
+            position: "absolute", bottom: 0, left: 0, width: "100%", height: 120,
+            opacity: night ? 0 : 1,
+            transition: `opacity ${DUR} ${EASE}`,
+          }}
+          viewBox="0 0 1440 120" preserveAspectRatio="none"
+        >
+          <ellipse cx="300"  cy="140" rx="400" ry="120" fill="rgba(126,200,164,0.45)" />
+          <ellipse cx="900"  cy="150" rx="500" ry="130" fill="rgba(126,200,164,0.35)" />
+          <ellipse cx="1300" cy="145" rx="320" ry="115" fill="rgba(126,200,164,0.5)"  />
+        </svg>
+      </div>
+
+      {/* ══ SPACE LAYER — fades in as earth slides away ══ */}
+      <div ref={spaceRef} style={{ position: "absolute", inset: 0, opacity: 0 }}>
+
+        {/* Deep space background */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "radial-gradient(ellipse at 50% 40%, #0d001e 0%, #050010 45%, #000008 100%)",
+        }} />
+
+        {/* Background stars — rendered behind galaxy */}
         {spaceStars.map((s, i) => (
           <div key={i} style={{
             position: "absolute",
@@ -156,37 +167,138 @@ export default function SkyBackground({ night = false }: Props) {
           }} />
         ))}
 
-        {/* Planet A — warm giant with ring */}
+        {/* ── SPIRAL GALAXY ── */}
+        {/* Anchor point: positioned in upper-center of space layer */}
+        <div style={{ position: "absolute", top: "38%", left: "50%" }}>
+          {/* Drift animation wrapper */}
+          <div style={{ animation: "galaxy-drift 30s ease-in-out infinite alternate" }}>
+
+            {/* Outer diffuse halo */}
+            <div style={{
+              position: "absolute",
+              width: "92vmin", height: "44vmin",
+              transform: "translate(-50%, -50%) rotate(-22deg)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse, rgba(100,40,180,0.13) 0%, rgba(60,20,120,0.06) 55%, transparent 80%)",
+              filter: "blur(55px)",
+            }} />
+
+            {/* Main galaxy disk */}
+            <div style={{
+              position: "absolute",
+              width: "68vmin", height: "24vmin",
+              transform: "translate(-50%, -50%) rotate(-22deg)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse, rgba(220,130,255,0.22) 0%, rgba(140,80,255,0.16) 35%, rgba(80,100,220,0.10) 65%, transparent 85%)",
+              filter: "blur(22px)",
+            }} />
+
+            {/* Spiral arm A — upper-left, pink/magenta */}
+            <div style={{
+              position: "absolute",
+              width: "55vmin", height: "11vmin",
+              transform: "translate(-50%, -50%) rotate(-22deg) translateX(-16vmin)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse at 25% 50%, rgba(255,100,200,0.32) 0%, rgba(220,80,255,0.18) 45%, transparent 75%)",
+              filter: "blur(16px)",
+            }} />
+
+            {/* Spiral arm B — lower-right, blue/cyan */}
+            <div style={{
+              position: "absolute",
+              width: "55vmin", height: "11vmin",
+              transform: "translate(-50%, -50%) rotate(-22deg) translateX(16vmin)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse at 75% 50%, rgba(80,160,255,0.30) 0%, rgba(60,200,255,0.16) 45%, transparent 75%)",
+              filter: "blur(16px)",
+            }} />
+
+            {/* Spiral arm C — perpendicular, warm pink */}
+            <div style={{
+              position: "absolute",
+              width: "42vmin", height: "9vmin",
+              transform: "translate(-50%, -50%) rotate(68deg) translateX(-12vmin)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse at 25% 50%, rgba(255,140,180,0.24) 0%, rgba(200,80,220,0.12) 50%, transparent 75%)",
+              filter: "blur(18px)",
+            }} />
+
+            {/* Spiral arm D — perpendicular, blue */}
+            <div style={{
+              position: "absolute",
+              width: "38vmin", height: "8vmin",
+              transform: "translate(-50%, -50%) rotate(68deg) translateX(12vmin)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse at 75% 50%, rgba(60,180,255,0.22) 0%, rgba(100,220,255,0.10) 50%, transparent 75%)",
+              filter: "blur(18px)",
+            }} />
+
+            {/* Inner galactic bulge — warm glow */}
+            <div style={{
+              position: "absolute",
+              width: "22vmin", height: "9vmin",
+              transform: "translate(-50%, -50%) rotate(-22deg)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse, rgba(255,210,160,0.38) 0%, rgba(255,140,200,0.22) 45%, transparent 80%)",
+              filter: "blur(10px)",
+            }} />
+
+            {/* Core glow */}
+            <div style={{
+              position: "absolute",
+              width: "9vmin", height: "6vmin",
+              transform: "translate(-50%, -50%) rotate(-22deg)",
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse, rgba(255,255,220,0.95) 0%, rgba(255,200,140,0.70) 35%, rgba(255,120,200,0.30) 65%, transparent 85%)",
+              filter: "blur(5px)",
+            }} />
+
+            {/* Core nucleus */}
+            <div style={{
+              position: "absolute",
+              width: "2.5vmin", height: "2.5vmin",
+              transform: "translate(-50%, -50%)",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, #ffffff 0%, rgba(255,240,200,0.9) 40%, transparent 75%)",
+              filter: "blur(2px)",
+              boxShadow: "0 0 18px 8px rgba(255,220,160,0.45)",
+            }} />
+          </div>
+        </div>
+
+        {/* Planets — all far from the sky sun position */}
+
+        {/* Planet A — warm ringed giant (right-center of space) */}
         <div style={{
-          position: "absolute", top: "11%", right: "8%",
+          position: "absolute", top: "32%", left: "76%",
           width: 52, height: 52, borderRadius: "50%",
           background: "radial-gradient(circle at 35% 30%, #f2c882 0%, #c06828 52%, #7a3212 100%)",
           boxShadow: "inset -14px -10px 24px rgba(0,0,0,0.65), 0 0 28px rgba(220,150,60,0.2)",
         }} />
         <div style={{
-          position: "absolute", top: "calc(11% + 22px)", right: "calc(8% - 18px)",
+          position: "absolute", top: "calc(32% + 22px)", left: "calc(76% - 18px)",
           width: 88, height: 16, borderRadius: "50%",
           border: "2px solid rgba(240,200,120,0.38)",
           transform: "rotate(-12deg)",
         }} />
 
-        {/* Planet B — ice blue */}
+        {/* Planet B — ice blue (lower-left) */}
         <div style={{
-          position: "absolute", top: "43%", left: "5%",
+          position: "absolute", top: "62%", left: "5%",
           width: 40, height: 40, borderRadius: "50%",
           background: "radial-gradient(circle at 40% 32%, #a8e8f8 0%, #2268b0 55%, #102448 100%)",
           boxShadow: "inset -10px -7px 18px rgba(0,0,0,0.7), 0 0 20px rgba(60,160,220,0.16)",
         }} />
 
-        {/* Planet C — small purple */}
+        {/* Planet C — small purple (lower-right) */}
         <div style={{
-          position: "absolute", top: "67%", right: "17%",
+          position: "absolute", top: "74%", right: "17%",
           width: 26, height: 26, borderRadius: "50%",
           background: "radial-gradient(circle at 38% 32%, #e4b4ff 0%, #6428a8 60%, #320068 100%)",
           boxShadow: "inset -7px -5px 12px rgba(0,0,0,0.65)",
         }} />
 
-        {/* Shooting stars */}
+        {/* Shooting stars — exactly as before */}
         <div className="shooting-star shooting-star--1" />
         <div className="shooting-star shooting-star--2" />
         <div className="shooting-star shooting-star--3" />
@@ -212,6 +324,10 @@ export default function SkyBackground({ night = false }: Props) {
           8%   {                                                             opacity: 1; }
           70%  {                                                             opacity: 0.6; }
           100% { transform: rotate(30deg) translateX(calc(100vw + 500px)); opacity: 0; }
+        }
+        @keyframes galaxy-drift {
+          from { transform: translateY(-20px); }
+          to   { transform: translateY(20px);  }
         }
 
         .kids-cloud {

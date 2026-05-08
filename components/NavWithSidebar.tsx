@@ -101,6 +101,9 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
   const isOwner = role === "owner";
   const isCreator = role === "creator" || isOwner;
 
+  // Kids pages have their own bottom nav — hide the adult header entirely
+  if (pathname.includes("/kids")) return null;
+
   const mkHref = (next: SupportedLocale) =>
     restPath === "/" ? `/${next}` : `/${next}${restPath}`;
 
