@@ -1,18 +1,20 @@
 "use client";
 import { useEffect, useMemo, useRef } from "react";
 
-interface Props { night?: boolean; }
+interface Props {
+  night?: boolean;
+  spaceZone?: number; // px; must match layout's SPACE_ZONE
+}
 
 function seededRand(seed: number) {
   const x = Math.sin(seed + 1) * 10000;
   return x - Math.floor(x);
 }
 
-const DUR      = "2.6s";
-const EASE     = "cubic-bezier(0.4, 0, 0.2, 1)";
-const SPACE_AT = 500; // scrollY px where space is fully visible
+const DUR  = "2.6s";
+const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-export default function SkyBackground({ night = false }: Props) {
+export default function SkyBackground({ night = false, spaceZone = 400 }: Props) {
   const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
 
@@ -38,13 +40,13 @@ export default function SkyBackground({ night = false }: Props) {
       glow:         i % 12 === 0,
     })), []);
 
-  // Scroll: earth slides down, space fades in
   useEffect(() => {
     let raf: number;
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const p = Math.min(1, window.scrollY / SPACE_AT);
+        // p = 0 at sky position (scrollY = spaceZone), 1 at full space (scrollY = 0)
+        const p = Math.max(0, Math.min(1, 1 - window.scrollY / spaceZone));
         if (earthRef.current) {
           earthRef.current.style.transform = `translateY(${p * 60}%)`;
           earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
@@ -55,9 +57,9 @@ export default function SkyBackground({ night = false }: Props) {
       });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
+    onScroll(); // sync on mount (handles page already scrolled to spaceZone)
     return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
-  }, []);
+  }, [spaceZone]);
 
   return (
     <div
@@ -68,7 +70,7 @@ export default function SkyBackground({ night = false }: Props) {
         background: "#020010",
       }}
     >
-      {/* ══ EARTH LAYER — slides down + fades on scroll ══ */}
+      {/* ══ EARTH LAYER ══ */}
       <div ref={earthRef} style={{ position: "absolute", inset: 0 }}>
 
         {/* Day sky */}
@@ -145,7 +147,7 @@ export default function SkyBackground({ night = false }: Props) {
         </svg>
       </div>
 
-      {/* ══ SPACE LAYER — fades in as earth slides away ══ */}
+      {/* ══ SPACE LAYER ══ */}
       <div ref={spaceRef} style={{ position: "absolute", inset: 0, opacity: 0 }}>
 
         {/* Deep space background */}
@@ -154,7 +156,7 @@ export default function SkyBackground({ night = false }: Props) {
           background: "radial-gradient(ellipse at 50% 40%, #0d001e 0%, #050010 45%, #000008 100%)",
         }} />
 
-        {/* Background stars — rendered behind galaxy */}
+        {/* Background stars — behind galaxy */}
         {spaceStars.map((s, i) => (
           <div key={i} style={{
             position: "absolute",
@@ -168,9 +170,7 @@ export default function SkyBackground({ night = false }: Props) {
         ))}
 
         {/* ── SPIRAL GALAXY ── */}
-        {/* Anchor point: positioned in upper-center of space layer */}
         <div style={{ position: "absolute", top: "38%", left: "50%" }}>
-          {/* Drift animation wrapper */}
           <div style={{ animation: "galaxy-drift 30s ease-in-out infinite alternate" }}>
 
             {/* Outer diffuse halo */}
@@ -233,7 +233,7 @@ export default function SkyBackground({ night = false }: Props) {
               filter: "blur(18px)",
             }} />
 
-            {/* Inner galactic bulge — warm glow */}
+            {/* Inner galactic bulge */}
             <div style={{
               position: "absolute",
               width: "22vmin", height: "9vmin",
@@ -266,9 +266,9 @@ export default function SkyBackground({ night = false }: Props) {
           </div>
         </div>
 
-        {/* Planets — all far from the sky sun position */}
+        {/* Planets — all well away from the sky sun/moon area */}
 
-        {/* Planet A — warm ringed giant (right-center of space) */}
+        {/* Planet A — warm ringed giant */}
         <div style={{
           position: "absolute", top: "32%", left: "76%",
           width: 52, height: 52, borderRadius: "50%",
@@ -282,7 +282,7 @@ export default function SkyBackground({ night = false }: Props) {
           transform: "rotate(-12deg)",
         }} />
 
-        {/* Planet B — ice blue (lower-left) */}
+        {/* Planet B — ice blue */}
         <div style={{
           position: "absolute", top: "62%", left: "5%",
           width: 40, height: 40, borderRadius: "50%",
@@ -290,7 +290,7 @@ export default function SkyBackground({ night = false }: Props) {
           boxShadow: "inset -10px -7px 18px rgba(0,0,0,0.7), 0 0 20px rgba(60,160,220,0.16)",
         }} />
 
-        {/* Planet C — small purple (lower-right) */}
+        {/* Planet C — small purple */}
         <div style={{
           position: "absolute", top: "74%", right: "17%",
           width: 26, height: 26, borderRadius: "50%",
@@ -298,7 +298,7 @@ export default function SkyBackground({ night = false }: Props) {
           boxShadow: "inset -7px -5px 12px rgba(0,0,0,0.65)",
         }} />
 
-        {/* Shooting stars — exactly as before */}
+        {/* Shooting stars */}
         <div className="shooting-star shooting-star--1" />
         <div className="shooting-star shooting-star--2" />
         <div className="shooting-star shooting-star--3" />
