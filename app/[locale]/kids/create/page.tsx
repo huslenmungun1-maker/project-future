@@ -15,7 +15,7 @@ const LABELS: Record<string, Record<string, string>> = {
     contentPlaceholder: "Write your story here...",
     submit: "Submit for Review",
     submitting: "Submitting...",
-    success: "Your story was submitted! Your parent or teacher will review it. 🎉",
+    success: "Your story was submitted! Your parent or teacher will review it.",
     noPermission: "You need permission from your parent or teacher to create content.",
     errorTitle: "Please add a title.",
     errorType: "Please choose a type.",
@@ -32,7 +32,7 @@ const LABELS: Record<string, Record<string, string>> = {
     contentPlaceholder: "Үлгэрээ энд бич...",
     submit: "Хянуулахаар илгээх",
     submitting: "Илгээж байна...",
-    success: "Таны үлгэр хянуулахаар илгээгдлээ! 🎉",
+    success: "Таны үлгэр хянуулахаар илгээгдлээ!",
     noPermission: "Контент үүсгэхийн тулд эцэг эх эсвэл багшийн зөвшөөрөл хэрэгтэй.",
     errorTitle: "Гарчиг оруулна уу.",
     errorType: "Төрлийг сонгоно уу.",
@@ -49,7 +49,7 @@ const LABELS: Record<string, Record<string, string>> = {
     contentPlaceholder: "이야기를 여기에 써요...",
     submit: "검토 요청하기",
     submitting: "제출 중...",
-    success: "이야기가 제출되었어요! 부모님이나 선생님이 검토할 거예요. 🎉",
+    success: "이야기가 제출되었어요! 부모님이나 선생님이 검토할 거예요.",
     noPermission: "콘텐츠를 만들려면 부모님이나 선생님의 허락이 필요해요.",
     errorTitle: "제목을 입력해주세요.",
     errorType: "종류를 선택해주세요.",
@@ -66,7 +66,7 @@ const LABELS: Record<string, Record<string, string>> = {
     contentPlaceholder: "ここにお話を書こう...",
     submit: "レビューに出す",
     submitting: "送信中...",
-    success: "お話が送られました！保護者か先生が確認するよ。🎉",
+    success: "お話が送られました！保護者か先生が確認するよ。",
     noPermission: "コンテンツを作るには保護者か先生の許可が必要だよ。",
     errorTitle: "タイトルを入力してね。",
     errorType: "種類を選んでね。",
@@ -149,7 +149,12 @@ export default function KidsCreatePage({ params }: { params: Promise<{ locale: s
   if (canCreate === false) {
     return (
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 20px", textAlign: "center" }}>
-        <div style={{ fontSize: "3rem", marginBottom: 16 }}>🔒</div>
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center", color: "var(--kids-muted, #7a9ab8)" }}>
+          <svg width={56} height={56} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
         <div style={{ color: "var(--kids-text, #2a3a52)", fontSize: "1rem" }}>{t.noPermission}</div>
       </div>
     );

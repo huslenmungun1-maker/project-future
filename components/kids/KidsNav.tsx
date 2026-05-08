@@ -43,7 +43,7 @@ export default function KidsNav({ locale, night, onToggleNight }: Props) {
     gap: 4,
     textDecoration: "none",
     color: active
-      ? night ? "#f7c84a" : "#f7a84a"
+      ? night ? "#c4b5fd" : "#f7a84a"
       : night ? "#a090d0" : "#7a9ab8",
     fontWeight: active ? 700 : 500,
     fontSize: "0.7rem",
@@ -98,7 +98,7 @@ export default function KidsNav({ locale, night, onToggleNight }: Props) {
           background: "none",
           border: "none",
           cursor: "pointer",
-          color: night ? "#f7c84a" : "#7a9ab8",
+          color: night ? "#c4b5fd" : "#7a9ab8",
           fontWeight: 500,
           fontSize: "0.7rem",
           minWidth: 56,

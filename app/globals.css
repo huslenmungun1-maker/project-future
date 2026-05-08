@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@property --kids-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7a84a;
+}
+
 /* ============================= */
 /*  Enkhverse Soft Editorial UI  */
 /* ============================= */
@@ -241,7 +247,7 @@ body {
   --kids-border:    rgba(180,140,255,0.2);
   --kids-text:      #e8e0ff;
   --kids-muted:     #a090d0;
-  --kids-accent:    #f7c84a;
+  --kids-accent:    #c4b5fd;
   --kids-accent2:   #7ec8e8;
   --kids-accent3:   #e0a0ff;
   --kids-radius:    24px;
@@ -276,8 +282,8 @@ body {
   font-weight: 700;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(247,168,74,0.38);
-  transition: transform 140ms ease, opacity 140ms ease;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--kids-accent) 40%, transparent);
+  transition: transform 140ms ease, opacity 140ms ease, background 2.6s cubic-bezier(0.4,0,0.2,1), box-shadow 2.6s cubic-bezier(0.4,0,0.2,1);
 }
 .btn-kids:hover  { opacity: 0.92; }
 .btn-kids:active { transform: scale(0.96); }
