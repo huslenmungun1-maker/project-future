@@ -129,6 +129,11 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // Wallet — any logged-in user
+  if (restPath.startsWith("/wallet")) {
+    return res;
+  }
+
   return res;
 }
 

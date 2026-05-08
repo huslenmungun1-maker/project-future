@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
@@ -28,6 +29,7 @@ type ChapterRow = {
   status?: string | null;
   is_published?: boolean | null;
   published_at?: string | null;
+  price?: number | null;
 };
 
 type TranslationRow = {
@@ -54,6 +56,14 @@ const UI_TEXT = {
     noContent: "No content for this chapter.",
     views: "views",
     untitledBook: "Untitled book",
+    locked: "This chapter requires a one-time purchase.",
+    unlock: "Unlock for",
+    unlocking: "Unlocking…",
+    unlocked: "Chapter unlocked.",
+    insufficientBalance: "Insufficient balance.",
+    topupWallet: "Add funds",
+    unlockError: "Could not unlock chapter.",
+    loginToUnlock: "Sign in to unlock this chapter.",
   },
   mn: {
     back: "Уншигч руу буцах",
@@ -69,6 +79,14 @@ const UI_TEXT = {
     noContent: "Энэ бүлэгт контент алга.",
     views: "үзэлт",
     untitledBook: "Нэргүй ном",
+    locked: "Энэ бүлэг нэг удаагийн худалдан авалт шаарддаг.",
+    unlock: "Нээх",
+    unlocking: "Нээж байна…",
+    unlocked: "Бүлэг нээгдлээ.",
+    insufficientBalance: "Үлдэгдэл хүрэлцэхгүй.",
+    topupWallet: "Мөнгө нэмэх",
+    unlockError: "Бүлэг нээж чадсангүй.",
+    loginToUnlock: "Нэвтэрч орно уу.",
   },
   ko: {
     back: "리더로 돌아가기",
@@ -84,6 +102,14 @@ const UI_TEXT = {
     noContent: "이 챕터에 내용이 없습니다.",
     views: "조회수",
     untitledBook: "제목 없는 책",
+    locked: "이 챕터는 일회성 구매가 필요합니다.",
+    unlock: "잠금 해제",
+    unlocking: "처리 중…",
+    unlocked: "챕터 잠금 해제 완료.",
+    insufficientBalance: "잔액이 부족합니다.",
+    topupWallet: "충전",
+    unlockError: "챕터를 열 수 없습니다.",
+    loginToUnlock: "로그인 후 이용해주세요.",
   },
   ja: {
     back: "リーダーへ戻る",
@@ -99,6 +125,14 @@ const UI_TEXT = {
     noContent: "このチャプターには内容がありません。",
     views: "閲覧",
     untitledBook: "無題の本",
+    locked: "このチャプターは一度限りの購入が必要です。",
+    unlock: "アンロック",
+    unlocking: "処理中…",
+    unlocked: "チャプターをアンロックしました。",
+    insufficientBalance: "残高が不足しています。",
+    topupWallet: "チャージ",
+    unlockError: "チャプターをアンロックできませんでした。",
+    loginToUnlock: "ログインしてください。",
   },
 } as const;
 
@@ -126,8 +160,21 @@ export default function ReaderChapterPage() {
   const chapterParam = (params?.chapterNumber as string) || "1";
   const chapterNumber = Number(chapterParam) || 1;
 
+  const authClient = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
+
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
 
   const [title, setTitle] = useState<string>("");
   const [coverUrl, setCoverUrl] = useState<string>("");
@@ -135,6 +182,12 @@ export default function ReaderChapterPage() {
 
   const [displayTitle, setDisplayTitle] = useState<string>("");
   const [displayChapters, setDisplayChapters] = useState<ChapterRow[]>([]);
+
+  useEffect(() => {
+    authClient.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, [authClient]);
 
   const localeForDate = useMemo(() => {
     return locale === "mn"
@@ -300,7 +353,7 @@ export default function ReaderChapterPage() {
       const { data: bookCh, error: chErr } = await supabase
         .from("chapters")
         .select(
-          "id, title, chapter_number, created_at, content, book_id, status, is_published, published_at"
+          "id, title, chapter_number, created_at, content, book_id, status, is_published, published_at, price"
         )
         .eq("book_id", bookId)
         .order("chapter_number", { ascending: true });
@@ -337,11 +390,52 @@ export default function ReaderChapterPage() {
         baseChapters: publishedChapters,
       });
 
+      // Check if current chapter is paid and if user has unlocked it
+      const currentCh = publishedChapters.find((c) => (c.chapter_number ?? 0) === chapterNumber);
+      const chapterPrice = Number(currentCh?.price ?? 0);
+      if (chapterPrice > 0) {
+        const { data: { user } } = await authClient.auth.getUser();
+        if (user && currentCh) {
+          const { data: unlock } = await supabase
+            .from("chapter_unlocks")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("chapter_id", currentCh.id)
+            .maybeSingle();
+          setIsUnlocked(!!unlock);
+        } else {
+          setIsUnlocked(false);
+        }
+      } else {
+        setIsUnlocked(true);
+      }
+
       setStatus("ok");
     };
 
     load();
-  }, [bookId, chapterNumber, locale, t.notFound]);
+  }, [bookId, chapterNumber, locale, t.notFound, authClient]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const chapterPrice = Number(currentChapter?.price ?? 0);
+  const isPaidChapter = chapterPrice > 0;
+
+  async function handleUnlock() {
+    if (!currentChapter) return;
+    setUnlocking(true);
+    setUnlockError(null);
+    const res = await fetch("/api/wallet/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chapterId: currentChapter.id }),
+    });
+    const json = await res.json();
+    setUnlocking(false);
+    if (res.ok && json.ok) {
+      setIsUnlocked(true);
+    } else {
+      setUnlockError(json.error ?? "unlock_error");
+    }
+  }
 
   const basePath = `/${locale}/reader/${bookId}`;
   const prevHref = prevChapter ? `${basePath}/${prevChapter.chapter_number ?? 1}` : null;
@@ -513,12 +607,25 @@ export default function ReaderChapterPage() {
                         <span className="truncate">
                           {t.chapter} {ch.chapter_number ?? "—"}
                         </span>
-                        <span
-                          className="truncate text-[11px]"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          {ch.title || ""}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {ch.title ? (
+                            <span className="truncate text-[11px]" style={{ color: "var(--muted)" }}>
+                              {ch.title}
+                            </span>
+                          ) : null}
+                          {Number(ch.price ?? 0) > 0 && (
+                            <span
+                              className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold"
+                              style={{
+                                background: "rgba(10,10,12,0.08)",
+                                color: "var(--muted)",
+                                border: "1px solid rgba(47,47,47,0.12)",
+                              }}
+                            >
+                              {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(ch.price))}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                   );
@@ -585,7 +692,98 @@ export default function ReaderChapterPage() {
                 boxShadow: "0 24px 70px rgba(0,0,0,0.12)",
               }}
             >
-              {contentText ? (
+              {isPaidChapter && !isUnlocked ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 20,
+                    padding: "48px 24px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: "50%",
+                      background: "rgba(10,10,12,0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                    }}
+                  >
+                    &#x1F512;
+                  </div>
+                  <div>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--text)", marginBottom: 8 }}
+                    >
+                      {t.locked}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
+                      {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(chapterPrice)}
+                    </p>
+                  </div>
+                  {unlockError && (
+                    <p className="text-xs" style={{ color: "#c85252" }}>
+                      {unlockError === "insufficient_balance"
+                        ? t.insufficientBalance
+                        : unlockError === "already_unlocked"
+                        ? t.unlocked
+                        : t.unlockError}
+                    </p>
+                  )}
+                  {!userId ? (
+                    <Link
+                      href={`/${locale}/login`}
+                      className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-semibold transition"
+                      style={{
+                        borderColor: "rgba(47,47,47,0.18)",
+                        background: "rgba(10,10,12,0.08)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      {t.loginToUnlock}
+                    </Link>
+                  ) : (
+                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+                      <button
+                        onClick={handleUnlock}
+                        disabled={unlocking}
+                        className="inline-flex items-center rounded-full border px-6 py-2.5 text-xs font-semibold transition"
+                        style={{
+                          borderColor: "rgba(47,47,47,0.18)",
+                          background: "rgba(10,10,12,0.88)",
+                          color: "#eceae4",
+                          cursor: unlocking ? "not-allowed" : "pointer",
+                          opacity: unlocking ? 0.7 : 1,
+                        }}
+                      >
+                        {unlocking
+                          ? t.unlocking
+                          : `${t.unlock} ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(chapterPrice)}`}
+                      </button>
+                      {unlockError === "insufficient_balance" && (
+                        <Link
+                          href={`/${locale}/wallet`}
+                          className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-medium transition"
+                          style={{
+                            borderColor: "rgba(47,47,47,0.14)",
+                            background: "rgba(255,255,255,0.55)",
+                            color: "var(--muted)",
+                          }}
+                        >
+                          {t.topupWallet}
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : contentText ? (
                 <div className="mx-auto max-w-3xl">
                   <pre
                     className="whitespace-pre-wrap break-words font-sans text-[15px] leading-8"

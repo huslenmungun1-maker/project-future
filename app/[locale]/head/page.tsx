@@ -15,6 +15,13 @@ const ACCENT  = "#b6a07c";
 
 type AppStatus = "pending" | "approved" | "rejected";
 
+type EarningRow = {
+  id: string;
+  amount: number;
+  description: string;
+  created_at: string;
+};
+
 type Application = {
   id: string;
   user_id: string;
@@ -50,6 +57,10 @@ export default function HeadPage() {
   const [acting, setActing] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  const [earnings, setEarnings] = useState<{ total: number; rows: EarningRow[] } | null>(null);
+  const [earningsLoading, setEarningsLoading] = useState(true);
+  const [earningsTab, setEarningsTab] = useState(false);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -63,6 +74,19 @@ export default function HeadPage() {
     }
     load();
   }, [supabase]);
+
+  useEffect(() => {
+    async function loadEarnings() {
+      setEarningsLoading(true);
+      const res = await fetch("/api/admin/earnings");
+      if (res.ok) {
+        const json = await res.json();
+        setEarnings(json);
+      }
+      setEarningsLoading(false);
+    }
+    loadEarnings();
+  }, []);
 
   async function act(id: string, status: "approved" | "rejected") {
     setActing(id);
@@ -161,13 +185,13 @@ export default function HeadPage() {
       <div style={{ maxWidth: 840, margin: "0 auto", padding: "52px 24px 80px", color: TEXT }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 36 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 28 }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>
               Admin
             </p>
             <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: TEXT }}>
-              Creator Applications
+              {earningsTab ? "Platform Earnings" : "Creator Applications"}
             </h1>
           </div>
           <Link
@@ -178,6 +202,126 @@ export default function HeadPage() {
           </Link>
         </div>
 
+        {/* Tab switcher */}
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: 4,
+            background: SURFACE,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 12,
+            marginBottom: 20,
+            width: "fit-content",
+          }}
+        >
+          {[
+            { key: false, label: "Applications" },
+            { key: true,  label: "Earnings" },
+          ].map(({ key, label }) => {
+            const active = earningsTab === key;
+            return (
+              <button
+                key={String(key)}
+                onClick={() => setEarningsTab(key)}
+                style={{
+                  padding: "6px 18px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  border: "none",
+                  transition: "all 120ms ease",
+                  background: active ? "rgba(255,255,255,0.07)" : "transparent",
+                  color: active ? TEXT : MUTED,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {earningsTab ? (
+          /* ── Earnings panel ── */
+          earningsLoading ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.4, margin: "0 auto" }} />
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Summary card */}
+              <div
+                style={{
+                  background: "linear-gradient(145deg, #141418, #1a1a22)",
+                  border: `1px solid rgba(255,255,255,0.1)`,
+                  borderRadius: 18,
+                  padding: "28px 24px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED }}>
+                  Total platform earnings
+                </p>
+                <p style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.03em", color: TEXT, lineHeight: 1 }}>
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(earnings?.total ?? 0)}
+                </p>
+                <p style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
+                  {earnings?.rows.length ?? 0} transaction{(earnings?.rows.length ?? 0) !== 1 ? "s" : ""} · 15% platform cut
+                </p>
+              </div>
+
+              {/* Row list */}
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED, marginTop: 8 }}>
+                Earning history
+              </p>
+              {!earnings?.rows.length ? (
+                <div
+                  style={{
+                    padding: "40px 24px",
+                    textAlign: "center",
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 14,
+                  }}
+                >
+                  <p style={{ fontSize: 13, color: MUTED }}>No earnings recorded yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {earnings.rows.map((row) => (
+                    <div
+                      key={row.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 16,
+                        padding: "13px 18px",
+                        background: SURFACE,
+                        border: `1px solid ${BORDER}`,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{row.description}</p>
+                        <p style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                          {new Date(row.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "#6ea880", flexShrink: 0, letterSpacing: "-0.01em" }}>
+                        +{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        ) : (
+          <>
         {/* Filter tabs */}
         <div
           style={{
@@ -425,6 +569,8 @@ export default function HeadPage() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
