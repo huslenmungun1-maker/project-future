@@ -32,7 +32,6 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Create Something",
     createSub: "Write or draw your own story",
     noKidAccount: "Ask a parent or teacher to set up your Kids account.",
-    scrollHint: "Scroll up to explore",
   },
   mn: {
     greeting: "Сайн уу!",
@@ -42,7 +41,6 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Бүтээх",
     createSub: "Өөрийн үлгэр бичих эсвэл зурах",
     noKidAccount: "Эцэг эх эсвэл багш таны Kids бүртгэлийг тохируулах хэрэгтэй.",
-    scrollHint: "Дээш гүйлгэж судлаарай",
   },
   ko: {
     greeting: "안녕하세요!",
@@ -52,7 +50,6 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "만들기",
     createSub: "나만의 이야기 쓰거나 그리기",
     noKidAccount: "부모님이나 선생님께 Kids 계정 설정을 부탁하세요.",
-    scrollHint: "위로 스크롤해서 탐험하기",
   },
   ja: {
     greeting: "こんにちは！",
@@ -62,7 +59,6 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "つくる",
     createSub: "自分のお話を書いたり描いたり",
     noKidAccount: "保護者か先生にKidsアカウントの設定をお願いしてね。",
-    scrollHint: "スクロールして探検しよう",
   },
 };
 
@@ -126,9 +122,9 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
         background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 60%, #e8f6ff 100%)",
       }} />
 
-      {/* ── Section 1: Sky / Home (bottom) — starting view ── */}
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 120px" }}>
+      {/* ── Page 1: Sky / Home — starting view ── */}
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 100px" }}>
           {/* Greeting */}
           <div style={{ marginBottom: 36, textAlign: "center" }}>
             <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--kids-text, #2a3a52)", lineHeight: 1.2 }}>
@@ -179,12 +175,6 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
                 <div style={{ fontSize: "0.875rem", color: "var(--kids-muted, #7a9ab8)" }}>{t.createSub}</div>
               </Link>
             )}
-          </div>
-
-          {/* Scroll hint */}
-          <div style={{ textAlign: "center", marginTop: 40, color: "var(--kids-muted, #7a9ab8)", fontSize: "0.8rem" }}>
-            <div style={{ fontSize: 20, marginBottom: 4 }}>↑</div>
-            {t.scrollHint}
           </div>
         </div>
       </div>
