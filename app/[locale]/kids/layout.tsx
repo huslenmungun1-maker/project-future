@@ -54,8 +54,9 @@ export default function KidsLayout({
   // translateY: Home(idx 1)=-100vh, Page2(idx 0)=0
   const translateY = isHomePage ? -(pageIndex * 100) : 0;
 
-  // Non-home pages (setup, reader, etc.) show space background
-  const parallaxScrollY = isHomePage ? 0 : 300;
+  // Setup page gets space background; all other pages get sky
+  const isSetupPage = /\/kids\/setup/.test(pathname ?? "");
+  const parallaxScrollY = isSetupPage ? 300 : 0;
 
   return (
     <div

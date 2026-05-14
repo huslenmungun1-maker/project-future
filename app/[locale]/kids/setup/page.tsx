@@ -534,24 +534,13 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
         </div>
       )}
 
-      {/* Fixed bottom nav */}
-      <div style={{
-        position: "fixed",
-        bottom: 0, left: 0, right: 0,
-        padding: "16px 20px 32px",
-        background: "rgba(10,8,30,0.7)",
-        backdropFilter: "blur(16px)",
-        zIndex: 200,
-        display: "flex",
-        gap: 12,
-        maxWidth: 520,
-        margin: "0 auto",
-      }}>
+      {/* Navigation buttons */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, gap: 12 }}>
         {step > 1 && (
           <button
             onClick={() => { setError(""); setStep(s => s - 1); }}
             className="btn-kids-secondary"
-            style={{ flex: "0 0 90px" }}
+            style={{ flex: 1 }}
           >
             {t.back}
           </button>
