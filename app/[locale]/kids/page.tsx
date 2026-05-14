@@ -116,15 +116,25 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
-      {/* ── Page 2 (very top) — empty sky, no ground ── */}
-      <div style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 60%, #e8f6ff 100%)",
-      }} />
+      {/* ── Page 2 (very top) — empty sky, nothing here, just for fun ── */}
+      <div style={{ height: "100vh" }} />
 
       {/* ── Page 1: Sky / Home — starting view ── */}
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 100px" }}>
+          {/* Page label */}
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
+            <span style={{
+              fontSize: "0.7rem",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              color: "var(--kids-muted, #7a9ab8)",
+              textTransform: "uppercase",
+              background: "rgba(255,255,255,0.5)",
+              borderRadius: 99,
+              padding: "4px 14px",
+            }}>Page 1</span>
+          </div>
           {/* Greeting */}
           <div style={{ marginBottom: 36, textAlign: "center" }}>
             <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--kids-text, #2a3a52)", lineHeight: 1.2 }}>
