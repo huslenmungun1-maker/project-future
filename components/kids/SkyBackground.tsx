@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 
 interface Props {
   night?: boolean;
+  scrollEl?: React.RefObject<HTMLDivElement>;
 }
 
 function seededRand(seed: number) {
@@ -15,9 +16,11 @@ const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 const SPACE_AT = 300; // px of scroll to reach full space
 
-export default function SkyBackground({ night = false }: Props) {
+export default function SkyBackground({ night = false, scrollEl }: Props) {
   const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
+  const sunRef   = useRef<HTMLDivElement>(null);
+  const moonRef  = useRef<HTMLDivElement>(null);
 
   const skyStars = useMemo(() =>
     Array.from({ length: 60 }, (_, i) => ({
@@ -43,11 +46,13 @@ export default function SkyBackground({ night = false }: Props) {
 
   useEffect(() => {
     let raf: number;
+    const el = scrollEl?.current ?? null;
+    const target: EventTarget = el ?? window;
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        // p = 0 at top (sky), 1 when scrolled SPACE_AT px down (full space)
-        const p = Math.min(1, window.scrollY / SPACE_AT);
+        const scrollY = el ? el.scrollTop : window.scrollY;
+        const p = Math.min(1, scrollY / SPACE_AT);
         if (earthRef.current) {
           earthRef.current.style.transform = `translateY(${-p * 60}%)`;
           earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
@@ -55,12 +60,18 @@ export default function SkyBackground({ night = false }: Props) {
         if (spaceRef.current) {
           spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
         }
+        if (sunRef.current) {
+          sunRef.current.style.transform = `translateY(${-p * 40}px) translateX(${-p * 150}%)`;
+        }
+        if (moonRef.current) {
+          moonRef.current.style.transform = `translateY(${-p * 40}px) translateX(${p * 150}%)`;
+        }
       });
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
+    target.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
-    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
-  }, []);
+    return () => { target.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
+  }, [scrollEl]);
 
   return (
     <div
@@ -107,7 +118,7 @@ export default function SkyBackground({ night = false }: Props) {
         ))}
 
         {/* Sun — LEFT side, day only; fades out first when going to night */}
-        <div style={{
+        <div ref={sunRef} style={{
           position: "absolute", left: "8%", top: "6%",
           width: 72, height: 72, borderRadius: "50%",
           background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
@@ -119,7 +130,7 @@ export default function SkyBackground({ night = false }: Props) {
         }} />
 
         {/* Moon — RIGHT side, night only; fades in after sun is gone */}
-        <div style={{
+        <div ref={moonRef} style={{
           position: "absolute", right: "8%", top: "8%",
           width: 64, height: 64, borderRadius: "50%",
           background: "#f7e8a0",
