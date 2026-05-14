@@ -27,21 +27,12 @@ export default function KidsLayout({
     >
       <SkyBackground night={night} scrollY={scrollY} />
 
-      {/* Ghost scroll container — transparent, drives the parallax via onScroll state */}
+      {/* Scrollable content — drives both page and parallax */}
       <div
-        onScroll={(e) => setScrollY((e.currentTarget as HTMLDivElement).scrollTop)}
-        style={{ position: "absolute", inset: 0, overflowY: "scroll", zIndex: 1 }}
+        onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
+        style={{ position: "absolute", inset: 0, overflowY: "scroll", zIndex: 5 }}
       >
-        <div style={{ height: 700 }} />
-      </div>
-
-      {/* Content — pinned above ghost scroller */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", flexDirection: "column", justifyContent: "center", pointerEvents: "none" }}>
-        <div
-          style={{ pointerEvents: "auto", paddingBottom: "120px" }}
-        >
-          {children}
-        </div>
+        {children}
       </div>
 
       <KidsNav locale={locale} night={night} onToggleNight={() => setNight(n => !n)} />
