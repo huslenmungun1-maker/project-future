@@ -32,7 +32,7 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Create Something",
     createSub: "Write or draw your own story",
     noKidAccount: "Ask a parent or teacher to set up your Kids account.",
-    scrollHint: "Scroll to explore space",
+    scrollHint: "Scroll up to explore space",
     spaceTitle: "You're in Space!",
     spaceSub: "The universe is full of stories waiting for you.",
     spaceRead: "Space Stories",
@@ -144,7 +144,74 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
-      {/* ── Section 1: Sky / Home ── */}
+      {/* ── Section 1: Space (top) — scroll UP to reach ── */}
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 120px" }}>
+          {/* Space heading */}
+          <div style={{ marginBottom: 36, textAlign: "center" }}>
+            <div style={{ fontSize: "2rem", fontWeight: 800, color: "#e0d0ff", lineHeight: 1.2 }}>
+              {t.spaceTitle}
+            </div>
+            <div style={{ fontSize: "1rem", color: "#a090d0", marginTop: 6 }}>
+              {t.spaceSub}
+            </div>
+          </div>
+
+          {/* Space cards */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <Link
+              href={`/${locale}/kids/reader`}
+              style={{
+                background: "rgba(80,20,140,0.55)",
+                border: "2.5px solid rgba(180,140,255,0.35)",
+                borderRadius: 24,
+                padding: "28px 24px",
+                display: "flex", flexDirection: "column", gap: 8,
+                textDecoration: "none",
+                boxShadow: "0 4px 28px rgba(120,60,220,0.25)",
+                backdropFilter: "blur(12px)",
+                transition: "transform 140ms ease, box-shadow 140ms ease",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "")}
+            >
+              <div style={{ fontSize: 32 }}>🚀</div>
+              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#e0d0ff" }}>{t.spaceRead}</div>
+              <div style={{ fontSize: "0.875rem", color: "#a090d0" }}>{t.spaceReadSub}</div>
+            </Link>
+
+            {(canCreate || hasKidAccount === null) && (
+              <Link
+                href={`/${locale}/kids/create`}
+                style={{
+                  background: "rgba(20,60,120,0.55)",
+                  border: "2.5px solid rgba(100,180,255,0.30)",
+                  borderRadius: 24,
+                  padding: "28px 24px",
+                  display: "flex", flexDirection: "column", gap: 8,
+                  textDecoration: "none",
+                  boxShadow: "0 4px 28px rgba(40,120,220,0.20)",
+                  backdropFilter: "blur(12px)",
+                  transition: "transform 140ms ease, box-shadow 140ms ease",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+                onMouseLeave={e => (e.currentTarget.style.transform = "")}
+              >
+                <div style={{ fontSize: 32 }}>✨</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#c0e0ff" }}>{t.spaceCreate}</div>
+                <div style={{ fontSize: "0.875rem", color: "#80b0d0" }}>{t.spaceCreateSub}</div>
+              </Link>
+            )}
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 40, color: "#6040a0", fontSize: "0.8rem" }}>
+            <div style={{ fontSize: 20, marginBottom: 4 }}>↓</div>
+            scroll down to return home
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 2: Sky / Home (bottom) — starting view ── */}
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 120px" }}>
           {/* Greeting */}
@@ -201,80 +268,8 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
           {/* Scroll hint */}
           <div style={{ textAlign: "center", marginTop: 40, color: "var(--kids-muted, #7a9ab8)", fontSize: "0.8rem" }}>
-            <div style={{ fontSize: 20, marginBottom: 4 }}>↓</div>
-            {t.scrollHint}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Section 2: Space ── */}
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 120px" }}>
-          {/* Space heading */}
-          <div style={{ marginBottom: 36, textAlign: "center" }}>
-            <div style={{ fontSize: "2rem", fontWeight: 800, color: "#e0d0ff", lineHeight: 1.2 }}>
-              {t.spaceTitle}
-            </div>
-            <div style={{ fontSize: "1rem", color: "#a090d0", marginTop: 6 }}>
-              {t.spaceSub}
-            </div>
-          </div>
-
-          {/* Space cards */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Link
-              href={`/${locale}/kids/reader`}
-              style={{
-                background: "rgba(80,20,140,0.55)",
-                border: "2.5px solid rgba(180,140,255,0.35)",
-                borderRadius: 24,
-                padding: "28px 24px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                textDecoration: "none",
-                boxShadow: "0 4px 28px rgba(120,60,220,0.25)",
-                backdropFilter: "blur(12px)",
-                transition: "transform 140ms ease, box-shadow 140ms ease",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-              onMouseLeave={e => (e.currentTarget.style.transform = "")}
-            >
-              <div style={{ fontSize: 32 }}>🚀</div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#e0d0ff" }}>{t.spaceRead}</div>
-              <div style={{ fontSize: "0.875rem", color: "#a090d0" }}>{t.spaceReadSub}</div>
-            </Link>
-
-            {(canCreate || hasKidAccount === null) && (
-              <Link
-                href={`/${locale}/kids/create`}
-                style={{
-                  background: "rgba(20,60,120,0.55)",
-                  border: "2.5px solid rgba(100,180,255,0.30)",
-                  borderRadius: 24,
-                  padding: "28px 24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  textDecoration: "none",
-                  boxShadow: "0 4px 28px rgba(40,120,220,0.20)",
-                  backdropFilter: "blur(12px)",
-                  transition: "transform 140ms ease, box-shadow 140ms ease",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-                onMouseLeave={e => (e.currentTarget.style.transform = "")}
-              >
-                <div style={{ fontSize: 32 }}>✨</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#c0e0ff" }}>{t.spaceCreate}</div>
-                <div style={{ fontSize: "0.875rem", color: "#80b0d0" }}>{t.spaceCreateSub}</div>
-              </Link>
-            )}
-          </div>
-
-          {/* Scroll back up hint */}
-          <div style={{ textAlign: "center", marginTop: 40, color: "#6040a0", fontSize: "0.8rem" }}>
             <div style={{ fontSize: 20, marginBottom: 4 }}>↑</div>
-            scroll up to return
+            {t.scrollHint}
           </div>
         </div>
       </div>

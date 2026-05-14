@@ -50,7 +50,8 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
       earthRef.current.style.transform = `translateY(${-p * 60}%)`;
       earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
     }
-    if (spaceRef.current) {
+    if (spaceRef.current && !night) {
+      spaceRef.current.style.transition = "none";
       spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
     }
     if (sunRef.current) {
@@ -60,6 +61,12 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
       moonRef.current.style.transform = `translateY(${-p * 40}px) translateX(${p * 150}%)`;
     }
   }, [scrollY]);
+
+  useEffect(() => {
+    if (!spaceRef.current) return;
+    spaceRef.current.style.transition = "opacity 2s ease";
+    spaceRef.current.style.opacity = night ? "1" : "0";
+  }, [night]);
 
   return (
     <div
@@ -105,37 +112,31 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
           </div>
         ))}
 
-        {/* Sun — LEFT side, day only */}
+        {/* Sun — LEFT side, sinks behind hills at night */}
         <div style={{
           position: "absolute", left: "8%", top: "6%",
-          transform: night ? "translateY(70px)" : "translateY(0px)",
-          transition: `transform ${DUR} ${EASE}`,
+          transform: night ? "translateY(calc(100vh + 80px))" : "translateY(0px)",
+          transition: "transform 2.4s ease-in",
         }}>
           <div ref={sunRef} style={{
             width: 72, height: 72, borderRadius: "50%",
             background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
             boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
-            opacity: night ? 0 : 1,
-            transition: night
-              ? `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`
-              : `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`,
+            transition: `box-shadow ${DUR} ${EASE}`,
           }} />
         </div>
 
-        {/* Moon — RIGHT side, night only */}
+        {/* Moon — RIGHT side, rises from behind hills at night */}
         <div style={{
           position: "absolute", right: "8%", top: "8%",
-          transform: night ? "translateY(0px)" : "translateY(-70px)",
-          transition: `transform ${DUR} ${EASE}`,
+          transform: night ? "translateY(0px)" : "translateY(calc(100vh + 80px))",
+          transition: "transform 2.4s ease-out",
         }}>
           <div ref={moonRef} style={{
             width: 64, height: 64, borderRadius: "50%",
             background: "#f7e8a0",
             boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
-            opacity: night ? 1 : 0,
-            transition: night
-              ? `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`
-              : `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`,
+            transition: `box-shadow ${DUR} ${EASE}`,
           }} />
         </div>
 
@@ -144,12 +145,12 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
         <div className="kids-cloud kids-cloud--2" />
         <div className="kids-cloud kids-cloud--3" />
 
-        {/* Hills */}
+        {/* Hills — delay fade at night so sun sinks behind them first */}
         <svg
           style={{
             position: "absolute", bottom: 0, left: 0, width: "100%", height: 120,
             opacity: night ? 0 : 1,
-            transition: `opacity ${DUR} ${EASE}`,
+            transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.6s ease 0s",
           }}
           viewBox="0 0 1440 120" preserveAspectRatio="none"
         >
