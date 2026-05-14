@@ -54,8 +54,8 @@ export default function KidsLayout({
   // translateY: Home(idx 1)=-100vh, Page2(idx 0)=0
   const translateY = isHomePage ? -(pageIndex * 100) : 0;
 
-  // Page 2 is just empty sky — no space parallax ever
-  const parallaxScrollY = 0;
+  // Non-home pages (setup, reader, etc.) show space background
+  const parallaxScrollY = isHomePage ? 0 : 300;
 
   return (
     <div

@@ -344,9 +344,9 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
   ];
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 40px", marginBottom: "80px" }}>
+    <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 140px" }}>
       {/* Header */}
-      <Link href={`/${locale}/profile`} style={{ color: "var(--kids-muted, #7a9ab8)", fontSize: "0.875rem", textDecoration: "none", marginBottom: 20, display: "inline-block" }}>
+      <Link href={`/${locale}/kids`} style={{ color: "var(--kids-muted, #7a9ab8)", fontSize: "0.875rem", textDecoration: "none", marginBottom: 20, display: "inline-block" }}>
         ← Back
       </Link>
       <div style={{ marginBottom: 28 }}>
@@ -534,13 +534,24 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
         </div>
       )}
 
-      {/* Navigation buttons */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, gap: 12 }}>
+      {/* Fixed bottom nav */}
+      <div style={{
+        position: "fixed",
+        bottom: 0, left: 0, right: 0,
+        padding: "16px 20px 32px",
+        background: "rgba(10,8,30,0.7)",
+        backdropFilter: "blur(16px)",
+        zIndex: 200,
+        display: "flex",
+        gap: 12,
+        maxWidth: 520,
+        margin: "0 auto",
+      }}>
         {step > 1 && (
           <button
             onClick={() => { setError(""); setStep(s => s - 1); }}
             className="btn-kids-secondary"
-            style={{ flex: 1 }}
+            style={{ flex: "0 0 90px" }}
           >
             {t.back}
           </button>
