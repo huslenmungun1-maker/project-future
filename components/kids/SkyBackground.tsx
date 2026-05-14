@@ -139,18 +139,72 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
         <div className="kids-cloud kids-cloud--2" />
         <div className="kids-cloud kids-cloud--3" />
 
-        {/* Hills — delay fade at night so sun sinks behind them first */}
+        {/* Ground & Nature — Day */}
         <svg
-          style={{
-            position: "absolute", bottom: 0, left: 0, width: "100%", height: 120,
-            opacity: night ? 0 : 1,
-            transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.6s ease 0s",
-          }}
-          viewBox="0 0 1440 120" preserveAspectRatio="none"
+          style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 190, opacity: night ? 0 : 1, transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.6s ease 0s" }}
+          viewBox="0 0 1440 190" preserveAspectRatio="none"
         >
-          <ellipse cx="300"  cy="140" rx="400" ry="120" fill="rgba(126,200,164,0.45)" />
-          <ellipse cx="900"  cy="150" rx="500" ry="130" fill="rgba(126,200,164,0.35)" />
-          <ellipse cx="1300" cy="145" rx="320" ry="115" fill="rgba(126,200,164,0.5)"  />
+          <ellipse cx="360"  cy="210" rx="520" ry="150" fill="#6bb87a" />
+          <ellipse cx="1000" cy="215" rx="600" ry="155" fill="#52a868" />
+          <ellipse cx="1390" cy="208" rx="390" ry="138" fill="#5fba74" />
+          <rect x="0" y="158" width="1440" height="32" fill="#4a8a40" />
+          {/* Tree 1 */}
+          <rect x="144" y="118" width="12" height="42" fill="#7a4520" />
+          <circle cx="150" cy="100" r="28" fill="#38835c" />
+          <circle cx="133" cy="112" r="19" fill="#2d6a4f" />
+          <circle cx="167" cy="109" r="21" fill="#34926a" />
+          {/* Tree 2 */}
+          <rect x="413" y="74" width="14" height="86" fill="#7a4520" />
+          <circle cx="420" cy="56" r="36" fill="#2d6a4f" />
+          <circle cx="397" cy="74" r="25" fill="#38835c" />
+          <circle cx="443" cy="70" r="27" fill="#249058" />
+          {/* Tree 3 */}
+          <rect x="714" y="92" width="12" height="68" fill="#7a4520" />
+          <circle cx="720" cy="76" r="32" fill="#38835c" />
+          <circle cx="701" cy="90" r="23" fill="#2d6a4f" />
+          <circle cx="740" cy="87" r="24" fill="#34926a" />
+          {/* Tree 4 */}
+          <rect x="1043" y="72" width="14" height="88" fill="#7a4520" />
+          <circle cx="1050" cy="54" r="37" fill="#2d6a4f" />
+          <circle cx="1027" cy="72" r="26" fill="#38835c" />
+          <circle cx="1073" cy="68" r="28" fill="#249058" />
+          {/* Tree 5 */}
+          <rect x="1304" y="120" width="12" height="40" fill="#7a4520" />
+          <circle cx="1310" cy="104" r="26" fill="#38835c" />
+          <circle cx="1294" cy="116" r="18" fill="#2d6a4f" />
+          <circle cx="1326" cy="113" r="19" fill="#34926a" />
+          {/* Flowers */}
+          <circle cx="240" cy="157" r="5" fill="#ff9eb5" /><circle cx="245" cy="152" r="3" fill="#ffb8c8" />
+          <circle cx="600" cy="157" r="5" fill="#ffe066" /><circle cx="605" cy="152" r="3" fill="#fff0a0" />
+          <circle cx="870" cy="157" r="5" fill="#ff9eb5" /><circle cx="875" cy="152" r="3" fill="#ffb8c8" />
+          <circle cx="1200" cy="157" r="5" fill="#ffe066" /><circle cx="1205" cy="152" r="3" fill="#fff0a0" />
+        </svg>
+
+        {/* Ground & Nature — Night */}
+        <svg
+          style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 190, opacity: night ? 1 : 0, transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.4s ease 0s" }}
+          viewBox="0 0 1440 190" preserveAspectRatio="none"
+        >
+          <ellipse cx="360"  cy="210" rx="520" ry="150" fill="#0d2218" />
+          <ellipse cx="1000" cy="215" rx="600" ry="155" fill="#091c14" />
+          <ellipse cx="1390" cy="208" rx="390" ry="138" fill="#0b2016" />
+          <rect x="0" y="158" width="1440" height="32" fill="#071510" />
+          {/* Tree silhouettes */}
+          <rect x="144" y="118" width="12" height="42" fill="#040c07" />
+          <circle cx="150" cy="100" r="28" fill="#0a1e14" /><circle cx="133" cy="112" r="19" fill="#071610" /><circle cx="167" cy="109" r="21" fill="#081810" />
+          <rect x="413" y="74" width="14" height="86" fill="#040c07" />
+          <circle cx="420" cy="56" r="36" fill="#07160f" /><circle cx="397" cy="74" r="25" fill="#0a1e14" /><circle cx="443" cy="70" r="27" fill="#061208" />
+          <rect x="714" y="92" width="12" height="68" fill="#040c07" />
+          <circle cx="720" cy="76" r="32" fill="#0a1e14" /><circle cx="701" cy="90" r="23" fill="#07160f" /><circle cx="740" cy="87" r="24" fill="#081810" />
+          <rect x="1043" y="72" width="14" height="88" fill="#040c07" />
+          <circle cx="1050" cy="54" r="37" fill="#07160f" /><circle cx="1027" cy="72" r="26" fill="#0a1e14" /><circle cx="1073" cy="68" r="28" fill="#061208" />
+          <rect x="1304" y="120" width="12" height="40" fill="#040c07" />
+          <circle cx="1310" cy="104" r="26" fill="#0a1e14" /><circle cx="1294" cy="116" r="18" fill="#07160f" /><circle cx="1326" cy="113" r="19" fill="#081810" />
+          {/* Fireflies */}
+          <circle cx="240" cy="148" r="3"   fill="rgba(180,255,160,0.75)" />
+          <circle cx="600" cy="144" r="2.5" fill="rgba(180,255,160,0.65)" />
+          <circle cx="870" cy="150" r="3"   fill="rgba(180,255,160,0.75)" />
+          <circle cx="1200" cy="146" r="2.5" fill="rgba(180,255,160,0.65)" />
         </svg>
       </div>
 

@@ -144,10 +144,11 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
-      {/* ── Page 2 (very top) ── */}
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontSize: "2rem", fontWeight: 800, color: "#e0d0ff", opacity: 0.5 }}>Page 2</div>
-      </div>
+      {/* ── Page 2 (very top) — empty sky, no ground ── */}
+      <div style={{
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 60%, #e8f6ff 100%)",
+      }} />
 
       {/* ── Section 1: Space (top) — scroll UP to reach ── */}
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
