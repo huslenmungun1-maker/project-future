@@ -54,9 +54,9 @@ export default function KidsLayout({
   // translateY: Home(idx 1)=-100vh, Page2(idx 0)=0
   const translateY = isHomePage ? -(pageIndex * 100) : 0;
 
-  // Setup page gets space background; all other pages get sky
+  // Sky slides down WITH Page 1 when Page 2 is revealed, or on setup page
   const isSetupPage = /\/kids\/setup/.test(pathname ?? "");
-  const parallaxScrollY = isSetupPage ? 300 : 0;
+  const skySlideY = (isHomePage && pageIndex === 0) || isSetupPage ? 100 : 0;
 
   return (
     <div
@@ -64,7 +64,13 @@ export default function KidsLayout({
       style={{ height: "100vh", position: "relative", overflow: "hidden" }}
       onWheel={handleWheel}
     >
-      <SkyBackground night={night} scrollY={parallaxScrollY} />
+      {/* Page 2 surprise — always fixed behind the sky */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: -1,
+        background: "radial-gradient(ellipse at 50% 35%, #0d001e 0%, #080018 50%, #000008 100%)",
+      }} />
+
+      <SkyBackground night={night} scrollY={0} slideY={skySlideY} />
 
       {/* Page content — slides via translateY driven by pageIndex */}
       <div

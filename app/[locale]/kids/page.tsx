@@ -124,7 +124,7 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
-      {/* ── Page 2 (very top) — empty sky, nothing here, just for fun ── */}
+      {/* ── Page 2 — surprise, just the space background shows through ── */}
       <div style={{ height: "100vh" }} />
 
       {/* ── Page 1: Sky / Home — starting view ── */}

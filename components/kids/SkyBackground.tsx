@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 interface Props {
   night?: boolean;
   scrollY?: number;
+  slideY?: number; // vh — slides the whole sky down (used for page transitions)
 }
 
 function seededRand(seed: number) {
@@ -16,7 +17,7 @@ const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 const SPACE_AT = 300; // px of scroll to reach full space
 
-export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
+export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }: Props) {
   const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
   const sunRef   = useRef<HTMLDivElement>(null);
@@ -69,6 +70,8 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
         position: "fixed", inset: 0, zIndex: 0,
         pointerEvents: "none", overflow: "hidden",
         background: "#020010",
+        transform: `translateY(${slideY}vh)`,
+        transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       {/* ══ EARTH LAYER ══ */}
