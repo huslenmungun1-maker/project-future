@@ -32,6 +32,8 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Create Something",
     createSub: "Write or draw your own story",
     noKidAccount: "Ask a parent or teacher to set up your Kids account.",
+    setup: "Set Up a Child Account",
+    setupSub: "Create a safe space for your child to read and create",
   },
   mn: {
     greeting: "Сайн уу!",
@@ -41,6 +43,8 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Бүтээх",
     createSub: "Өөрийн үлгэр бичих эсвэл зурах",
     noKidAccount: "Эцэг эх эсвэл багш таны Kids бүртгэлийг тохируулах хэрэгтэй.",
+    setup: "Хүүхдийн бүртгэл үүсгэх",
+    setupSub: "Хүүхдэд зориулсан аюулгүй орчин бүтээх",
   },
   ko: {
     greeting: "안녕하세요!",
@@ -50,6 +54,8 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "만들기",
     createSub: "나만의 이야기 쓰거나 그리기",
     noKidAccount: "부모님이나 선생님께 Kids 계정 설정을 부탁하세요.",
+    setup: "아이 계정 만들기",
+    setupSub: "아이를 위한 안전한 공간 만들기",
   },
   ja: {
     greeting: "こんにちは！",
@@ -59,6 +65,8 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "つくる",
     createSub: "自分のお話を書いたり描いたり",
     noKidAccount: "保護者か先生にKidsアカウントの設定をお願いしてね。",
+    setup: "子どものアカウントを作る",
+    setupSub: "子どもが安心して読んだり作ったりできる場所",
   },
 };
 
@@ -145,21 +153,6 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
             </div>
           </div>
 
-          {hasKidAccount === false && (
-            <div style={{
-              background: "rgba(247,168,74,0.12)",
-              border: "2px solid rgba(247,168,74,0.35)",
-              borderRadius: 16,
-              padding: "16px 20px",
-              color: "var(--kids-text, #2a3a52)",
-              fontSize: "0.9rem",
-              marginBottom: 28,
-              textAlign: "center",
-            }}>
-              {t.noKidAccount}
-            </div>
-          )}
-
           {/* Action cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Link
@@ -183,6 +176,26 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
                 <div style={{ color: "#f7a84a" }}><PencilIcon size={36} /></div>
                 <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--kids-text, #2a3a52)" }}>{t.create}</div>
                 <div style={{ fontSize: "0.875rem", color: "var(--kids-muted, #7a9ab8)" }}>{t.createSub}</div>
+              </Link>
+            )}
+
+            {hasKidAccount === false && (
+              <Link
+                href={`/${locale}/kids/setup`}
+                style={cardStyle("#a78bfa")}
+                onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+                onMouseLeave={e => (e.currentTarget.style.transform = "")}
+              >
+                <div style={{ color: "#a78bfa" }}>
+                  <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <line x1="19" y1="8" x2="19" y2="14" />
+                    <line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
+                </div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--kids-text, #2a3a52)" }}>{t.setup}</div>
+                <div style={{ fontSize: "0.875rem", color: "var(--kids-muted, #7a9ab8)" }}>{t.setupSub}</div>
               </Link>
             )}
           </div>

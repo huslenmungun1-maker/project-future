@@ -51,11 +51,11 @@ export default function KidsLayout({
     else               changePage(+1); // scroll down → go back
   };
 
-  // translateY: Home(idx 2)=-200vh, Space(idx 1)=-100vh, Page2(idx 0)=0
+  // translateY: Home(idx 1)=-100vh, Page2(idx 0)=0
   const translateY = isHomePage ? -(pageIndex * 100) : 0;
 
-  // Parallax: Home (idx 1) → sky (0), Page2 (idx 0) → space (300 = SPACE_AT)
-  const parallaxScrollY = isHomePage && pageIndex === 0 ? 300 : 0;
+  // Page 2 is just empty sky — no space parallax ever
+  const parallaxScrollY = 0;
 
   return (
     <div
