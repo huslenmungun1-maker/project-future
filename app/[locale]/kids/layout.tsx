@@ -36,9 +36,9 @@ export default function KidsLayout({
       </div>
 
       {/* Content — pinned above ghost scroller, wheel events forwarded so parallax still triggers */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", flexDirection: "column", justifyContent: "flex-end", pointerEvents: "none" }}>
+      <div style={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", flexDirection: "column", justifyContent: "center", pointerEvents: "none" }}>
         <div
-          style={{ pointerEvents: "auto" }}
+          style={{ pointerEvents: "auto", paddingBottom: "120px" }}
           onWheel={(e) => { scrollRef.current?.scrollBy({ top: e.deltaY }); }}
         >
           {children}

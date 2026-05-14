@@ -344,7 +344,7 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
   ];
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 40px" }}>
+    <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 40px", marginBottom: "80px" }}>
       {/* Header */}
       <Link href={`/${locale}/profile`} style={{ color: "var(--kids-muted, #7a9ab8)", fontSize: "0.875rem", textDecoration: "none", marginBottom: 20, display: "inline-block" }}>
         ← Back
