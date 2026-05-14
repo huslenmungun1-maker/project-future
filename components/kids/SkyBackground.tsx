@@ -105,29 +105,39 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
           </div>
         ))}
 
-        {/* Sun — LEFT side, day only; fades out first when going to night */}
-        <div ref={sunRef} style={{
+        {/* Sun — LEFT side, day only */}
+        <div style={{
           position: "absolute", left: "8%", top: "6%",
-          width: 72, height: 72, borderRadius: "50%",
-          background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
-          boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
-          opacity: night ? 0 : 1,
-          transition: night
-            ? `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`
-            : `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`,
-        }} />
+          transform: night ? "translateY(70px)" : "translateY(0px)",
+          transition: `transform ${DUR} ${EASE}`,
+        }}>
+          <div ref={sunRef} style={{
+            width: 72, height: 72, borderRadius: "50%",
+            background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
+            boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
+            opacity: night ? 0 : 1,
+            transition: night
+              ? `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`
+              : `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`,
+          }} />
+        </div>
 
-        {/* Moon — RIGHT side, night only; fades in after sun is gone */}
-        <div ref={moonRef} style={{
+        {/* Moon — RIGHT side, night only */}
+        <div style={{
           position: "absolute", right: "8%", top: "8%",
-          width: 64, height: 64, borderRadius: "50%",
-          background: "#f7e8a0",
-          boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
-          opacity: night ? 1 : 0,
-          transition: night
-            ? `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`
-            : `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`,
-        }} />
+          transform: night ? "translateY(0px)" : "translateY(-70px)",
+          transition: `transform ${DUR} ${EASE}`,
+        }}>
+          <div ref={moonRef} style={{
+            width: 64, height: 64, borderRadius: "50%",
+            background: "#f7e8a0",
+            boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
+            opacity: night ? 1 : 0,
+            transition: night
+              ? `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`
+              : `opacity 0.4s ease 0s, box-shadow ${DUR} ${EASE}`,
+          }} />
+        </div>
 
         {/* Clouds */}
         <div className="kids-cloud kids-cloud--1" />
