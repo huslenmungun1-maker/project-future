@@ -64,10 +64,12 @@ export default function KidsLayout({
       style={{ height: "100vh", position: "relative", overflow: "hidden" }}
       onWheel={handleWheel}
     >
-      {/* Page 2 surprise — always fixed behind the sky */}
+      {/* Page 2 surprise — fades in as sky slides away */}
       <div style={{
         position: "fixed", inset: 0, zIndex: -1,
         background: "radial-gradient(ellipse at 50% 35%, #0d001e 0%, #080018 50%, #000008 100%)",
+        opacity: (isHomePage && pageIndex === 0) || isSetupPage ? 1 : 0,
+        transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }} />
 
       <SkyBackground night={night} scrollY={0} slideY={skySlideY} />
