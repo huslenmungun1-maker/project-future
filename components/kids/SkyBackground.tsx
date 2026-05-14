@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 
 interface Props {
   night?: boolean;
-  scrollEl?: React.RefObject<HTMLDivElement>;
+  scrollEl?: React.RefObject<HTMLDivElement | null>;
 }
 
 function seededRand(seed: number) {
