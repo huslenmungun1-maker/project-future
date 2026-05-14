@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 
 interface Props {
   night?: boolean;
-  scrollEl?: React.RefObject<HTMLDivElement | null>;
+  scrollY?: number;
 }
 
 function seededRand(seed: number) {
@@ -16,7 +16,7 @@ const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 const SPACE_AT = 300; // px of scroll to reach full space
 
-export default function SkyBackground({ night = false, scrollEl }: Props) {
+export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
   const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
   const sunRef   = useRef<HTMLDivElement>(null);
@@ -45,33 +45,21 @@ export default function SkyBackground({ night = false, scrollEl }: Props) {
     })), []);
 
   useEffect(() => {
-    let raf: number;
-    const el = scrollEl?.current ?? null;
-    const target: EventTarget = el ?? window;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const scrollY = el ? el.scrollTop : window.scrollY;
-        const p = Math.min(1, scrollY / SPACE_AT);
-        if (earthRef.current) {
-          earthRef.current.style.transform = `translateY(${-p * 60}%)`;
-          earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
-        }
-        if (spaceRef.current) {
-          spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
-        }
-        if (sunRef.current) {
-          sunRef.current.style.transform = `translateY(${-p * 40}px) translateX(${-p * 150}%)`;
-        }
-        if (moonRef.current) {
-          moonRef.current.style.transform = `translateY(${-p * 40}px) translateX(${p * 150}%)`;
-        }
-      });
-    };
-    target.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => { target.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
-  }, [scrollEl]);
+    const p = Math.min(1, scrollY / SPACE_AT);
+    if (earthRef.current) {
+      earthRef.current.style.transform = `translateY(${-p * 60}%)`;
+      earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
+    }
+    if (spaceRef.current) {
+      spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
+    }
+    if (sunRef.current) {
+      sunRef.current.style.transform = `translateY(${-p * 40}px) translateX(${-p * 150}%)`;
+    }
+    if (moonRef.current) {
+      moonRef.current.style.transform = `translateY(${-p * 40}px) translateX(${p * 150}%)`;
+    }
+  }, [scrollY]);
 
   return (
     <div
