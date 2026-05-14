@@ -49,7 +49,7 @@ export default function SkyBackground({ night = false }: Props) {
         // p = 0 at top (sky), 1 when scrolled SPACE_AT px down (full space)
         const p = Math.min(1, window.scrollY / SPACE_AT);
         if (earthRef.current) {
-          earthRef.current.style.transform = `translateY(${p * 60}%)`;
+          earthRef.current.style.transform = `translateY(${-p * 60}%)`;
           earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
         }
         if (spaceRef.current) {
@@ -118,9 +118,9 @@ export default function SkyBackground({ night = false }: Props) {
             : `opacity 0.4s ease 0.5s, box-shadow ${DUR} ${EASE}`,
         }} />
 
-        {/* Moon — LEFT side, night only; fades in after sun is gone */}
+        {/* Moon — RIGHT side, night only; fades in after sun is gone */}
         <div style={{
-          position: "absolute", left: "8%", top: "8%",
+          position: "absolute", right: "8%", top: "8%",
           width: 64, height: 64, borderRadius: "50%",
           background: "#f7e8a0",
           boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",

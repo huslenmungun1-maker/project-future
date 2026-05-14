@@ -17,12 +17,12 @@ export default function KidsLayout({
   return (
     <div
       className={night ? "theme-kids-night" : "theme-kids"}
-      style={{ minHeight: "100vh", position: "relative" }}
+      style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}
     >
       <SkyBackground night={night} />
 
       {/* Page content */}
-      <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", paddingBottom: 400 }}>
+      <div style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
         {children}
       </div>
 

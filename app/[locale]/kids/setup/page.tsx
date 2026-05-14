@@ -344,6 +344,7 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
   ];
 
   return (
+    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "40px 20px 40px" }}>
       {/* Header */}
       <Link href={`/${locale}/profile`} style={{ color: "var(--kids-muted, #7a9ab8)", fontSize: "0.875rem", textDecoration: "none", marginBottom: 20, display: "inline-block" }}>
@@ -555,6 +556,7 @@ export default function KidsSetupPage({ params }: { params: Promise<{ locale: st
           </button>
         )}
       </div>
+    </div>
     </div>
   );
 }
