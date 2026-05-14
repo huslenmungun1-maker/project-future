@@ -72,7 +72,7 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
       }}
     >
       {/* ══ EARTH LAYER ══ */}
-      <div ref={earthRef} style={{ position: "absolute", inset: 0 }}>
+      <div ref={earthRef} style={{ position: "absolute", inset: 0, transition: "transform 0.6s ease, opacity 0.6s ease" }}>
 
         {/* Day sky */}
         <div style={{
@@ -209,7 +209,7 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
       </div>
 
       {/* ══ SPACE LAYER ══ */}
-      <div ref={spaceRef} style={{ position: "absolute", inset: 0, opacity: 0 }}>
+      <div ref={spaceRef} style={{ position: "absolute", inset: 0, opacity: 0, transition: "opacity 0.6s ease" }}>
 
         {/* Deep space background */}
         <div style={{

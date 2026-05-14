@@ -1,8 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import SkyBackground from "@/components/kids/SkyBackground";
 import KidsNav from "@/components/kids/KidsNav";
 import { use } from "react";
+
+// DOM order in kids/page.tsx: [Page2][Space][Home]
+// pageIndex 0 = Page2 (top), 1 = Space, 2 = Home (start)
+const TOTAL_PAGES = 3;
 
 export default function KidsLayout({
   children,
@@ -12,37 +17,63 @@ export default function KidsLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = use(params);
+  const pathname = usePathname();
   const [night, setNight] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [pageIndex, setPageIndex] = useState(TOTAL_PAGES - 1); // start at Home
+  const animating = useRef(false);
+
+  // Only apply page-slide on the kids home page
+  const isHomePage = /\/kids\/?$/.test(pathname ?? "");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Start at home (bottom), space is above
+  // Reset to home when navigating to the home page
   useEffect(() => {
-    const el = contentRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, []);
+    if (isHomePage) setPageIndex(TOTAL_PAGES - 1);
+  }, [isHomePage]);
+
+  const changePage = (dir: -1 | 1) => {
+    if (!isHomePage || animating.current) return;
+    setPageIndex(prev => {
+      const next = prev + dir;
+      if (next < 0 || next >= TOTAL_PAGES) return prev;
+      animating.current = true;
+      setTimeout(() => { animating.current = false; }, 650);
+      return next;
+    });
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.deltaY < 0) changePage(-1); // scroll up → reveal page above (slides down)
+    else               changePage(+1); // scroll down → go back
+  };
+
+  // translateY: Home(idx 2)=-200vh, Space(idx 1)=-100vh, Page2(idx 0)=0
+  const translateY = isHomePage ? -(pageIndex * 100) : 0;
+
+  // Parallax: Home → sky (0), Space/Page2 → space (300 = SPACE_AT)
+  const parallaxScrollY = isHomePage && pageIndex === TOTAL_PAGES - 1 ? 0 : 300;
 
   return (
     <div
       className={night ? "theme-kids-night" : "theme-kids"}
       style={{ height: "100vh", position: "relative", overflow: "hidden" }}
+      onWheel={handleWheel}
     >
-      <SkyBackground night={night} scrollY={scrollY} />
+      <SkyBackground night={night} scrollY={parallaxScrollY} />
 
-      {/* Scrollable content — scroll UP reveals space, drives inverted parallax */}
+      {/* Page content — slides via translateY driven by pageIndex */}
       <div
-        ref={contentRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          const max = el.scrollHeight - el.clientHeight;
-          setScrollY(max > 0 ? max - el.scrollTop : 0);
+        style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0,
+          transform: `translateY(${translateY}vh)`,
+          transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+          zIndex: 5,
         }}
-        style={{ position: "absolute", inset: 0, overflowY: "scroll", zIndex: 5 }}
       >
         {children}
       </div>
