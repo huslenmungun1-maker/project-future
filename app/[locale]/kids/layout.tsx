@@ -5,9 +5,9 @@ import SkyBackground from "@/components/kids/SkyBackground";
 import KidsNav from "@/components/kids/KidsNav";
 import { use } from "react";
 
-// DOM order in kids/page.tsx: [Page2][Space][Home]
-// pageIndex 0 = Page2 (top), 1 = Space, 2 = Home (start)
-const TOTAL_PAGES = 3;
+// DOM order in kids/page.tsx: [Page2][Home]
+// pageIndex 0 = Page2 (top), 1 = Home (start)
+const TOTAL_PAGES = 2;
 
 export default function KidsLayout({
   children,
@@ -54,8 +54,8 @@ export default function KidsLayout({
   // translateY: Home(idx 2)=-200vh, Space(idx 1)=-100vh, Page2(idx 0)=0
   const translateY = isHomePage ? -(pageIndex * 100) : 0;
 
-  // Parallax: Home → sky (0), Space/Page2 → space (300 = SPACE_AT)
-  const parallaxScrollY = isHomePage && pageIndex === TOTAL_PAGES - 1 ? 0 : 300;
+  // Parallax: Home (idx 1) → sky (0), Page2 (idx 0) → space (300 = SPACE_AT)
+  const parallaxScrollY = isHomePage && pageIndex === 0 ? 300 : 0;
 
   return (
     <div

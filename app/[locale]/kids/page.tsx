@@ -32,13 +32,7 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Create Something",
     createSub: "Write or draw your own story",
     noKidAccount: "Ask a parent or teacher to set up your Kids account.",
-    scrollHint: "Scroll up to explore space",
-    spaceTitle: "You're in Space!",
-    spaceSub: "The universe is full of stories waiting for you.",
-    spaceRead: "Space Stories",
-    spaceReadSub: "Read adventures from across the galaxy",
-    spaceCreate: "Write a Space Story",
-    spaceCreateSub: "Create your own universe",
+    scrollHint: "Scroll up to explore",
   },
   mn: {
     greeting: "Сайн уу!",
@@ -48,13 +42,7 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "Бүтээх",
     createSub: "Өөрийн үлгэр бичих эсвэл зурах",
     noKidAccount: "Эцэг эх эсвэл багш таны Kids бүртгэлийг тохируулах хэрэгтэй.",
-    scrollHint: "Сансрыг судлахаар доош гүйл",
-    spaceTitle: "Та сансарт байна!",
-    spaceSub: "Орчлон ертөнц танг хүлээж буй үлгэрүүдээр дүүрэн.",
-    spaceRead: "Сансрын үлгэрүүд",
-    spaceReadSub: "Галактик даяар адал явдал уншаарай",
-    spaceCreate: "Сансрын үлгэр бич",
-    spaceCreateSub: "Өөрийн орчлон ертөнцийг бүтээ",
+    scrollHint: "Дээш гүйлгэж судлаарай",
   },
   ko: {
     greeting: "안녕하세요!",
@@ -64,13 +52,7 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "만들기",
     createSub: "나만의 이야기 쓰거나 그리기",
     noKidAccount: "부모님이나 선생님께 Kids 계정 설정을 부탁하세요.",
-    scrollHint: "스크롤해서 우주 탐험하기",
-    spaceTitle: "우주에 왔어요!",
-    spaceSub: "우주는 당신을 기다리는 이야기로 가득해요.",
-    spaceRead: "우주 이야기",
-    spaceReadSub: "은하 너머의 모험을 읽어요",
-    spaceCreate: "우주 이야기 쓰기",
-    spaceCreateSub: "나만의 우주를 만들어요",
+    scrollHint: "위로 스크롤해서 탐험하기",
   },
   ja: {
     greeting: "こんにちは！",
@@ -80,13 +62,7 @@ const LABELS: Record<string, Record<string, string>> = {
     create: "つくる",
     createSub: "自分のお話を書いたり描いたり",
     noKidAccount: "保護者か先生にKidsアカウントの設定をお願いしてね。",
-    scrollHint: "スクロールして宇宙を探検",
-    spaceTitle: "宇宙にいるよ！",
-    spaceSub: "宇宙はあなたを待つ物語でいっぱい。",
-    spaceRead: "宇宙のお話",
-    spaceReadSub: "銀河の向こうの冒険を読もう",
-    spaceCreate: "宇宙のお話をつくる",
-    spaceCreateSub: "自分だけの宇宙をつくろう",
+    scrollHint: "スクロールして探検しよう",
   },
 };
 
@@ -150,74 +126,7 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
         background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 60%, #e8f6ff 100%)",
       }} />
 
-      {/* ── Section 1: Space (top) — scroll UP to reach ── */}
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 120px" }}>
-          {/* Space heading */}
-          <div style={{ marginBottom: 36, textAlign: "center" }}>
-            <div style={{ fontSize: "2rem", fontWeight: 800, color: "#e0d0ff", lineHeight: 1.2 }}>
-              {t.spaceTitle}
-            </div>
-            <div style={{ fontSize: "1rem", color: "#a090d0", marginTop: 6 }}>
-              {t.spaceSub}
-            </div>
-          </div>
-
-          {/* Space cards */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Link
-              href={`/${locale}/kids/reader`}
-              style={{
-                background: "rgba(80,20,140,0.55)",
-                border: "2.5px solid rgba(180,140,255,0.35)",
-                borderRadius: 24,
-                padding: "28px 24px",
-                display: "flex", flexDirection: "column", gap: 8,
-                textDecoration: "none",
-                boxShadow: "0 4px 28px rgba(120,60,220,0.25)",
-                backdropFilter: "blur(12px)",
-                transition: "transform 140ms ease, box-shadow 140ms ease",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-              onMouseLeave={e => (e.currentTarget.style.transform = "")}
-            >
-              <div style={{ fontSize: 32 }}>🚀</div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#e0d0ff" }}>{t.spaceRead}</div>
-              <div style={{ fontSize: "0.875rem", color: "#a090d0" }}>{t.spaceReadSub}</div>
-            </Link>
-
-            {(canCreate || hasKidAccount === null) && (
-              <Link
-                href={`/${locale}/kids/create`}
-                style={{
-                  background: "rgba(20,60,120,0.55)",
-                  border: "2.5px solid rgba(100,180,255,0.30)",
-                  borderRadius: 24,
-                  padding: "28px 24px",
-                  display: "flex", flexDirection: "column", gap: 8,
-                  textDecoration: "none",
-                  boxShadow: "0 4px 28px rgba(40,120,220,0.20)",
-                  backdropFilter: "blur(12px)",
-                  transition: "transform 140ms ease, box-shadow 140ms ease",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-                onMouseLeave={e => (e.currentTarget.style.transform = "")}
-              >
-                <div style={{ fontSize: 32 }}>✨</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#c0e0ff" }}>{t.spaceCreate}</div>
-                <div style={{ fontSize: "0.875rem", color: "#80b0d0" }}>{t.spaceCreateSub}</div>
-              </Link>
-            )}
-          </div>
-
-          <div style={{ textAlign: "center", marginTop: 40, color: "#6040a0", fontSize: "0.8rem" }}>
-            <div style={{ fontSize: 20, marginBottom: 4 }}>↓</div>
-            scroll down to return home
-          </div>
-        </div>
-      </div>
-
-      {/* ── Section 2: Sky / Home (bottom) — starting view ── */}
+      {/* ── Section 1: Sky / Home (bottom) — starting view ── */}
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ maxWidth: 480, width: "100%", padding: "48px 20px 120px" }}>
           {/* Greeting */}
