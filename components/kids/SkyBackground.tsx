@@ -50,8 +50,7 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
       earthRef.current.style.transform = `translateY(${-p * 60}%)`;
       earthRef.current.style.opacity   = String(Math.max(0, 1 - p * 1.2));
     }
-    if (spaceRef.current && !night) {
-      spaceRef.current.style.transition = "none";
+    if (spaceRef.current) {
       spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
     }
     if (sunRef.current) {
@@ -62,11 +61,6 @@ export default function SkyBackground({ night = false, scrollY = 0 }: Props) {
     }
   }, [scrollY]);
 
-  useEffect(() => {
-    if (!spaceRef.current) return;
-    spaceRef.current.style.transition = "opacity 2s ease";
-    spaceRef.current.style.opacity = night ? "1" : "0";
-  }, [night]);
 
   return (
     <div
