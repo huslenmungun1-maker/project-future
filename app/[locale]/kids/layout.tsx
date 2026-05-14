@@ -64,7 +64,13 @@ export default function KidsLayout({
       style={{ height: "100vh", position: "relative", overflow: "hidden" }}
       onWheel={handleWheel}
     >
-      {/* Page 2 surprise — fades in as sky slides away */}
+      {/* Page 2 background — cross-fade: sky blue → deep space, blends mid-transition */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: -1,
+        background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 50%, #e8f6ff 100%)",
+        opacity: (isHomePage && pageIndex === 0) || isSetupPage ? 0 : 1,
+        transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+      }} />
       <div style={{
         position: "fixed", inset: 0, zIndex: -1,
         background: "radial-gradient(ellipse at 50% 35%, #0d001e 0%, #080018 50%, #000008 100%)",
