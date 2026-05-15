@@ -83,7 +83,7 @@ export default function KidsLayout({
       {/* Global sun — visible pages 1+2, exits left on pages 3+4 */}
       {isHomePage && (
         <div className="g-sun" style={{
-          transform: pageIndex <= 1 ? "translateX(-150%)" : night ? "translateY(calc(100vh + 80px))" : "translateY(0px)",
+          transform: pageIndex <= 1 ? "translateX(calc(-100vw - 150px))" : night ? "translateY(calc(100vh + 80px))" : "translateY(0px)",
           transition: "transform 0.55s cubic-bezier(0.4,0,0.2,1)",
         }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)", boxShadow: (!night && pageIndex > 1) ? "0 0 48px 16px rgba(255,210,60,0.32)" : "none", transition: "box-shadow 2.6s cubic-bezier(0.4,0,0.2,1)" }} />
@@ -92,7 +92,7 @@ export default function KidsLayout({
       {/* Global moon — visible pages 1+2 at night, exits right on pages 3+4 */}
       {isHomePage && (
         <div className="g-moon" style={{
-          transform: pageIndex <= 1 ? "translateX(150%)" : night ? "translateY(0px)" : "translateY(calc(100vh + 80px))",
+          transform: pageIndex <= 1 ? "translateX(calc(100vw + 150px))" : night ? "translateY(0px)" : "translateY(calc(100vh + 80px))",
           transition: "transform 0.55s cubic-bezier(0.4,0,0.2,1)",
         }}>
           <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f7e8a0", boxShadow: (night && pageIndex > 1) ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none", transition: "box-shadow 2.6s cubic-bezier(0.4,0,0.2,1)" }} />
