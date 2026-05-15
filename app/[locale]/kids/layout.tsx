@@ -64,12 +64,13 @@ export default function KidsLayout({
       style={{ height: "100vh", position: "relative", overflow: "hidden" }}
       onWheel={handleWheel}
     >
-      {/* Sky blue base — visible during transitions and on home */}
+      {/* Seamless sky-to-space gradient */}
       <div style={{
         position: "fixed", inset: 0, zIndex: -1,
-        background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 50%, #e8f6ff 100%)",
-        opacity: (isHomePage && pageIndex === 0) || isSetupPage ? 0 : 1,
-        transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+        backgroundImage: "linear-gradient(180deg, #000000 0%, #0a0a2e 8%, #1a1a4e 20%, #2d3a6e 40%, #4a6fa5 65%, #87ceeb 100%)",
+        backgroundSize: "100% 400vh",
+        backgroundPosition: isHomePage ? `0 ${pageIndex * 100}vh` : "0 300vh",
+        transition: "background-position 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }} />
       {/* Space — setup page only */}
       <div style={{
@@ -78,13 +79,25 @@ export default function KidsLayout({
         opacity: isSetupPage ? 1 : 0,
         transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }} />
-      {/* Pure black — page4 */}
-      <div style={{
-        position: "fixed", inset: 0, zIndex: -1,
-        background: "#000000",
-        opacity: isHomePage && pageIndex === 0 ? 1 : 0,
-        transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-      }} />
+
+      {/* Global sun — visible pages 1+2, exits left on pages 3+4 */}
+      {isHomePage && (
+        <div className="g-sun" style={{
+          transform: pageIndex <= 1 ? "translateX(-150%)" : night ? "translateY(calc(100vh + 80px))" : "translateY(0px)",
+          transition: "transform 0.55s cubic-bezier(0.4,0,0.2,1)",
+        }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)", boxShadow: (!night && pageIndex > 1) ? "0 0 48px 16px rgba(255,210,60,0.32)" : "none", transition: "box-shadow 2.6s cubic-bezier(0.4,0,0.2,1)" }} />
+        </div>
+      )}
+      {/* Global moon — visible pages 1+2 at night, exits right on pages 3+4 */}
+      {isHomePage && (
+        <div className="g-moon" style={{
+          transform: pageIndex <= 1 ? "translateX(150%)" : night ? "translateY(0px)" : "translateY(calc(100vh + 80px))",
+          transition: "transform 0.55s cubic-bezier(0.4,0,0.2,1)",
+        }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f7e8a0", boxShadow: (night && pageIndex > 1) ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none", transition: "box-shadow 2.6s cubic-bezier(0.4,0,0.2,1)" }} />
+        </div>
+      )}
 
       <SkyBackground night={night} scrollY={0} slideY={skySlideY} />
 

@@ -37,7 +37,7 @@ const P4_STARS = Array.from({ length: 160 }, (_, i) => ({
   delay: sr(i * 11 + 504) * 9,
 }));
 
-const P3_STARS = Array.from({ length: 45 }, (_, i) => ({
+const P3_STARS = Array.from({ length: 25 }, (_, i) => ({
   top:   sr(i * 5 + 100) * 94,
   left:  sr(i * 5 + 101) * 100,
   size:  i % 7 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
@@ -148,7 +148,7 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
   return (
     <>
       {/* ── Page 4 — CSS galaxy + MLP night silhouette ── */}
-      <div style={{ height: "100vh", background: "#0a0a2e", position: "relative", overflow: "hidden" }}>
+      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
 
         {/* Pan wrapper */}
         <div className="p4-pan">
@@ -274,82 +274,40 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
       </div>
 
       {/* ── Page 3 — dark starfield, sun slides left, moon slides right ── */}
-      <div style={{ height: "100vh", position: "relative", overflow: "hidden", background: "#0d0d2b" }}>
+      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
 
-        {/* Sun — day mode: visible, slides left on entry */}
-        <div className="p3-sun">
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)", boxShadow: "0 0 48px 16px rgba(255,210,60,0.38)" }} />
+        {/* 25 twinkling stars — fade in when page 3 is active */}
+        <div className="p3-stars">
+          {P3_STARS.map((s, i) => (
+            <div key={i} style={{
+              position: "absolute",
+              top: `${s.top}%`, left: `${s.left}%`,
+              width: s.size, height: s.size,
+              borderRadius: "50%",
+              background: "#fff",
+              opacity: s.opacity,
+              animation: `p3-twinkle ${s.dur.toFixed(1)}s ease-in-out infinite ${s.delay.toFixed(2)}s`,
+            }} />
+          ))}
         </div>
-
-        {/* Moon — night mode: visible, slides right on entry */}
-        <div className="p3-moon">
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f7e8a0", boxShadow: "0 0 40px 12px rgba(247,232,160,0.35)" }} />
-        </div>
-
-        {/* 45 twinkling stars */}
-        {P3_STARS.map((s, i) => (
-          <div key={i} style={{
-            position: "absolute",
-            top: `${s.top}%`, left: `${s.left}%`,
-            width: s.size, height: s.size,
-            borderRadius: "50%",
-            background: "#fff",
-            opacity: s.opacity,
-            animation: `p3-twinkle ${s.dur.toFixed(1)}s ease-in-out infinite ${s.delay.toFixed(2)}s`,
-          }} />
-        ))}
 
         <style>{`
           @keyframes p3-twinkle {
             0%, 100% { opacity: 0.15; transform: scale(0.8); }
             50%       { opacity: 1;    transform: scale(1.2); }
           }
-
-          /* Sun: visible in day, slides off left when entering page 3 */
-          .p3-sun {
-            position: absolute; left: 10%; top: 7%;
-            transform: translateX(0);
-            transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+          .p3-stars {
+            opacity: 0;
+            transition: opacity 1.2s ease 0.3s;
           }
-          .theme-kids-night .p3-sun {
-            transform: translateY(calc(100vh + 80px));
-          }
-          .kids-page-1 .p3-sun {
-            transform: translateX(calc(-100vw - 80px));
-          }
-
-          /* Moon: hidden in day, visible at night, slides off right when entering page 3 */
-          .p3-moon {
-            position: absolute; right: 10%; top: 7%;
-            transform: translateY(calc(100vh + 80px));
-            transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
-          }
-          .theme-kids-night .p3-moon {
-            transform: translateY(0);
-          }
-          .kids-page-1 .p3-moon {
-            transform: translateX(calc(100vw + 80px));
+          .kids-page-1 .p3-stars {
+            opacity: 1;
           }
         `}</style>
       </div>
 
       {/* ── Page 2 — full of clouds, day/night, sun + moon follow ── */}
       <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
-        {/* Day sky */}
-        <div className="p2-bg-day" />
-        {/* Night sky + stars */}
-        <div className="p2-bg-night" />
-
-        {/* Sun — day */}
-        <div className="p2-sun">
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)", boxShadow: "0 0 48px 16px rgba(255,210,60,0.38)" }} />
-        </div>
-
-        {/* Moon — night */}
-        <div className="p2-moon">
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f7e8a0", boxShadow: "0 0 40px 12px rgba(247,232,160,0.35)" }} />
-        </div>
-
         <div className="p2-cloud p2-cloud--1" />
         <div className="p2-cloud p2-cloud--2" />
         <div className="p2-cloud p2-cloud--3" />
@@ -374,58 +332,6 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
             from { transform: translateX(-400px); }
             to   { transform: translateX(calc(100vw + 400px)); }
           }
-
-          /* Day/night backgrounds */
-          .p2-bg-day {
-            position: absolute; inset: 0;
-            background: linear-gradient(180deg, #aed6f1 0%, #c9e8f8 45%, #e0f3ff 100%);
-            opacity: 1;
-            transition: opacity 2.6s cubic-bezier(0.4,0,0.2,1);
-          }
-          .theme-kids-night .p2-bg-day { opacity: 0; }
-          .p2-bg-night {
-            position: absolute; inset: 0;
-            background:
-              radial-gradient(1px 1px at  6% 10%, rgba(255,255,255,0.85) 0%, transparent 100%),
-              radial-gradient(2px 2px at 19%  4%, rgba(255,255,255,0.92) 0%, transparent 100%),
-              radial-gradient(1px 1px at 31% 26%, rgba(255,255,255,0.70) 0%, transparent 100%),
-              radial-gradient(2px 2px at 45%  8%, rgba(255,255,255,0.95) 0%, transparent 100%),
-              radial-gradient(1px 1px at 58% 18%, rgba(255,255,255,0.75) 0%, transparent 100%),
-              radial-gradient(2px 2px at 71%  3%, rgba(255,255,255,0.88) 0%, transparent 100%),
-              radial-gradient(1px 1px at 83% 14%, rgba(255,255,255,0.65) 0%, transparent 100%),
-              radial-gradient(1px 1px at 93% 28%, rgba(255,255,255,0.80) 0%, transparent 100%),
-              radial-gradient(2px 2px at 12% 44%, rgba(255,255,255,0.72) 0%, transparent 100%),
-              radial-gradient(1px 1px at 26% 54%, rgba(255,255,255,0.60) 0%, transparent 100%),
-              radial-gradient(1px 1px at 39% 66%, rgba(255,255,255,0.78) 0%, transparent 100%),
-              radial-gradient(2px 2px at 53% 38%, rgba(255,255,255,0.88) 0%, transparent 100%),
-              radial-gradient(1px 1px at 66% 56%, rgba(255,255,255,0.65) 0%, transparent 100%),
-              radial-gradient(1px 1px at 78% 70%, rgba(255,255,255,0.72) 0%, transparent 100%),
-              radial-gradient(2px 2px at 89% 46%, rgba(255,255,255,0.90) 0%, transparent 100%),
-              radial-gradient(1px 1px at  4% 76%, rgba(255,255,255,0.60) 0%, transparent 100%),
-              radial-gradient(1px 1px at 16% 84%, rgba(255,255,255,0.75) 0%, transparent 100%),
-              radial-gradient(2px 2px at 35% 79%, rgba(255,255,255,0.82) 0%, transparent 100%),
-              radial-gradient(1px 1px at 50% 87%, rgba(255,255,255,0.65) 0%, transparent 100%),
-              radial-gradient(1px 1px at 68% 81%, rgba(255,255,255,0.70) 0%, transparent 100%),
-              radial-gradient(2px 2px at 87% 92%, rgba(255,255,255,0.85) 0%, transparent 100%),
-              linear-gradient(180deg, #1a1040 0%, #2e1c6a 60%, #3d1a5a 100%);
-            opacity: 0;
-            transition: opacity 2.6s cubic-bezier(0.4,0,0.2,1);
-          }
-          .theme-kids-night .p2-bg-night { opacity: 1; }
-
-          /* Sun/moon: follow day/night theme */
-          .p2-sun {
-            position: absolute; left: 8%; top: 6%;
-            transform: translateY(0);
-            transition: transform 2.4s ease-in;
-          }
-          .theme-kids-night .p2-sun { transform: translateY(calc(100vh + 80px)); }
-          .p2-moon {
-            position: absolute; right: 8%; top: 8%;
-            transform: translateY(calc(100vh + 80px));
-            transition: transform 2.4s ease-out;
-          }
-          .theme-kids-night .p2-moon { transform: translateY(0); }
 
           .p2-cloud {
             position: absolute;

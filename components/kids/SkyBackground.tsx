@@ -20,8 +20,6 @@ const SPACE_AT = 300; // px of scroll to reach full space
 export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }: Props) {
   const earthRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef<HTMLDivElement>(null);
-  const sunRef   = useRef<HTMLDivElement>(null);
-  const moonRef  = useRef<HTMLDivElement>(null);
 
   const skyStars = useMemo(() =>
     Array.from({ length: 60 }, (_, i) => ({
@@ -53,12 +51,6 @@ export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }
     }
     if (spaceRef.current) {
       spaceRef.current.style.opacity = String(Math.min(1, p * 1.3));
-    }
-    if (sunRef.current) {
-      sunRef.current.style.transform = `translateY(${-p * 40}px) translateX(${-p * 150}%)`;
-    }
-    if (moonRef.current) {
-      moonRef.current.style.transform = `translateY(${-p * 40}px) translateX(${p * 150}%)`;
     }
   }, [scrollY]);
 
@@ -108,34 +100,6 @@ export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }
             }} />
           </div>
         ))}
-
-        {/* Sun — LEFT side, sinks behind hills at night */}
-        <div style={{
-          position: "absolute", left: "8%", top: "6%",
-          transform: night ? "translateY(calc(100vh + 80px))" : "translateY(0px)",
-          transition: "transform 2.4s ease-in",
-        }}>
-          <div ref={sunRef} style={{
-            width: 72, height: 72, borderRadius: "50%",
-            background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)",
-            boxShadow: night ? "none" : "0 0 48px 16px rgba(255,210,60,0.32)",
-            transition: `box-shadow ${DUR} ${EASE}`,
-          }} />
-        </div>
-
-        {/* Moon — RIGHT side, rises from behind hills at night */}
-        <div style={{
-          position: "absolute", right: "8%", top: "8%",
-          transform: night ? "translateY(0px)" : "translateY(calc(100vh + 80px))",
-          transition: "transform 2.4s ease-out",
-        }}>
-          <div ref={moonRef} style={{
-            width: 64, height: 64, borderRadius: "50%",
-            background: "#f7e8a0",
-            boxShadow: night ? "0 0 40px 12px rgba(247,232,160,0.35)" : "none",
-            transition: `box-shadow ${DUR} ${EASE}`,
-          }} />
-        </div>
 
         {/* Clouds */}
         <div className="kids-cloud kids-cloud--1" />

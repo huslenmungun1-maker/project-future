@@ -327,3 +327,18 @@ body {
 .kids-input::placeholder {
   color: var(--kids-muted);
 }
+
+.g-sun {
+  position: fixed;
+  left: 8%;
+  top: 6%;
+  z-index: 1;
+  pointer-events: none;
+}
+.g-moon {
+  position: fixed;
+  right: 8%;
+  top: 8%;
+  z-index: 1;
+  pointer-events: none;
+}
