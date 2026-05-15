@@ -5,9 +5,9 @@ import SkyBackground from "@/components/kids/SkyBackground";
 import KidsNav from "@/components/kids/KidsNav";
 import { use } from "react";
 
-// DOM order in kids/page.tsx: [Page2][Home]
-// pageIndex 0 = Page2 (top), 1 = Home (start)
-const TOTAL_PAGES = 2;
+// DOM order in kids/page.tsx: [Page3][Page2][Home]
+// pageIndex 0 = Page3 (top), 1 = Page2, 2 = Home (start)
+const TOTAL_PAGES = 3;
 
 export default function KidsLayout({
   children,
@@ -54,9 +54,9 @@ export default function KidsLayout({
   // translateY: Home(idx 1)=-100vh, Page2(idx 0)=0
   const translateY = isHomePage ? -(pageIndex * 100) : 0;
 
-  // Sky slides down WITH Page 1 when Page 2 is revealed, or on setup page
+  // Sky slides down WITH Page 1 when Page 2 or 3 is revealed, or on setup page
   const isSetupPage = /\/kids\/setup/.test(pathname ?? "");
-  const skySlideY = (isHomePage && pageIndex === 0) || isSetupPage ? 100 : 0;
+  const skySlideY = (isHomePage && pageIndex <= 1) || isSetupPage ? 100 : 0;
 
   return (
     <div
@@ -68,13 +68,13 @@ export default function KidsLayout({
       <div style={{
         position: "fixed", inset: 0, zIndex: -1,
         background: "linear-gradient(180deg, #b8dff8 0%, #d4ecff 50%, #e8f6ff 100%)",
-        opacity: (isHomePage && pageIndex === 0) || isSetupPage ? 0 : 1,
+        opacity: (isHomePage && pageIndex <= 1) || isSetupPage ? 0 : 1,
         transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }} />
       <div style={{
         position: "fixed", inset: 0, zIndex: -1,
         background: "radial-gradient(ellipse at 50% 35%, #0d001e 0%, #080018 50%, #000008 100%)",
-        opacity: (isHomePage && pageIndex === 0) || isSetupPage ? 1 : 0,
+        opacity: (isHomePage && pageIndex <= 1) || isSetupPage ? 1 : 0,
         transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       }} />
 

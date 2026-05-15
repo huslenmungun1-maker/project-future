@@ -124,7 +124,23 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
-      {/* ── Page 2 — surprise, just the space background shows through ── */}
+      {/* ── Page 3 — topmost page, space background shows through ── */}
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <span style={{
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            color: "#a78bfa",
+            textTransform: "uppercase",
+            background: "rgba(255,255,255,0.08)",
+            borderRadius: 99,
+            padding: "4px 14px",
+          }}>Page 3</span>
+        </div>
+      </div>
+
+      {/* ── Page 2 — space background shows through ── */}
       <div style={{ height: "100vh" }} />
 
       {/* ── Page 1: Sky / Home — starting view ── */}
