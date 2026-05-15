@@ -143,8 +143,19 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
         </div>
       </div>
 
-      {/* ── Page 2 — full of clouds ── */}
+      {/* ── Page 2 — full of clouds, sun + moon follow ── */}
       <div style={{ height: "100vh", position: "relative", overflow: "hidden", background: "linear-gradient(180deg, #aed6f1 0%, #c9e8f8 45%, #e0f3ff 100%)" }}>
+
+        {/* Sun — day */}
+        <div className="p2-sun">
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)", boxShadow: "0 0 48px 16px rgba(255,210,60,0.38)" }} />
+        </div>
+
+        {/* Moon — night */}
+        <div className="p2-moon">
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f7e8a0", boxShadow: "0 0 40px 12px rgba(247,232,160,0.35)" }} />
+        </div>
+
         <div className="p2-cloud p2-cloud--1" />
         <div className="p2-cloud p2-cloud--2" />
         <div className="p2-cloud p2-cloud--3" />
@@ -157,11 +168,37 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
         <div className="p2-cloud p2-cloud--10" />
         <div className="p2-cloud p2-cloud--11" />
         <div className="p2-cloud p2-cloud--12" />
+        <div className="p2-cloud p2-cloud--13" />
+        <div className="p2-cloud p2-cloud--14" />
+        <div className="p2-cloud p2-cloud--15" />
+        <div className="p2-cloud p2-cloud--16" />
+        <div className="p2-cloud p2-cloud--17" />
+        <div className="p2-cloud p2-cloud--18" />
+
         <style>{`
           @keyframes p2-drift {
             from { transform: translateX(-400px); }
             to   { transform: translateX(calc(100vw + 400px)); }
           }
+
+          /* Sun/moon: follow day/night theme */
+          .p2-sun {
+            position: absolute; left: 8%; top: 6%;
+            transform: translateY(0);
+            transition: transform 2.4s ease-in;
+          }
+          .theme-kids-night .p2-sun {
+            transform: translateY(calc(100vh + 80px));
+          }
+          .p2-moon {
+            position: absolute; right: 8%; top: 8%;
+            transform: translateY(calc(100vh + 80px));
+            transition: transform 2.4s ease-out;
+          }
+          .theme-kids-night .p2-moon {
+            transform: translateY(0);
+          }
+
           .p2-cloud {
             position: absolute;
             border-radius: 999px;
@@ -174,42 +211,78 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
             border-radius: 999px;
             background: inherit;
           }
-          .p2-cloud--1  { width:300px; height:80px;  top: 6%;  left:-300px; animation: p2-drift 36s linear infinite; }
+
+          .p2-cloud--1  { width:300px; height:80px;  top: 6%;  left:0; animation: p2-drift 36s linear infinite -18s; }
           .p2-cloud--1::before  { width:130px; height:96px;  top:-42px; left:50px; }
           .p2-cloud--1::after   { width:100px; height:74px;  top:-28px; left:148px; }
-          .p2-cloud--2  { width:200px; height:56px;  top:20%;  left:-200px; animation: p2-drift 50s linear infinite 6s; }
+
+          .p2-cloud--2  { width:200px; height:56px;  top:20%;  left:0; animation: p2-drift 48s linear infinite -12s; }
           .p2-cloud--2::before  { width: 90px; height:68px;  top:-30px; left:36px; }
           .p2-cloud--2::after   { width: 68px; height:50px;  top:-20px; left:102px; }
-          .p2-cloud--3  { width:130px; height:38px;  top:11%;  left:-130px; animation: p2-drift 64s linear infinite 20s; }
+
+          .p2-cloud--3  { width:130px; height:38px;  top:11%;  left:0; animation: p2-drift 60s linear infinite -30s; }
           .p2-cloud--3::before  { width: 60px; height:46px;  top:-20px; left:24px; }
           .p2-cloud--3::after   { width: 46px; height:36px;  top:-14px; left:66px; }
-          .p2-cloud--4  { width:340px; height:92px;  top:33%;  left:-340px; animation: p2-drift 30s linear infinite 10s; }
+
+          .p2-cloud--4  { width:340px; height:92px;  top:33%;  left:0; animation: p2-drift 32s linear infinite -16s; }
           .p2-cloud--4::before  { width:150px; height:110px; top:-48px; left:60px; }
           .p2-cloud--4::after   { width:110px; height:82px;  top:-32px; left:170px; }
-          .p2-cloud--5  { width:180px; height:52px;  top:48%;  left:-180px; animation: p2-drift 54s linear infinite 2s; }
+
+          .p2-cloud--5  { width:180px; height:52px;  top:48%;  left:0; animation: p2-drift 52s linear infinite -26s; }
           .p2-cloud--5::before  { width: 82px; height:62px;  top:-28px; left:32px; }
           .p2-cloud--5::after   { width: 62px; height:46px;  top:-18px; left:92px; }
-          .p2-cloud--6  { width:110px; height:32px;  top:28%;  left:-110px; animation: p2-drift 72s linear infinite 28s; }
+
+          .p2-cloud--6  { width:110px; height:32px;  top:28%;  left:0; animation: p2-drift 68s linear infinite -10s; }
           .p2-cloud--6::before  { width: 50px; height:40px;  top:-18px; left:18px; }
           .p2-cloud--6::after   { width: 38px; height:30px;  top:-12px; left:56px; }
-          .p2-cloud--7  { width:260px; height:72px;  top:60%;  left:-260px; animation: p2-drift 42s linear infinite 14s; }
+
+          .p2-cloud--7  { width:260px; height:72px;  top:60%;  left:0; animation: p2-drift 40s linear infinite -20s; }
           .p2-cloud--7::before  { width:116px; height:86px;  top:-38px; left:44px; }
           .p2-cloud--7::after   { width: 88px; height:66px;  top:-24px; left:130px; }
-          .p2-cloud--8  { width:160px; height:46px;  top:74%;  left:-160px; animation: p2-drift 58s linear infinite 8s; }
+
+          .p2-cloud--8  { width:160px; height:46px;  top:74%;  left:0; animation: p2-drift 56s linear infinite -28s; }
           .p2-cloud--8::before  { width: 72px; height:56px;  top:-24px; left:28px; }
           .p2-cloud--8::after   { width: 56px; height:42px;  top:-16px; left:82px; }
-          .p2-cloud--9  { width: 90px; height:26px;  top:16%;  left:- 90px; animation: p2-drift 68s linear infinite 35s; }
+
+          .p2-cloud--9  { width: 90px; height:26px;  top:16%;  left:0; animation: p2-drift 64s linear infinite -32s; }
           .p2-cloud--9::before  { width: 42px; height:32px;  top:-14px; left:14px; }
           .p2-cloud--9::after   { width: 32px; height:24px;  top:-10px; left:46px; }
-          .p2-cloud--10 { width:240px; height:66px;  top:42%;  left:-240px; animation: p2-drift 46s linear infinite 22s; }
+
+          .p2-cloud--10 { width:240px; height:66px;  top:42%;  left:0; animation: p2-drift 44s linear infinite -22s; }
           .p2-cloud--10::before { width:108px; height:80px;  top:-35px; left:42px; }
           .p2-cloud--10::after  { width: 82px; height:60px;  top:-22px; left:120px; }
-          .p2-cloud--11 { width:170px; height:48px;  top:82%;  left:-170px; animation: p2-drift 52s linear infinite 17s; }
+
+          .p2-cloud--11 { width:170px; height:48px;  top:82%;  left:0; animation: p2-drift 50s linear infinite  -8s; }
           .p2-cloud--11::before { width: 76px; height:58px;  top:-26px; left:30px; }
           .p2-cloud--11::after  { width: 58px; height:44px;  top:-17px; left:86px; }
-          .p2-cloud--12 { width:120px; height:34px;  top:55%;  left:-120px; animation: p2-drift 66s linear infinite 40s; }
+
+          .p2-cloud--12 { width:120px; height:34px;  top:55%;  left:0; animation: p2-drift 62s linear infinite -31s; }
           .p2-cloud--12::before { width: 54px; height:42px;  top:-18px; left:20px; }
           .p2-cloud--12::after  { width: 42px; height:32px;  top:-13px; left:60px; }
+
+          .p2-cloud--13 { width:280px; height:76px;  top:24%;  left:0; animation: p2-drift 38s linear infinite -19s; }
+          .p2-cloud--13::before { width:124px; height:92px;  top:-40px; left:48px; }
+          .p2-cloud--13::after  { width: 94px; height:70px;  top:-26px; left:140px; }
+
+          .p2-cloud--14 { width:150px; height:44px;  top:67%;  left:0; animation: p2-drift 54s linear infinite -27s; }
+          .p2-cloud--14::before { width: 68px; height:52px;  top:-23px; left:26px; }
+          .p2-cloud--14::after  { width: 52px; height:40px;  top:-16px; left:78px; }
+
+          .p2-cloud--15 { width:210px; height:60px;  top:38%;  left:0; animation: p2-drift 46s linear infinite -23s; }
+          .p2-cloud--15::before { width: 94px; height:72px;  top:-32px; left:38px; }
+          .p2-cloud--15::after  { width: 72px; height:54px;  top:-21px; left:108px; }
+
+          .p2-cloud--16 { width: 80px; height:24px;  top:50%;  left:0; animation: p2-drift 70s linear infinite -35s; }
+          .p2-cloud--16::before { width: 36px; height:28px;  top:-12px; left:12px; }
+          .p2-cloud--16::after  { width: 28px; height:22px;  top: -9px; left:40px; }
+
+          .p2-cloud--17 { width:320px; height:88px;  top:72%;  left:0; animation: p2-drift 34s linear infinite -17s; }
+          .p2-cloud--17::before { width:142px; height:106px; top:-46px; left:56px; }
+          .p2-cloud--17::after  { width:108px; height:80px;  top:-30px; left:164px; }
+
+          .p2-cloud--18 { width:140px; height:40px;  top:88%;  left:0; animation: p2-drift 58s linear infinite -14s; }
+          .p2-cloud--18::before { width: 64px; height:48px;  top:-21px; left:24px; }
+          .p2-cloud--18::after  { width: 48px; height:36px;  top:-15px; left:72px; }
         `}</style>
       </div>
 
