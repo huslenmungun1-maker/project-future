@@ -60,7 +60,7 @@ export default function KidsLayout({
 
   return (
     <div
-      className={night ? "theme-kids-night" : "theme-kids"}
+      className={`${night ? "theme-kids-night" : "theme-kids"} kids-page-${pageIndex}`}
       style={{ height: "100vh", position: "relative", overflow: "hidden" }}
       onWheel={handleWheel}
     >
