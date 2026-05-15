@@ -127,24 +127,138 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
       {/* ── Page 4 — topmost page, pure black ── */}
       <div style={{ height: "100vh", background: "#000000" }} />
 
-      {/* ── Page 3 — topmost page, space background shows through ── */}
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <span style={{
-            fontSize: "0.7rem",
-            fontWeight: 700,
-            letterSpacing: "0.12em",
-            color: "#a78bfa",
-            textTransform: "uppercase",
-            background: "rgba(255,255,255,0.08)",
-            borderRadius: 99,
-            padding: "4px 14px",
-          }}>Page 3</span>
+      {/* ── Page 3 — day/night sky ── */}
+      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
+        {/* Day sky */}
+        <div className="p3-bg-day" />
+        {/* Night sky + stars */}
+        <div className="p3-bg-night" />
+
+        {/* Sun — day */}
+        <div className="p3-sun">
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "radial-gradient(circle, #ffe97a 40%, #ffcf3a 100%)", boxShadow: "0 0 48px 16px rgba(255,210,60,0.38)" }} />
         </div>
+        {/* Moon — night */}
+        <div className="p3-moon">
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f7e8a0", boxShadow: "0 0 40px 12px rgba(247,232,160,0.35)" }} />
+        </div>
+
+        {/* Fewer, larger clouds — spaced out */}
+        <div className="p3-cloud p3-cloud--1" />
+        <div className="p3-cloud p3-cloud--2" />
+        <div className="p3-cloud p3-cloud--3" />
+        <div className="p3-cloud p3-cloud--4" />
+        <div className="p3-cloud p3-cloud--5" />
+        <div className="p3-cloud p3-cloud--6" />
+        <div className="p3-cloud p3-cloud--7" />
+        <div className="p3-cloud p3-cloud--8" />
+
+        <style>{`
+          @keyframes p3-drift {
+            from { transform: translateX(-450px); }
+            to   { transform: translateX(calc(100vw + 450px)); }
+          }
+          .p3-bg-day {
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, #c5e8f9 0%, #daf0ff 50%, #edf8ff 100%);
+            opacity: 1;
+            transition: opacity 2.6s cubic-bezier(0.4,0,0.2,1);
+          }
+          .theme-kids-night .p3-bg-day { opacity: 0; }
+          .p3-bg-night {
+            position: absolute; inset: 0;
+            background:
+              radial-gradient(1px 1px at  8% 12%, rgba(255,255,255,0.85) 0%, transparent 100%),
+              radial-gradient(2px 2px at 20%  6%, rgba(255,255,255,0.90) 0%, transparent 100%),
+              radial-gradient(1px 1px at 33% 28%, rgba(255,255,255,0.70) 0%, transparent 100%),
+              radial-gradient(2px 2px at 47%  9%, rgba(255,255,255,0.95) 0%, transparent 100%),
+              radial-gradient(1px 1px at 60% 20%, rgba(255,255,255,0.75) 0%, transparent 100%),
+              radial-gradient(2px 2px at 73%  5%, rgba(255,255,255,0.88) 0%, transparent 100%),
+              radial-gradient(1px 1px at 85% 16%, rgba(255,255,255,0.65) 0%, transparent 100%),
+              radial-gradient(1px 1px at 94% 30%, rgba(255,255,255,0.80) 0%, transparent 100%),
+              radial-gradient(2px 2px at 14% 45%, rgba(255,255,255,0.70) 0%, transparent 100%),
+              radial-gradient(1px 1px at 27% 55%, rgba(255,255,255,0.60) 0%, transparent 100%),
+              radial-gradient(1px 1px at 41% 68%, rgba(255,255,255,0.75) 0%, transparent 100%),
+              radial-gradient(2px 2px at 55% 40%, rgba(255,255,255,0.85) 0%, transparent 100%),
+              radial-gradient(1px 1px at 68% 58%, rgba(255,255,255,0.65) 0%, transparent 100%),
+              radial-gradient(1px 1px at 80% 72%, rgba(255,255,255,0.70) 0%, transparent 100%),
+              radial-gradient(2px 2px at 90% 48%, rgba(255,255,255,0.90) 0%, transparent 100%),
+              radial-gradient(1px 1px at  5% 78%, rgba(255,255,255,0.60) 0%, transparent 100%),
+              radial-gradient(1px 1px at 18% 85%, rgba(255,255,255,0.75) 0%, transparent 100%),
+              radial-gradient(2px 2px at 36% 80%, rgba(255,255,255,0.80) 0%, transparent 100%),
+              radial-gradient(1px 1px at 52% 88%, rgba(255,255,255,0.65) 0%, transparent 100%),
+              radial-gradient(1px 1px at 70% 82%, rgba(255,255,255,0.70) 0%, transparent 100%),
+              radial-gradient(2px 2px at 88% 90%, rgba(255,255,255,0.85) 0%, transparent 100%),
+              linear-gradient(180deg, #1a1040 0%, #2e1c6a 60%, #3d1a5a 100%);
+            opacity: 0;
+            transition: opacity 2.6s cubic-bezier(0.4,0,0.2,1);
+          }
+          .theme-kids-night .p3-bg-night { opacity: 1; }
+
+          .p3-sun {
+            position: absolute; left: 8%; top: 6%;
+            transform: translateY(0);
+            transition: transform 2.4s ease-in;
+          }
+          .theme-kids-night .p3-sun { transform: translateY(calc(100vh + 80px)); }
+          .p3-moon {
+            position: absolute; right: 8%; top: 8%;
+            transform: translateY(calc(100vh + 80px));
+            transition: transform 2.4s ease-out;
+          }
+          .theme-kids-night .p3-moon { transform: translateY(0); }
+
+          .p3-cloud {
+            position: absolute;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.90);
+            box-shadow: 0 10px 40px rgba(160,210,255,0.20);
+            transition: background 2.6s cubic-bezier(0.4,0,0.2,1),
+                        box-shadow  2.6s cubic-bezier(0.4,0,0.2,1),
+                        opacity     2.6s cubic-bezier(0.4,0,0.2,1);
+          }
+          .theme-kids-night .p3-cloud {
+            background: rgba(72,48,168,0.45);
+            box-shadow: 0 8px 24px rgba(40,20,100,0.10);
+            opacity: 0.6;
+          }
+          .p3-cloud::before, .p3-cloud::after {
+            content: ""; position: absolute;
+            border-radius: 999px; background: inherit;
+          }
+          .p3-cloud--1 { width:380px; height:100px; top:10%; left:0; animation: p3-drift 40s linear infinite -20s; }
+          .p3-cloud--1::before { width:168px; height:122px; top:-52px; left:64px; }
+          .p3-cloud--1::after  { width:128px; height: 94px; top:-36px; left:192px; }
+          .p3-cloud--2 { width:240px; height: 68px; top:32%; left:0; animation: p3-drift 56s linear infinite -28s; }
+          .p3-cloud--2::before { width:108px; height: 82px; top:-36px; left:42px; }
+          .p3-cloud--2::after  { width: 82px; height: 62px; top:-24px; left:122px; }
+          .p3-cloud--3 { width:160px; height: 46px; top:18%; left:0; animation: p3-drift 70s linear infinite -14s; }
+          .p3-cloud--3::before { width: 72px; height: 56px; top:-24px; left:28px; }
+          .p3-cloud--3::after  { width: 54px; height: 42px; top:-16px; left:82px; }
+          .p3-cloud--4 { width:420px; height:114px; top:52%; left:0; animation: p3-drift 36s linear infinite -18s; }
+          .p3-cloud--4::before { width:186px; height:138px; top:-60px; left:72px; }
+          .p3-cloud--4::after  { width:142px; height:106px; top:-40px; left:210px; }
+          .p3-cloud--5 { width:200px; height: 58px; top:70%; left:0; animation: p3-drift 62s linear infinite -31s; }
+          .p3-cloud--5::before { width: 90px; height: 70px; top:-30px; left:36px; }
+          .p3-cloud--5::after  { width: 68px; height: 52px; top:-20px; left:102px; }
+          .p3-cloud--6 { width:100px; height: 30px; top:24%; left:0; animation: p3-drift 80s linear infinite -40s; }
+          .p3-cloud--6::before { width: 46px; height: 36px; top:-16px; left:16px; }
+          .p3-cloud--6::after  { width: 34px; height: 26px; top:-11px; left:50px; }
+          .p3-cloud--7 { width:300px; height: 84px; top:42%; left:0; animation: p3-drift 48s linear infinite -24s; }
+          .p3-cloud--7::before { width:134px; height:102px; top:-44px; left:52px; }
+          .p3-cloud--7::after  { width:102px; height: 78px; top:-30px; left:154px; }
+          .p3-cloud--8 { width:140px; height: 40px; top:84%; left:0; animation: p3-drift 66s linear infinite -10s; }
+          .p3-cloud--8::before { width: 62px; height: 48px; top:-20px; left:24px; }
+          .p3-cloud--8::after  { width: 48px; height: 36px; top:-14px; left:70px; }
+        `}</style>
       </div>
 
-      {/* ── Page 2 — full of clouds, sun + moon follow ── */}
-      <div style={{ height: "100vh", position: "relative", overflow: "hidden", background: "linear-gradient(180deg, #aed6f1 0%, #c9e8f8 45%, #e0f3ff 100%)" }}>
+      {/* ── Page 2 — full of clouds, day/night, sun + moon follow ── */}
+      <div style={{ height: "100vh", position: "relative", overflow: "hidden" }}>
+        {/* Day sky */}
+        <div className="p2-bg-day" />
+        {/* Night sky + stars */}
+        <div className="p2-bg-night" />
 
         {/* Sun — day */}
         <div className="p2-sun">
@@ -181,29 +295,71 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
             to   { transform: translateX(calc(100vw + 400px)); }
           }
 
+          /* Day/night backgrounds */
+          .p2-bg-day {
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, #aed6f1 0%, #c9e8f8 45%, #e0f3ff 100%);
+            opacity: 1;
+            transition: opacity 2.6s cubic-bezier(0.4,0,0.2,1);
+          }
+          .theme-kids-night .p2-bg-day { opacity: 0; }
+          .p2-bg-night {
+            position: absolute; inset: 0;
+            background:
+              radial-gradient(1px 1px at  6% 10%, rgba(255,255,255,0.85) 0%, transparent 100%),
+              radial-gradient(2px 2px at 19%  4%, rgba(255,255,255,0.92) 0%, transparent 100%),
+              radial-gradient(1px 1px at 31% 26%, rgba(255,255,255,0.70) 0%, transparent 100%),
+              radial-gradient(2px 2px at 45%  8%, rgba(255,255,255,0.95) 0%, transparent 100%),
+              radial-gradient(1px 1px at 58% 18%, rgba(255,255,255,0.75) 0%, transparent 100%),
+              radial-gradient(2px 2px at 71%  3%, rgba(255,255,255,0.88) 0%, transparent 100%),
+              radial-gradient(1px 1px at 83% 14%, rgba(255,255,255,0.65) 0%, transparent 100%),
+              radial-gradient(1px 1px at 93% 28%, rgba(255,255,255,0.80) 0%, transparent 100%),
+              radial-gradient(2px 2px at 12% 44%, rgba(255,255,255,0.72) 0%, transparent 100%),
+              radial-gradient(1px 1px at 26% 54%, rgba(255,255,255,0.60) 0%, transparent 100%),
+              radial-gradient(1px 1px at 39% 66%, rgba(255,255,255,0.78) 0%, transparent 100%),
+              radial-gradient(2px 2px at 53% 38%, rgba(255,255,255,0.88) 0%, transparent 100%),
+              radial-gradient(1px 1px at 66% 56%, rgba(255,255,255,0.65) 0%, transparent 100%),
+              radial-gradient(1px 1px at 78% 70%, rgba(255,255,255,0.72) 0%, transparent 100%),
+              radial-gradient(2px 2px at 89% 46%, rgba(255,255,255,0.90) 0%, transparent 100%),
+              radial-gradient(1px 1px at  4% 76%, rgba(255,255,255,0.60) 0%, transparent 100%),
+              radial-gradient(1px 1px at 16% 84%, rgba(255,255,255,0.75) 0%, transparent 100%),
+              radial-gradient(2px 2px at 35% 79%, rgba(255,255,255,0.82) 0%, transparent 100%),
+              radial-gradient(1px 1px at 50% 87%, rgba(255,255,255,0.65) 0%, transparent 100%),
+              radial-gradient(1px 1px at 68% 81%, rgba(255,255,255,0.70) 0%, transparent 100%),
+              radial-gradient(2px 2px at 87% 92%, rgba(255,255,255,0.85) 0%, transparent 100%),
+              linear-gradient(180deg, #1a1040 0%, #2e1c6a 60%, #3d1a5a 100%);
+            opacity: 0;
+            transition: opacity 2.6s cubic-bezier(0.4,0,0.2,1);
+          }
+          .theme-kids-night .p2-bg-night { opacity: 1; }
+
           /* Sun/moon: follow day/night theme */
           .p2-sun {
             position: absolute; left: 8%; top: 6%;
             transform: translateY(0);
             transition: transform 2.4s ease-in;
           }
-          .theme-kids-night .p2-sun {
-            transform: translateY(calc(100vh + 80px));
-          }
+          .theme-kids-night .p2-sun { transform: translateY(calc(100vh + 80px)); }
           .p2-moon {
             position: absolute; right: 8%; top: 8%;
             transform: translateY(calc(100vh + 80px));
             transition: transform 2.4s ease-out;
           }
-          .theme-kids-night .p2-moon {
-            transform: translateY(0);
-          }
+          .theme-kids-night .p2-moon { transform: translateY(0); }
 
           .p2-cloud {
             position: absolute;
             border-radius: 999px;
             background: rgba(255,255,255,0.92);
             box-shadow: 0 8px 32px rgba(160,210,255,0.22);
+            transition: background 2.6s cubic-bezier(0.4,0,0.2,1),
+                        box-shadow  2.6s cubic-bezier(0.4,0,0.2,1),
+                        opacity     2.6s cubic-bezier(0.4,0,0.2,1);
+          }
+          .theme-kids-night .p2-cloud {
+            background: rgba(72,48,168,0.50);
+            box-shadow: 0 8px 24px rgba(40,20,100,0.12);
+            opacity: 0.65;
           }
           .p2-cloud::before, .p2-cloud::after {
             content: "";
