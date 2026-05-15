@@ -27,6 +27,16 @@ function sr(seed: number) {
   const x = Math.sin(seed + 1) * 10000;
   return x - Math.floor(x);
 }
+const P4_STARS = Array.from({ length: 160 }, (_, i) => ({
+  top:   sr(i * 11 + 500) * 82,
+  left:  sr(i * 11 + 501) * 100,
+  size:  i % 18 === 0 ? 3.5 : i % 6 === 0 ? 2.5 : i % 3 === 0 ? 2 : 1.5,
+  big:   i % 18 === 0,
+  opacity: 0.35 + sr(i * 11 + 502) * 0.65,
+  dur:   1.5 + sr(i * 11 + 503) * 4.5,
+  delay: sr(i * 11 + 504) * 9,
+}));
+
 const P3_STARS = Array.from({ length: 45 }, (_, i) => ({
   top:   sr(i * 5 + 100) * 94,
   left:  sr(i * 5 + 101) * 100,
@@ -137,8 +147,131 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
-      {/* ── Page 4 — topmost page, pure black ── */}
-      <div style={{ height: "100vh", background: "#000000" }} />
+      {/* ── Page 4 — CSS galaxy + MLP night silhouette ── */}
+      <div style={{ height: "100vh", background: "#0a0a2e", position: "relative", overflow: "hidden" }}>
+
+        {/* Pan wrapper */}
+        <div className="p4-pan">
+          {/* Pulse wrapper */}
+          <div className="p4-pulse">
+            {/* Nebula clouds */}
+            <div className="p4-nebula p4-nb--core"  />
+            <div className="p4-nebula p4-nb--blue1" />
+            <div className="p4-nebula p4-nb--blue2" />
+            <div className="p4-nebula p4-nb--pink1" />
+            <div className="p4-nebula p4-nb--pink2" />
+            <div className="p4-nebula p4-nb--warm"  />
+            {/* Stars */}
+            {P4_STARS.map((s, i) => (
+              <div key={i} style={{
+                position: "absolute",
+                top: `${s.top}%`, left: `${s.left}%`,
+                width: s.size, height: s.size,
+                borderRadius: "50%",
+                background: "#fff",
+                opacity: s.opacity,
+                boxShadow: s.big ? `0 0 6px 2px rgba(200,220,255,0.5)` : undefined,
+                animation: `p4-twinkle ${s.dur.toFixed(1)}s ease-in-out infinite ${s.delay.toFixed(2)}s`,
+              }} />
+            ))}
+            {/* Bright star flares */}
+            <div className="p4-flare" style={{ top: "18%", left: "32%" }} />
+            <div className="p4-flare" style={{ top: "42%", left: "72%" }} />
+            <div className="p4-flare" style={{ top: "12%", left: "78%" }} />
+            <div className="p4-flare" style={{ top: "58%", left: "18%" }} />
+          </div>
+        </div>
+
+        {/* MLP-style night silhouette landscape */}
+        <svg style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 180 }}
+             viewBox="0 0 1440 180" preserveAspectRatio="none">
+          {/* Rolling hill silhouettes — back to front */}
+          <path d="M0,110 C200,70 400,95 600,80 C800,65 1000,55 1200,80 C1360,100 1440,90 1440,100 L1440,180 L0,180 Z" fill="#0f0628"/>
+          <path d="M0,125 C180,100 380,110 580,118 C780,126 940,108 1140,118 C1300,126 1400,118 1440,122 L1440,180 L0,180 Z" fill="#1a0a3e"/>
+          <path d="M0,140 Q240,122 480,134 Q720,146 960,130 Q1200,114 1440,136 L1440,180 L0,180 Z" fill="#1e0d46"/>
+          <path d="M0,152 Q200,140 400,148 Q600,156 800,144 Q1000,132 1200,146 Q1380,158 1440,152 L1440,180 L0,180 Z" fill="#200f4e"/>
+          {/* Left tree silhouette */}
+          <path d="M94,155 C93,142 92,128 93,118 C94,109 97,103 99,96 L107,96 C109,103 111,109 112,118 C113,128 112,142 111,155 Z" fill="#0d0520"/>
+          <circle cx="100" cy="82"  r="36" fill="#0d0520"/>
+          <circle cx="74"  cy="95"  r="25" fill="#0d0520"/>
+          <circle cx="126" cy="93"  r="27" fill="#0d0520"/>
+          <circle cx="92"  cy="68"  r="22" fill="#0d0520"/>
+          {/* Right tree silhouette */}
+          <path d="M1328,155 C1327,143 1326,130 1327,120 C1328,111 1331,105 1333,98 L1341,98 C1343,105 1345,111 1346,120 C1347,130 1346,143 1344,155 Z" fill="#0d0520"/>
+          <circle cx="1335" cy="85"  r="30" fill="#0d0520"/>
+          <circle cx="1312" cy="97"  r="21" fill="#0d0520"/>
+          <circle cx="1358" cy="95"  r="23" fill="#0d0520"/>
+          <circle cx="1328" cy="72"  r="18" fill="#0d0520"/>
+          {/* Center-left small tree */}
+          <rect x="576" y="130" width="6" height="28" fill="#0d0520"/>
+          <circle cx="579" cy="122" r="16" fill="#0d0520"/>
+          <circle cx="565" cy="128" r="11" fill="#0d0520"/>
+          <circle cx="593" cy="126" r="13" fill="#0d0520"/>
+          {/* Faint glowing path */}
+          <path d="M720,180 C700,165 678,155 658,145 C638,135 630,127 642,119 C652,112 674,109 680,102" fill="none" stroke="rgba(140,80,255,0.20)" strokeWidth="10" strokeLinecap="round"/>
+          {/* Glowing ground flowers */}
+          <circle cx="180"  cy="162" r="2.5" fill="#7bc8ff" opacity="0.85"/>
+          <circle cx="310"  cy="165" r="2"   fill="#c77dff" opacity="0.75"/>
+          <circle cx="460"  cy="160" r="2.5" fill="#7bc8ff" opacity="0.85"/>
+          <circle cx="620"  cy="163" r="2"   fill="#c77dff" opacity="0.75"/>
+          <circle cx="800"  cy="161" r="2.5" fill="#7bc8ff" opacity="0.85"/>
+          <circle cx="950"  cy="164" r="2"   fill="#c77dff" opacity="0.75"/>
+          <circle cx="1100" cy="162" r="2.5" fill="#7bc8ff" opacity="0.85"/>
+          <circle cx="1270" cy="160" r="2"   fill="#c77dff" opacity="0.75"/>
+          <circle cx="1400" cy="163" r="2.5" fill="#7bc8ff" opacity="0.75"/>
+        </svg>
+
+        <style>{`
+          @keyframes p4-twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.85); }
+            50%       { opacity: 1;   transform: scale(1.15); }
+          }
+          @keyframes p4-pan {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-20px); }
+          }
+          @keyframes p4-pulse {
+            from { transform: scale(1.0); }
+            to   { transform: scale(1.05); }
+          }
+          .p4-pan {
+            position: absolute; inset: -25px;
+            animation: p4-pan 20s ease-in-out infinite alternate;
+          }
+          .p4-pulse {
+            position: absolute; inset: 0;
+            animation: p4-pulse 8s ease-in-out infinite alternate;
+          }
+          .p4-nebula {
+            position: absolute; border-radius: 50%; pointer-events: none;
+          }
+          .p4-nb--core  { top:20%; left:28%; width:560px; height:320px; background:radial-gradient(ellipse,rgba(180,80,255,0.22) 0%,rgba(100,40,180,0.10) 55%,transparent 82%); filter:blur(55px); }
+          .p4-nb--blue1 { top: 5%; left:48%; width:440px; height:270px; background:radial-gradient(ellipse,rgba(79,195,247,0.28) 0%,rgba(30,100,200,0.12) 52%,transparent 80%); filter:blur(50px); }
+          .p4-nb--blue2 { top:52%; left: 5%; width:380px; height:220px; background:radial-gradient(ellipse,rgba(79,195,247,0.20) 0%,rgba(20,80,160,0.08) 55%,transparent 82%); filter:blur(60px); }
+          .p4-nb--pink1 { top:28%; left:58%; width:480px; height:300px; background:radial-gradient(ellipse,rgba(199,125,255,0.25) 0%,rgba(120,40,200,0.10) 52%,transparent 80%); filter:blur(52px); }
+          .p4-nb--pink2 { top:55%; right:2%; width:320px; height:210px; background:radial-gradient(ellipse,rgba(255,120,180,0.18) 0%,rgba(180,40,120,0.08) 55%,transparent 82%); filter:blur(65px); }
+          .p4-nb--warm  { top:35%; left:33%; width:380px; height:220px; background:radial-gradient(ellipse,rgba(255,160,80,0.14) 0%,rgba(200,80,40,0.06) 55%,transparent 82%); filter:blur(80px); }
+          .p4-flare {
+            position: absolute;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #fff;
+            transform: translate(-50%,-50%);
+            box-shadow: 0 0 12px 6px rgba(255,255,255,0.55), 0 0 32px 12px rgba(200,220,255,0.28);
+          }
+          .p4-flare::before {
+            content:""; position:absolute;
+            width:110px; height:1.5px;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent);
+            top:50%; left:50%; transform:translate(-50%,-50%);
+          }
+          .p4-flare::after {
+            content:""; position:absolute;
+            width:1.5px; height:110px;
+            background:linear-gradient(180deg,transparent,rgba(255,255,255,0.55),transparent);
+            top:50%; left:50%; transform:translate(-50%,-50%);
+          }
+        `}</style>
+      </div>
 
       {/* ── Page 3 — dark starfield, sun slides left, moon slides right ── */}
       <div style={{ height: "100vh", position: "relative", overflow: "hidden", background: "#0d0d2b" }}>

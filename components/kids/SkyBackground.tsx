@@ -146,72 +146,120 @@ export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }
         <div className="kids-cloud kids-cloud--6" />
         <div className="kids-cloud kids-cloud--7" />
 
-        {/* Ground & Nature — Day */}
+        {/* Ground & Nature — Day (MLP/Disney cartoon style) */}
         <svg
-          style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 190, opacity: night ? 0 : 1, transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.6s ease 0s" }}
-          viewBox="0 0 1440 190" preserveAspectRatio="none"
+          style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 220, opacity: night ? 0 : 1, transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.6s ease 0s" }}
+          viewBox="0 0 1440 220" preserveAspectRatio="none"
         >
-          <ellipse cx="360"  cy="210" rx="520" ry="150" fill="#6bb87a" />
-          <ellipse cx="1000" cy="215" rx="600" ry="155" fill="#52a868" />
-          <ellipse cx="1390" cy="208" rx="390" ry="138" fill="#5fba74" />
-          <rect x="0" y="158" width="1440" height="32" fill="#4a8a40" />
-          {/* Tree 1 */}
-          <rect x="144" y="118" width="12" height="42" fill="#7a4520" />
-          <circle cx="150" cy="100" r="28" fill="#38835c" />
-          <circle cx="133" cy="112" r="19" fill="#2d6a4f" />
-          <circle cx="167" cy="109" r="21" fill="#34926a" />
-          {/* Tree 2 */}
-          <rect x="413" y="74" width="14" height="86" fill="#7a4520" />
-          <circle cx="420" cy="56" r="36" fill="#2d6a4f" />
-          <circle cx="397" cy="74" r="25" fill="#38835c" />
-          <circle cx="443" cy="70" r="27" fill="#249058" />
-          {/* Tree 3 */}
-          <rect x="714" y="92" width="12" height="68" fill="#7a4520" />
-          <circle cx="720" cy="76" r="32" fill="#38835c" />
-          <circle cx="701" cy="90" r="23" fill="#2d6a4f" />
-          <circle cx="740" cy="87" r="24" fill="#34926a" />
-          {/* Tree 4 */}
-          <rect x="1043" y="72" width="14" height="88" fill="#7a4520" />
-          <circle cx="1050" cy="54" r="37" fill="#2d6a4f" />
-          <circle cx="1027" cy="72" r="26" fill="#38835c" />
-          <circle cx="1073" cy="68" r="28" fill="#249058" />
-          {/* Tree 5 */}
-          <rect x="1304" y="120" width="12" height="40" fill="#7a4520" />
-          <circle cx="1310" cy="104" r="26" fill="#38835c" />
-          <circle cx="1294" cy="116" r="18" fill="#2d6a4f" />
-          <circle cx="1326" cy="113" r="19" fill="#34926a" />
-          {/* Flowers */}
-          <circle cx="240" cy="157" r="5" fill="#ff9eb5" /><circle cx="245" cy="152" r="3" fill="#ffb8c8" />
-          <circle cx="600" cy="157" r="5" fill="#ffe066" /><circle cx="605" cy="152" r="3" fill="#fff0a0" />
-          <circle cx="870" cy="157" r="5" fill="#ff9eb5" /><circle cx="875" cy="152" r="3" fill="#ffb8c8" />
-          <circle cx="1200" cy="157" r="5" fill="#ffe066" /><circle cx="1205" cy="152" r="3" fill="#fff0a0" />
+          {/* Far mountains — faded blue-grey */}
+          <path d="M0,170 C120,110 240,55 380,95 C520,135 560,60 700,85 C820,106 860,45 1000,75 C1140,105 1200,50 1360,80 L1440,90 L1440,220 L0,220 Z" fill="#c2d4dc" stroke="#9ab5be" strokeWidth="1.5"/>
+          {/* Closer mountains */}
+          <path d="M0,180 C100,145 200,100 340,130 C460,155 500,95 650,120 C780,142 820,95 960,118 C1100,140 1160,95 1300,118 L1440,130 L1440,220 L0,220 Z" fill="#8faab5" stroke="#6b8e9c" strokeWidth="2"/>
+          {/* Dark back hills */}
+          <path d="M0,188 Q180,172 360,180 Q540,188 720,174 Q900,160 1080,176 Q1260,190 1440,182 L1440,220 L0,220 Z" fill="#2d7a2d" stroke="#1e5c1e" strokeWidth="2"/>
+          {/* Mid hills */}
+          <path d="M0,196 Q200,180 400,188 Q600,196 800,182 Q1000,168 1200,183 Q1360,194 1440,190 L1440,220 L0,220 Z" fill="#4a9e4a" stroke="#2d7a2d" strokeWidth="2"/>
+          {/* Bright foreground hills */}
+          <path d="M0,204 Q180,192 360,199 Q540,206 720,194 Q900,182 1080,196 Q1260,208 1440,203 L1440,220 L0,220 Z" fill="#5db85d" stroke="#3a9040" strokeWidth="2.5"/>
+          {/* Ground strip */}
+          <rect x="0" y="213" width="1440" height="7" fill="#4a8a40"/>
+          {/* Dirt path */}
+          <path d="M700,220 C680,208 658,198 638,188 C618,178 610,170 622,162 C634,154 658,150 666,142 C670,138 664,132 654,130" fill="none" stroke="#b8914a" strokeWidth="14" strokeLinecap="round"/>
+          <path d="M700,220 C680,208 658,198 638,188 C618,178 610,170 622,162 C634,154 658,150 666,142 C670,138 664,132 654,130" fill="none" stroke="#d4a96e" strokeWidth="8"  strokeLinecap="round"/>
+          {/* Pond */}
+          <ellipse cx="840" cy="196" rx="52" ry="14" fill="#5bb8e0" stroke="#3a9abf" strokeWidth="2"/>
+          <ellipse cx="840" cy="194" rx="32" ry="7"  fill="rgba(255,255,255,0.28)"/>
+          {/* === LEFT BIG TREE === */}
+          <path d="M100,218 C98,202 96,182 97,168 C98,155 103,146 106,136 L116,136 C119,146 122,155 123,168 C124,182 122,202 120,218 Z" fill="#5c3317" stroke="#3d1f0a" strokeWidth="1.5"/>
+          <circle cx="108" cy="116" r="50" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="2"/>
+          <circle cx="76"  cy="132" r="35" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="2"/>
+          <circle cx="142" cy="130" r="38" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="2"/>
+          <circle cx="108" cy="110" r="48" fill="#38835c" stroke="#26613f" strokeWidth="2"/>
+          <circle cx="76"  cy="126" r="33" fill="#38835c" stroke="#26613f" strokeWidth="2"/>
+          <circle cx="142" cy="124" r="36" fill="#38835c" stroke="#26613f" strokeWidth="2"/>
+          <circle cx="98"  cy="98"  r="30" fill="#5fba74" stroke="#3d9050" strokeWidth="1.5"/>
+          <circle cx="122" cy="106" r="20" fill="#5fba74" stroke="#3d9050" strokeWidth="1.5"/>
+          <circle cx="84"  cy="112" r="16" fill="#5fba74" stroke="#3d9050" strokeWidth="1.5"/>
+          {/* === RIGHT TREE === */}
+          <path d="M1322,218 C1320,202 1318,184 1319,170 C1320,158 1324,150 1326,140 L1336,140 C1338,150 1340,158 1341,170 C1342,184 1340,202 1338,218 Z" fill="#5c3317" stroke="#3d1f0a" strokeWidth="1.5"/>
+          <circle cx="1329" cy="120" r="42" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="2"/>
+          <circle cx="1300" cy="135" r="30" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="2"/>
+          <circle cx="1358" cy="132" r="32" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="2"/>
+          <circle cx="1329" cy="114" r="40" fill="#38835c" stroke="#26613f" strokeWidth="2"/>
+          <circle cx="1300" cy="128" r="28" fill="#38835c" stroke="#26613f" strokeWidth="2"/>
+          <circle cx="1358" cy="125" r="30" fill="#38835c" stroke="#26613f" strokeWidth="2"/>
+          <circle cx="1320" cy="103" r="24" fill="#5fba74" stroke="#3d9050" strokeWidth="1.5"/>
+          <circle cx="1342" cy="110" r="16" fill="#5fba74" stroke="#3d9050" strokeWidth="1.5"/>
+          {/* === SMALL BACKGROUND TREE === */}
+          <rect x="424" y="178" width="8" height="28" fill="#5c3317" stroke="#3d1f0a" strokeWidth="1"/>
+          <circle cx="428" cy="168" r="20" fill="#2d6a4f" stroke="#1e4d38" strokeWidth="1.5"/>
+          <circle cx="412" cy="174" r="14" fill="#38835c" stroke="#26613f" strokeWidth="1.5"/>
+          <circle cx="444" cy="172" r="16" fill="#38835c" stroke="#26613f" strokeWidth="1.5"/>
+          <circle cx="426" cy="160" r="12" fill="#5fba74" stroke="#3d9050" strokeWidth="1"/>
+          {/* === FLOWERS === */}
+          <circle cx="190"  cy="210" r="4"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="210"  cy="207" r="3"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="370"  cy="209" r="4"   fill="#f0f8ff" stroke="#c8d8e0" strokeWidth="1"/>
+          <circle cx="490"  cy="210" r="3.5" fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="580"  cy="208" r="3"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="765"  cy="209" r="4"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="920"  cy="210" r="3.5" fill="#f0f8ff" stroke="#c8d8e0" strokeWidth="1"/>
+          <circle cx="1060" cy="208" r="4"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="1200" cy="209" r="3"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="1290" cy="210" r="4"   fill="#fff"    stroke="#ddd" strokeWidth="1"/>
+          <circle cx="250"  cy="209" r="3.5" fill="#8ec8f0" stroke="#5da0c8" strokeWidth="1"/>
+          <circle cx="400"  cy="208" r="3"   fill="#7ab8e8" stroke="#4a90c0" strokeWidth="1"/>
+          <circle cx="540"  cy="209" r="4"   fill="#8ec8f0" stroke="#5da0c8" strokeWidth="1"/>
+          <circle cx="720"  cy="210" r="3"   fill="#7ab8e8" stroke="#4a90c0" strokeWidth="1"/>
+          <circle cx="980"  cy="209" r="3.5" fill="#8ec8f0" stroke="#5da0c8" strokeWidth="1"/>
+          <circle cx="1120" cy="210" r="4"   fill="#7ab8e8" stroke="#4a90c0" strokeWidth="1"/>
+          <circle cx="1240" cy="208" r="3"   fill="#8ec8f0" stroke="#5da0c8" strokeWidth="1"/>
+          <circle cx="320"  cy="209" r="3.5" fill="#ffe066" stroke="#c8a800" strokeWidth="1"/>
+          <circle cx="660"  cy="209" r="3"   fill="#ffe066" stroke="#c8a800" strokeWidth="1"/>
+          <circle cx="880"  cy="210" r="3.5" fill="#ffe066" stroke="#c8a800" strokeWidth="1"/>
+          <circle cx="1160" cy="208" r="3"   fill="#ffe066" stroke="#c8a800" strokeWidth="1"/>
         </svg>
 
-        {/* Ground & Nature — Night */}
+        {/* Ground & Nature — Night (dark MLP silhouettes) */}
         <svg
-          style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 190, opacity: night ? 1 : 0, transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.4s ease 0s" }}
-          viewBox="0 0 1440 190" preserveAspectRatio="none"
+          style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 220, opacity: night ? 1 : 0, transition: night ? "opacity 0.8s ease 2.2s" : "opacity 0.4s ease 0s" }}
+          viewBox="0 0 1440 220" preserveAspectRatio="none"
         >
-          <ellipse cx="360"  cy="210" rx="520" ry="150" fill="#0d2218" />
-          <ellipse cx="1000" cy="215" rx="600" ry="155" fill="#091c14" />
-          <ellipse cx="1390" cy="208" rx="390" ry="138" fill="#0b2016" />
-          <rect x="0" y="158" width="1440" height="32" fill="#071510" />
-          {/* Tree silhouettes */}
-          <rect x="144" y="118" width="12" height="42" fill="#040c07" />
-          <circle cx="150" cy="100" r="28" fill="#0a1e14" /><circle cx="133" cy="112" r="19" fill="#071610" /><circle cx="167" cy="109" r="21" fill="#081810" />
-          <rect x="413" y="74" width="14" height="86" fill="#040c07" />
-          <circle cx="420" cy="56" r="36" fill="#07160f" /><circle cx="397" cy="74" r="25" fill="#0a1e14" /><circle cx="443" cy="70" r="27" fill="#061208" />
-          <rect x="714" y="92" width="12" height="68" fill="#040c07" />
-          <circle cx="720" cy="76" r="32" fill="#0a1e14" /><circle cx="701" cy="90" r="23" fill="#07160f" /><circle cx="740" cy="87" r="24" fill="#081810" />
-          <rect x="1043" y="72" width="14" height="88" fill="#040c07" />
-          <circle cx="1050" cy="54" r="37" fill="#07160f" /><circle cx="1027" cy="72" r="26" fill="#0a1e14" /><circle cx="1073" cy="68" r="28" fill="#061208" />
-          <rect x="1304" y="120" width="12" height="40" fill="#040c07" />
-          <circle cx="1310" cy="104" r="26" fill="#0a1e14" /><circle cx="1294" cy="116" r="18" fill="#07160f" /><circle cx="1326" cy="113" r="19" fill="#081810" />
+          {/* Mountain silhouettes */}
+          <path d="M0,170 C120,110 240,55 380,95 C520,135 560,60 700,85 C820,106 860,45 1000,75 C1140,105 1200,50 1360,80 L1440,90 L1440,220 L0,220 Z" fill="#060e12"/>
+          <path d="M0,180 C100,145 200,100 340,130 C460,155 500,95 650,120 C780,142 820,95 960,118 C1100,140 1160,95 1300,118 L1440,130 L1440,220 L0,220 Z" fill="#0a1a20"/>
+          {/* Hill silhouettes */}
+          <path d="M0,188 Q180,172 360,180 Q540,188 720,174 Q900,160 1080,176 Q1260,190 1440,182 L1440,220 L0,220 Z" fill="#071510"/>
+          <path d="M0,196 Q200,180 400,188 Q600,196 800,182 Q1000,168 1200,183 Q1360,194 1440,190 L1440,220 L0,220 Z" fill="#0a1c14"/>
+          <path d="M0,204 Q180,192 360,199 Q540,206 720,194 Q900,182 1080,196 Q1260,208 1440,203 L1440,220 L0,220 Z" fill="#0d2218"/>
+          <rect x="0" y="213" width="1440" height="7" fill="#071510"/>
+          {/* Left tree silhouette */}
+          <path d="M100,218 C98,202 96,182 97,168 C98,155 103,146 106,136 L116,136 C119,146 122,155 123,168 C124,182 122,202 120,218 Z" fill="#040c07"/>
+          <circle cx="108" cy="116" r="50" fill="#040c07"/>
+          <circle cx="76"  cy="132" r="35" fill="#061008"/>
+          <circle cx="142" cy="130" r="38" fill="#040c07"/>
+          <circle cx="98"  cy="98"  r="30" fill="#061008"/>
+          <circle cx="122" cy="106" r="20" fill="#040c07"/>
+          <circle cx="84"  cy="112" r="16" fill="#061008"/>
+          {/* Right tree silhouette */}
+          <path d="M1322,218 C1320,202 1318,184 1319,170 C1320,158 1324,150 1326,140 L1336,140 C1338,150 1340,158 1341,170 C1342,184 1340,202 1338,218 Z" fill="#040c07"/>
+          <circle cx="1329" cy="120" r="42" fill="#040c07"/>
+          <circle cx="1300" cy="135" r="30" fill="#061008"/>
+          <circle cx="1358" cy="132" r="32" fill="#040c07"/>
+          <circle cx="1320" cy="103" r="24" fill="#061008"/>
+          <circle cx="1342" cy="110" r="16" fill="#040c07"/>
+          {/* Small back tree silhouette */}
+          <rect x="424" y="178" width="8" height="28" fill="#040c07"/>
+          <circle cx="428" cy="168" r="20" fill="#040c07"/>
+          <circle cx="412" cy="174" r="14" fill="#061008"/>
+          <circle cx="444" cy="172" r="16" fill="#040c07"/>
           {/* Fireflies */}
-          <circle cx="240" cy="148" r="3"   fill="rgba(180,255,160,0.75)" />
-          <circle cx="600" cy="144" r="2.5" fill="rgba(180,255,160,0.65)" />
-          <circle cx="870" cy="150" r="3"   fill="rgba(180,255,160,0.75)" />
-          <circle cx="1200" cy="146" r="2.5" fill="rgba(180,255,160,0.65)" />
+          <circle cx="240"  cy="208" r="3"   fill="rgba(180,255,160,0.75)"/>
+          <circle cx="440"  cy="205" r="2"   fill="rgba(180,255,160,0.55)"/>
+          <circle cx="600"  cy="207" r="2.5" fill="rgba(180,255,160,0.65)"/>
+          <circle cx="870"  cy="209" r="3"   fill="rgba(180,255,160,0.75)"/>
+          <circle cx="1050" cy="206" r="2.5" fill="rgba(180,255,160,0.60)"/>
+          <circle cx="1200" cy="208" r="2.5" fill="rgba(180,255,160,0.65)"/>
         </svg>
       </div>
 
