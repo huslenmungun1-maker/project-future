@@ -124,6 +124,22 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
 
   return (
     <>
+      {/* ── Page 4 — topmost page, pure black ── */}
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <span style={{
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            color: "#ffffff",
+            textTransform: "uppercase",
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 99,
+            padding: "4px 14px",
+          }}>Page 4</span>
+        </div>
+      </div>
+
       {/* ── Page 3 — topmost page, space background shows through ── */}
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
