@@ -141,6 +141,10 @@ export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }
         <div className="kids-cloud kids-cloud--1" />
         <div className="kids-cloud kids-cloud--2" />
         <div className="kids-cloud kids-cloud--3" />
+        <div className="kids-cloud kids-cloud--4" />
+        <div className="kids-cloud kids-cloud--5" />
+        <div className="kids-cloud kids-cloud--6" />
+        <div className="kids-cloud kids-cloud--7" />
 
         {/* Ground & Nature — Day */}
         <svg
@@ -420,6 +424,18 @@ export default function SkyBackground({ night = false, scrollY = 0, slideY = 0 }
         .kids-cloud--2::after  { width: 60px; height: 44px; top: -18px; left: 90px; }
         .kids-cloud--3 { width: 140px; height: 42px; top: 8%; left: -140px; animation: float-cloud 66s linear infinite 20s; }
         .kids-cloud--3::before { width: 65px; height: 50px; top: -22px; left: 28px; }
+        .kids-cloud--4 { width: 200px; height: 58px; top: 20%; left: -200px; animation: float-cloud 44s linear infinite 15s; }
+        .kids-cloud--4::before { width: 90px; height: 70px; top: -32px; left: 35px; }
+        .kids-cloud--4::after  { width: 70px; height: 52px; top: -20px; left: 105px; }
+        .kids-cloud--5 { width: 160px; height: 46px; top: 36%; left: -160px; animation: float-cloud 58s linear infinite 3s; }
+        .kids-cloud--5::before { width: 72px; height: 54px; top: -24px; left: 28px; }
+        .kids-cloud--5::after  { width: 54px; height: 40px; top: -16px; left: 82px; }
+        .kids-cloud--6 { width: 110px; height: 34px; top: 5%; left: -110px; animation: float-cloud 72s linear infinite 30s; }
+        .kids-cloud--6::before { width: 50px; height: 42px; top: -18px; left: 20px; }
+        .kids-cloud--6::after  { width: 40px; height: 32px; top: -12px; left: 60px; }
+        .kids-cloud--7 { width: 280px; height: 78px; top: 44%; left: -280px; animation: float-cloud 46s linear infinite 24s; }
+        .kids-cloud--7::before { width: 120px; height: 92px; top: -40px; left: 50px; }
+        .kids-cloud--7::after  { width: 90px;  height: 68px; top: -26px; left: 145px; }
 
         .shooting-star {
           position: absolute;
