@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -222,6 +222,8 @@ export default function ReaderSeriesChapterPage() {
     []
   );
 
+  const stripeVerified = useRef(false);
+
   const [status, setStatus] = useState<Status>("loading");
   const [message, setMessage] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -391,23 +393,33 @@ export default function ReaderSeriesChapterPage() {
             );
 
           const chapterPrice = Number(foundCurrent.price ?? 0);
-          if (chapterPrice > 0) {
+          if (chapterPrice > 0 && !stripeVerified.current) {
             const { data: unlock } = await authClient
               .from("chapter_unlocks")
               .select("id")
               .eq("user_id", user.id)
               .eq("chapter_id", foundCurrent.id)
               .maybeSingle();
-            setIsUnlocked(!!unlock);
-          } else {
-            setIsUnlocked(true);
+            let hasAccess = !!unlock;
+            if (!hasAccess) {
+              const { data: purchase } = await authClient
+                .from("purchases")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("chapter_id", foundCurrent.id)
+                .maybeSingle();
+              hasAccess = !!purchase;
+            }
+            if (!stripeVerified.current) setIsUnlocked(hasAccess);
+          } else if (!stripeVerified.current) {
+            setIsUnlocked(chapterPrice === 0);
           }
         } else {
           const chapterPrice = Number(foundCurrent.price ?? 0);
-          setIsUnlocked(chapterPrice === 0);
+          if (!stripeVerified.current) setIsUnlocked(chapterPrice === 0);
         }
       } catch {
-        setIsUnlocked(true);
+        if (!stripeVerified.current) setIsUnlocked(true);
       }
 
       setStatus("ok");
@@ -426,7 +438,12 @@ export default function ReaderSeriesChapterPage() {
     window.history.replaceState({}, "", window.location.pathname);
     fetch(`/api/stripe/verify?session_id=${encodeURIComponent(sessionId)}`)
       .then(r => r.json())
-      .then(json => { if (json.ok) setIsUnlocked(true); })
+      .then(json => {
+        if (json.ok) {
+          stripeVerified.current = true;
+          setIsUnlocked(true);
+        }
+      })
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -755,8 +772,11 @@ export default function ReaderSeriesChapterPage() {
               >
                 {isPaidChapter && !isUnlocked ? (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "48px 24px", textAlign: "center" }}>
-                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(10,10,12,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                      &#x1F512;
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", border: "1.5px solid rgba(47,47,47,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--muted)" }}>
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
                     </div>
                     <div>
                       <p className="text-sm font-semibold" style={{ color: "var(--text)", marginBottom: 8 }}>{t.locked}</p>
