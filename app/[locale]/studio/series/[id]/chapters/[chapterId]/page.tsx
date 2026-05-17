@@ -78,7 +78,7 @@ export default function ChapterEditorPage() {
       if (!alive) return;
 
       const role = profile?.role ?? "reader";
-      if (role !== "creator" && role !== "owner") { router.replace(`/${locale}/profile`); return; }
+      if (role !== "creator" && role !== "owner" && session.user.email !== process.env.NEXT_PUBLIC_OWNER_EMAIL) { router.replace(`/${locale}/profile`); return; }
 
       const { data: s } = await supabase
         .from("series").select("id, title, project_type")

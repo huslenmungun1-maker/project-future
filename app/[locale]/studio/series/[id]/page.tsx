@@ -341,7 +341,7 @@ export default function SeriesDetailPage() {
       .maybeSingle();
 
     const role = profile?.role ?? "reader";
-    if (role !== "creator" && role !== "owner") {
+    if (role !== "creator" && role !== "owner" && user.email !== process.env.NEXT_PUBLIC_OWNER_EMAIL) {
       setPageError(t.ownerOnly);
       setAccessChecked(true);
       router.replace(`/${locale}/profile`);

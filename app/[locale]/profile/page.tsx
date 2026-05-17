@@ -26,7 +26,7 @@ export default async function ProfilePage({
     .maybeSingle();
   const role = profile?.role ?? "reader";
   const isKid = profile?.account_type === "kid";
-  const isOwner = role === "owner";
+  const isOwner = role === "owner" || email === process.env.NEXT_PUBLIC_OWNER_EMAIL;
   const isCreator = role === "creator" || isOwner;
 
   // Kids accounts linked to this adult

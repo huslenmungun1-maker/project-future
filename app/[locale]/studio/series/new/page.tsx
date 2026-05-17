@@ -45,7 +45,7 @@ export default function NewSeriesPage() {
         .maybeSingle();
 
       const role = profile?.role ?? "reader";
-      if (role !== "creator" && role !== "owner") {
+      if (role !== "creator" && role !== "owner" && user.email !== process.env.NEXT_PUBLIC_OWNER_EMAIL) {
         router.replace(`/${locale}/profile`);
         return;
       }

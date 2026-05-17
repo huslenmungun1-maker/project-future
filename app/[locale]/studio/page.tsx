@@ -269,7 +269,7 @@ export default function StudioHomePage() {
         .maybeSingle();
 
       const role = profile?.role ?? "reader";
-      if (role !== "creator" && role !== "owner") {
+      if (role !== "creator" && role !== "owner" && user.email !== process.env.NEXT_PUBLIC_OWNER_EMAIL) {
         setCheckingAccess(false);
         router.replace(`/${locale}/profile`);
         return;

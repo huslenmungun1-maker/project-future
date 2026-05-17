@@ -52,7 +52,7 @@ export default function CreatorPage() {
       const userRole = profile?.role ?? "reader";
       setRole(userRole);
 
-      if (userRole === "owner") {
+      if (userRole === "owner" || session.user.email === process.env.NEXT_PUBLIC_OWNER_EMAIL) {
         router.replace(`/${locale}/studio`);
         return;
       }
