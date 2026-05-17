@@ -15,7 +15,16 @@
       "Bash(npx vercel *)",
       "Bash(timeout 12)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\" -Force)",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(supabase status *)",
+      "Bash(Test-Path *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\components\" -Depth 1 | Where-Object { $_.PSIsContainer -eq $false } | Select-Object Name)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\reader\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\create\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\dashboard\\\\[kidId]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\setup\")",
+      "WebFetch(domain:localhost)"
     ],
     "defaultMode": "acceptEdits"
   }
