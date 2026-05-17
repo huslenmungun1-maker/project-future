@@ -419,21 +419,37 @@ export default function ReaderChapterPage() {
   const chapterPrice = Number(currentChapter?.price ?? 0);
   const isPaidChapter = chapterPrice > 0;
 
-  async function handleUnlock() {
+  // Handle Stripe redirect back with session_id in URL
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get("stripe_session_id");
+    if (!sessionId) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch(`/api/stripe/verify?session_id=${encodeURIComponent(sessionId)}`)
+      .then(r => r.json())
+      .then(json => { if (json.ok) setIsUnlocked(true); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleStripeCheckout() {
     if (!currentChapter) return;
     setUnlocking(true);
     setUnlockError(null);
-    const res = await fetch("/api/wallet/unlock", {
+    const base = window.location.pathname;
+    const res = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chapterId: currentChapter.id }),
+      body: JSON.stringify({
+        chapterId: currentChapter.id,
+        successUrl: `${window.location.origin}${base}?stripe_session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}${base}`,
+      }),
     });
     const json = await res.json();
-    setUnlocking(false);
-    if (res.ok && json.ok) {
-      setIsUnlocked(true);
+    if (res.ok && json.url) {
+      window.location.href = json.url;
     } else {
-      setUnlockError(json.error ?? "unlock_error");
+      setUnlockError("unlock_error");
+      setUnlocking(false);
     }
   }
 
@@ -767,37 +783,22 @@ export default function ReaderChapterPage() {
                       {t.loginToUnlock}
                     </Link>
                   ) : (
-                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-                      <button
-                        onClick={handleUnlock}
-                        disabled={unlocking}
-                        className="inline-flex items-center rounded-full border px-6 py-2.5 text-xs font-semibold transition"
-                        style={{
-                          borderColor: "rgba(47,47,47,0.18)",
-                          background: "rgba(10,10,12,0.88)",
-                          color: "#eceae4",
-                          cursor: unlocking ? "not-allowed" : "pointer",
-                          opacity: unlocking ? 0.7 : 1,
-                        }}
-                      >
-                        {unlocking
-                          ? t.unlocking
-                          : `${t.unlock} ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(chapterPrice)}`}
-                      </button>
-                      {unlockError === "insufficient_balance" && (
-                        <Link
-                          href={`/${locale}/wallet`}
-                          className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-medium transition"
-                          style={{
-                            borderColor: "rgba(47,47,47,0.14)",
-                            background: "rgba(255,255,255,0.55)",
-                            color: "var(--muted)",
-                          }}
-                        >
-                          {t.topupWallet}
-                        </Link>
-                      )}
-                    </div>
+                    <button
+                      onClick={handleStripeCheckout}
+                      disabled={unlocking}
+                      className="inline-flex items-center rounded-full border px-6 py-2.5 text-xs font-semibold transition"
+                      style={{
+                        borderColor: "rgba(47,47,47,0.18)",
+                        background: "rgba(10,10,12,0.88)",
+                        color: "#eceae4",
+                        cursor: unlocking ? "not-allowed" : "pointer",
+                        opacity: unlocking ? 0.7 : 1,
+                      }}
+                    >
+                      {unlocking
+                        ? t.unlocking
+                        : `${t.unlock} ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(chapterPrice)}`}
+                    </button>
                   )}
                 </div>
               ) : contentText ? (
