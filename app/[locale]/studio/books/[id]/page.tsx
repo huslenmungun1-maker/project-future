@@ -11,7 +11,7 @@ type BookRow = {
   title: string;
   description: string | null;
   created_at: string;
-  cover_image_url: string | null;
+  cover_url: string | null;
   language: string | null;
 };
 
@@ -416,7 +416,7 @@ export default function BookDetailPage() {
             <h2 className="mb-2 text-sm font-semibold text-slate-100">
               {t.cover}
             </h2>
-            <CoverImageUploader bookId={book.id} initialUrl={book.cover_image_url} />
+            <CoverImageUploader bookId={book.id} initialUrl={book.cover_url} />
           </div>
           <div className="self-center text-xs text-slate-400">
             <p>{t.coverHelp}</p>

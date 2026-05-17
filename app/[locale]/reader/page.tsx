@@ -16,6 +16,7 @@ type BookRow = {
   status: BookStatus;
   created_at: string;
   cover_url?: string | null;
+  cover_image_url?: string | null;
   views?: number | null;
   page_count?: number | null;
 };
@@ -290,7 +291,7 @@ export default function ReaderHomePage() {
     );
 
   const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url || "";
-  const getBookCover = (item: BookRow) => item.cover_url || "";
+  const getBookCover = (item: BookRow) => item.cover_url || item.cover_image_url || "";
 
   const filteredSeries = useMemo(() => {
     const q = searchQuery.toLowerCase();

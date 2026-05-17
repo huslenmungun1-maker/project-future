@@ -24,8 +24,8 @@ export default function CoverImageUploader({
   const [url, setUrl] = useState<string | null>(initialUrl);
 
   const target =
-    bookId ? { table: "books", id: bookId, prefix: "books" } : seriesId
-    ? { table: "series", id: seriesId, prefix: "series" }
+    bookId   ? { table: "books",  id: bookId,   prefix: "books",  column: "cover_url"       }
+    : seriesId ? { table: "series", id: seriesId, prefix: "series", column: "cover_image_url" }
     : null;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -60,7 +60,7 @@ export default function CoverImageUploader({
 
       const { error: updateError } = await supabase
         .from(target.table)
-        .update({ cover_image_url: publicUrl })
+        .update({ [target.column]: publicUrl })
         .eq("id", target.id);
 
       if (updateError) throw updateError;
