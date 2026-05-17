@@ -445,10 +445,27 @@ export default function ReaderChapterPage() {
   if (status === "loading") {
     return (
       <main className="min-h-screen theme-soft">
-        <div className="mx-auto max-w-6xl px-6 py-12">
-          <p style={{ color: "var(--muted)" }} className="text-sm">
-            {t.loading}
-          </p>
+        <div className="mx-auto max-w-6xl px-6 py-10">
+          <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <aside className="space-y-4">
+              <div className="skeleton rounded-[28px]" style={{ aspectRatio: "2/3" }} />
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="skeleton h-10 rounded-[12px]" style={{ animationDelay: `${i * 50}ms` }} />
+                ))}
+              </div>
+            </aside>
+            <div className="space-y-4 pt-2">
+              <div className="skeleton h-7 rounded-lg" style={{ width: "60%" }} />
+              <div className="skeleton h-4 rounded-md" style={{ width: "35%" }} />
+              <div className="mt-6 space-y-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="skeleton h-4 rounded-md"
+                    style={{ width: `${75 + (i % 3) * 8}%`, animationDelay: `${i * 30}ms` }} />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     );

@@ -130,8 +130,29 @@ export default function SeriesDetailPage() {
   if (status === "loading") {
     return (
       <main className="min-h-screen theme-soft">
-        <div className="mx-auto max-w-4xl px-6 py-14">
-          <p style={{ color: "var(--muted)", fontSize: 13 }}>{t.loading}</p>
+        <div className="mx-auto max-w-5xl px-6 py-10">
+          <div className="skeleton h-4 rounded-full mb-8" style={{ width: 80 }} />
+          <div
+            className="rounded-[32px] border overflow-hidden mb-8"
+            style={{ borderColor: "var(--border)", background: "rgba(233,230,223,0.72)", boxShadow: "var(--shadow-soft)" }}
+          >
+            <div className="grid md:grid-cols-[240px_minmax(0,1fr)]">
+              <div className="skeleton" style={{ minHeight: 320 }} />
+              <div className="p-8 space-y-4">
+                <div className="skeleton h-7 rounded-lg" style={{ width: "65%" }} />
+                <div className="skeleton h-4 rounded-md" style={{ width: "40%" }} />
+                <div className="skeleton h-3 rounded-md" style={{ width: "90%", marginTop: 24 }} />
+                <div className="skeleton h-3 rounded-md" style={{ width: "80%" }} />
+                <div className="skeleton h-3 rounded-md" style={{ width: "60%" }} />
+                <div className="skeleton h-9 rounded-full" style={{ width: 160, marginTop: 24 }} />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton h-14 rounded-[16px]" style={{ animationDelay: `${i * 50}ms` }} />
+            ))}
+          </div>
         </div>
       </main>
     );

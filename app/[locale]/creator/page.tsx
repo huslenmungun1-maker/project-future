@@ -78,7 +78,9 @@ export default function CreatorPage() {
   if (loading) {
     return (
       <div style={{ background: BG }} className="min-h-screen flex items-center justify-center">
-        <div style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.5 }} />
+        <div style={{ width: "100%", maxWidth: 520, padding: "0 24px" }}>
+          <div className="skeleton-dark rounded-[20px]" style={{ height: 280 }} />
+        </div>
       </div>
     );
   }

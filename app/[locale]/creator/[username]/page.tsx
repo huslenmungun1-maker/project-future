@@ -168,9 +168,23 @@ export default function CreatorPublicProfilePage() {
 
   if (status === "loading") {
     return (
-      <main style={{ background: BG, minHeight: "100vh", color: TEXT }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px" }}>
-          <p style={{ color: MUTED, fontSize: 13 }}>Loading…</p>
+      <main style={{ background: BG, minHeight: "100vh" }}>
+        <div className="skeleton-dark" style={{ height: 200, width: "100%" }} />
+        <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px" }}>
+          <div className="skeleton-dark rounded-full"
+            style={{ width: 80, height: 80, marginTop: -40, border: `4px solid ${BG}` }} />
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="skeleton-dark rounded-md" style={{ height: 24, width: "30%" }} />
+            <div className="skeleton-dark rounded-md" style={{ height: 14, width: "20%" }} />
+            <div className="skeleton-dark rounded-md" style={{ height: 13, width: "70%", marginTop: 8 }} />
+            <div className="skeleton-dark rounded-md" style={{ height: 13, width: "55%" }} />
+          </div>
+          <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton-dark rounded-[20px]"
+                style={{ aspectRatio: "2/3", animationDelay: `${i * 60}ms` }} />
+            ))}
+          </div>
         </div>
       </main>
     );

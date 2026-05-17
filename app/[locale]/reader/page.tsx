@@ -308,6 +308,17 @@ export default function ReaderHomePage() {
     );
   }, [books, searchQuery]);
 
+  const SkeletonCard = ({ n }: { n: number }) => (
+    <div className="space-y-3" style={{ animationDelay: `${n * 60}ms` }}>
+      <div className="skeleton rounded-[24px]" style={{ aspectRatio: "2/3" }} />
+      <div className="space-y-1.5 px-0.5">
+        <div className="skeleton h-3.5 rounded-md" style={{ width: "70%" }} />
+        <div className="skeleton h-3 rounded-md" style={{ width: "45%" }} />
+        <div className="skeleton h-3 rounded-md" style={{ width: "30%" }} />
+      </div>
+    </div>
+  );
+
   return (
     <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -430,24 +441,12 @@ export default function ReaderHomePage() {
             </h2>
           </div>
 
-          {status === "ok" && filteredSeries.length === 0 && books.length > 0 ? (
-            <div
-              className="flex items-center gap-4 rounded-[20px] border px-5 py-4"
-              style={{
-                borderColor: "var(--border)",
-                background: "rgba(233,230,223,0.66)",
-                boxShadow: "var(--shadow-soft)",
-              }}
-            >
-              <div>
-                <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{t.emptySeriesTitle}</p>
-                <p className="text-xs" style={{ color: "var(--muted)" }}>{t.emptySeriesBody}</p>
-              </div>
-            </div>
-          ) : null}
-
-          {filteredSeries.length > 0 ? (
+          {status === "loading" ? (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} n={i} />)}
+            </div>
+          ) : filteredSeries.length > 0 ? (
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5 fade-in">
               {filteredSeries.map((item) => {
                 const coverSrc = getSeriesCover(item);
 
@@ -600,8 +599,12 @@ export default function ReaderHomePage() {
             </div>
           ) : null}
 
-          {filteredBooks.length > 0 ? (
+          {status === "loading" ? (
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} n={i} />)}
+            </div>
+          ) : filteredBooks.length > 0 ? (
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4 xl:grid-cols-5 fade-in">
               {filteredBooks.map((item) => {
                 const coverSrc = getBookCover(item);
 
