@@ -55,6 +55,7 @@ const UI_TEXT = {
     save: "Save",
     cancel: "Cancel",
     retry: "Retry",
+    edit: "Edit",
     delete: "Delete",
     confirmDelete: "Delete this chapter? This cannot be undone.",
     loading: "Loading project…",
@@ -108,6 +109,7 @@ const UI_TEXT = {
     save: "Хадгалах",
     cancel: "Цуцлах",
     retry: "Дахин оролдох",
+    edit: "Засах",
     delete: "Устгах",
     confirmDelete: "Энэ бүлгийг устгах уу? Буцаах боломжгүй.",
     loading: "Төслийг ачаалж байна…",
@@ -163,6 +165,7 @@ const UI_TEXT = {
     save: "저장",
     cancel: "취소",
     retry: "다시 시도",
+    edit: "편집",
     delete: "삭제",
     confirmDelete: "이 챕터를 삭제할까요? 되돌릴 수 없습니다.",
     loading: "프로젝트 불러오는 중…",
@@ -217,6 +220,7 @@ const UI_TEXT = {
     save: "保存",
     cancel: "キャンセル",
     retry: "再試行",
+    edit: "編集",
     delete: "削除",
     confirmDelete: "このチャプターを削除しますか？元に戻せません。",
     loading: "読み込み中…",
@@ -1140,7 +1144,7 @@ export default function SeriesDetailPage() {
                   }}
                 >
                   <div className="flex items-start justify-between gap-3 px-4 py-4">
-                    <Link href={`/${locale}/studio/series/${seriesId}/chapters/${c.id}`} className="block min-w-0 flex-1">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-[var(--text)]">
                           #{c.chapter_number} · {c.title}
@@ -1173,17 +1177,29 @@ export default function SeriesDetailPage() {
                           timeStyle: "short",
                         })}
                       </p>
-                    </Link>
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => deleteChapter(c.id)}
-                      className="ml-3 text-[11px] transition hover:opacity-80"
-                      style={{ color: "var(--danger)" }}
-                      title={t.delete}
-                    >
-                      {t.delete}
-                    </button>
+                    <div className="ml-3 flex flex-col items-end gap-2">
+                      <Link
+                        href={`/${locale}/studio/series/${seriesId}/chapters/${c.id}`}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold transition hover:opacity-85"
+                        style={{
+                          background: "var(--accent)",
+                          color: "#f8f7f3",
+                        }}
+                      >
+                        {t.edit}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => deleteChapter(c.id)}
+                        className="text-[11px] transition hover:opacity-80"
+                        style={{ color: "var(--danger)" }}
+                        title={t.delete}
+                      >
+                        {t.delete}
+                      </button>
+                    </div>
                   </div>
                 </li>
               ))}
