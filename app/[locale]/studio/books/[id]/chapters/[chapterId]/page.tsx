@@ -15,6 +15,7 @@ type ChapterRow = {
   chapter_number: number;
   is_published: boolean;
   content: string | null;
+  price: number | null;
   created_at: string;
 };
 
@@ -40,6 +41,7 @@ export default function ChapterEditorPage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [price, setPrice] = useState("");
   const [isPublished, setIsPublished] = useState(false);
 
   const baseLocale = locale ? `/${locale}` : "";
@@ -96,7 +98,7 @@ export default function ChapterEditorPage() {
       const { data: chapterData, error: chapterError } = await supabase
         .from("book_chapters")
         .select(
-          "id, book_id, title, chapter_number, is_published, content, created_at"
+          "id, book_id, title, chapter_number, is_published, content, price, created_at"
         )
         .eq("id", chapterId)
         .single();
@@ -113,6 +115,7 @@ export default function ChapterEditorPage() {
       setChapter(chapterData);
       setTitle(chapterData.title || "");
       setContent(chapterData.content || "");
+      setPrice(chapterData.price != null ? String(chapterData.price) : "");
       setIsPublished(!!chapterData.is_published);
       setLoadStatus("ok");
     }
@@ -125,16 +128,19 @@ export default function ChapterEditorPage() {
     setSaveStatus("saving");
     setErrorMessage(null);
 
+    const priceNum = price.trim() ? Number(price.trim()) : null;
+
     const { error, data } = await supabase
       .from("book_chapters")
       .update({
         title: title.trim() || "Untitled chapter",
         content: content.trim() || null,
+        price: priceNum && priceNum > 0 ? priceNum : null,
         is_published: isPublished,
       })
       .eq("id", chapter.id)
       .select(
-        "id, book_id, title, chapter_number, is_published, content, created_at"
+        "id, book_id, title, chapter_number, is_published, content, price, created_at"
       )
       .single();
 
@@ -239,6 +245,22 @@ export default function ChapterEditorPage() {
                     rows={18}
                     className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     placeholder="Write your story here..."
+                  />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Price (USD) — leave blank for free
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="e.g. 1.99"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-50 outline-none ring-0 placeholder:text-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
 

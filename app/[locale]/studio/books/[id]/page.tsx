@@ -22,6 +22,7 @@ type ChapterRow = {
   chapter_number: number;
   created_at: string;
   content: string | null;
+  price?: number | null;
 };
 
 const UI_TEXT = {
@@ -135,6 +136,7 @@ export default function BookDetailPage() {
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterNumber, setChapterNumber] = useState("");
   const [chapterContent, setChapterContent] = useState("");
+  const [chapterPrice, setChapterPrice] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -238,12 +240,15 @@ export default function BookDetailPage() {
     setCreating(true);
     setCreateError(null);
 
+    const priceValue = chapterPrice.trim() ? Number(chapterPrice.trim()) : null;
+
     const { error } = await supabase.from("chapters").insert([
       {
         book_id: bookId,
         title: chapterTitle.trim(),
         chapter_number: numberValue,
         content: chapterContent.trim() || null,
+        price: priceValue && priceValue > 0 ? priceValue : null,
       },
     ]);
 
@@ -253,6 +258,7 @@ export default function BookDetailPage() {
       setChapterTitle("");
       setChapterNumber("");
       setChapterContent("");
+      setChapterPrice("");
       await fetchData();
     }
 
@@ -460,6 +466,19 @@ export default function BookDetailPage() {
                 />
               </div>
 
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-300">Price (USD) — leave blank for free</label>
+                <input
+                  className="rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400"
+                  placeholder="e.g. 1.99"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={chapterPrice}
+                  onChange={(e) => setChapterPrice(e.target.value)}
+                />
+              </div>
+
               {createError && <p className="text-xs text-rose-300">⚠️ {createError}</p>}
 
               <button
@@ -486,25 +505,40 @@ export default function BookDetailPage() {
                 {chapters.map((c) => (
                   <li
                     key={c.id}
-                    className="rounded-xl border border-slate-800 bg-black/40 px-0 py-0 hover:border-emerald-400/70"
+                    className="rounded-xl border border-slate-800 bg-black/40 px-4 py-3 hover:border-slate-700"
                   >
-                    <Link href={`/${locale}/publisher/books`} className="block px-4 py-3">
-                      <p className="font-semibold text-slate-50 text-sm">
-                        #{c.chapter_number} · {c.title}
-                      </p>
-                      {c.content && (
-                        <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
-                          {c.content}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-slate-50 text-sm">
+                            #{c.chapter_number} · {c.title}
+                          </p>
+                          {Number(c.price ?? 0) > 0 && (
+                            <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-300">
+                              ${Number(c.price).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        {c.content && (
+                          <p className="mt-1 text-[11px] text-slate-400 line-clamp-1">
+                            {c.content}
+                          </p>
+                        )}
+                        <p className="mt-1 text-[10px] text-slate-600">
+                          {t.createdAt}:{" "}
+                          {new Date(c.created_at).toLocaleString(localeForDate, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
                         </p>
-                      )}
-                      <p className="mt-1 text-[10px] text-slate-500">
-                        {t.createdAt}:{" "}
-                        {new Date(c.created_at).toLocaleString(localeForDate, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                    </Link>
+                      </div>
+                      <Link
+                        href={`/${locale}/studio/books/${bookId}/chapters/${c.id}`}
+                        className="flex-shrink-0 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-black hover:bg-emerald-400 transition"
+                      >
+                        Edit
+                      </Link>
+                    </div>
                   </li>
                 ))}
               </ul>
