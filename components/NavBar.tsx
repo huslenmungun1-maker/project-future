@@ -55,7 +55,7 @@ export default function NavBar({ locale }: { locale: string }) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
-          .eq("id", userId)
+          .eq("user_id", userId)
           .maybeSingle();
 
         if (profile?.role) {
