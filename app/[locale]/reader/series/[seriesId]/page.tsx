@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type SeriesRow = {
@@ -52,6 +52,7 @@ export default function SeriesDetailPage() {
   const locale = normLocale(params.locale || "en");
   const seriesId = params.seriesId || "";
   const t = UI[locale];
+  const router = useRouter();
 
   const [series, setSeries] = useState<SeriesRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
@@ -59,11 +60,16 @@ export default function SeriesDetailPage() {
   const [progressChapterId, setProgressChapterId] = useState<string | null>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [status, setStatus] = useState<"loading"|"ok"|"error">("loading");
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     let alive = true;
     async function load() {
       if (!seriesId) { if (alive) setStatus("error"); return; }
+
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      const ownerLocal = authSess?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL;
+      if (alive) setIsOwner(ownerLocal);
 
       const { data: s } = await supabase
         .from("series")
@@ -72,15 +78,13 @@ export default function SeriesDetailPage() {
         .maybeSingle();
 
       if (!alive) return;
-      if (!s || (!s.published && !s.published_at)) { setStatus("error"); return; }
+      if (!s || (!ownerLocal && !s.published && !s.published_at)) { setStatus("error"); return; }
       setSeries(s as SeriesRow);
 
-      const { data: chs } = await supabase
-        .from("chapters")
-        .select("id,chapter_number,title,is_published,published_at,created_at")
-        .eq("series_id", seriesId)
-        .or("is_published.eq.true,published_at.not.is.null")
-        .order("chapter_number", { ascending: true });
+      const { data: chs } = await (ownerLocal
+        ? supabase.from("chapters").select("id,chapter_number,title,is_published,published_at,created_at").eq("series_id", seriesId).order("chapter_number", { ascending: true })
+        : supabase.from("chapters").select("id,chapter_number,title,is_published,published_at,created_at").eq("series_id", seriesId).or("is_published.eq.true,published_at.not.is.null").order("chapter_number", { ascending: true })
+      );
 
       if (!alive) return;
       setChapters((chs as ChapterRow[]) || []);
@@ -126,6 +130,40 @@ export default function SeriesDetailPage() {
   const typeLabel = series?.project_type
     ? series.project_type.charAt(0).toUpperCase() + series.project_type.slice(1)
     : null;
+
+  async function handleDeleteSeries() {
+    if (!series) return;
+    if (!window.confirm("Delete this series and all its chapters? This cannot be undone.")) return;
+    const { error } = await supabase.rpc("delete_series_cascade", { p_series_id: series.id });
+    if (error) { alert("Delete failed: " + error.message); return; }
+    router.replace(`/${locale}/reader`);
+  }
+
+  async function handleTogglePublishSeries() {
+    if (!series) return;
+    const newPublished = !series.published;
+    const msg = newPublished ? "Publish this series?" : "Unpublish this series? Readers won't see it anymore.";
+    if (!window.confirm(msg)) return;
+    const { error } = await supabase.from("series").update({ published: newPublished, published_at: newPublished ? new Date().toISOString() : null }).eq("id", series.id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setSeries(prev => prev ? { ...prev, published: newPublished, published_at: newPublished ? new Date().toISOString() : null } : prev);
+  }
+
+  async function handleDeleteChapter(id: string) {
+    if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
+    const { error } = await supabase.from("chapters").delete().eq("id", id);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    setChapters(prev => prev.filter(c => c.id !== id));
+  }
+
+  async function handleToggleChapterPublish(id: string, currentlyPublished: boolean) {
+    const newVal = !currentlyPublished;
+    const msg = newVal ? "Publish this chapter?" : "Unpublish this chapter?";
+    if (!window.confirm(msg)) return;
+    const { error } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setChapters(prev => prev.map(c => c.id === id ? { ...c, is_published: newVal, published_at: newVal ? new Date().toISOString() : null } : c));
+  }
 
   if (status === "loading") {
     return (
@@ -279,6 +317,24 @@ export default function SeriesDetailPage() {
                 <span>{chapters.length} {t.chapters}</span>
               </div>
 
+              {/* Owner actions */}
+              {isOwner && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingTop: 4 }}>
+                  <button
+                    onClick={handleTogglePublishSeries}
+                    style={{ fontSize: 11, padding: "4px 12px", borderRadius: 8, border: "1px solid rgba(194,120,0,0.45)", background: "rgba(194,120,0,0.08)", color: "#8a5500", cursor: "pointer" }}
+                  >
+                    {series.published ? "Unpublish Series" : "Publish Series"}
+                  </button>
+                  <button
+                    onClick={handleDeleteSeries}
+                    style={{ fontSize: 11, padding: "4px 12px", borderRadius: 8, border: "1px solid rgba(185,28,28,0.4)", background: "rgba(185,28,28,0.07)", color: "#b01c1c", cursor: "pointer" }}
+                  >
+                    Delete Series
+                  </button>
+                </div>
+              )}
+
               {/* CTAs */}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
                 {progressChapter ? (
@@ -345,37 +401,68 @@ export default function SeriesDetailPage() {
               {chapters.map((ch, i) => {
                 const isProgress = ch.id === progressChapterId;
                 return (
-                  <Link
+                  <div
                     key={ch.id}
-                    href={`/${locale}/reader/series/${seriesId}/${ch.chapter_number}`}
                     style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "14px 20px", borderRadius: 16, textDecoration: "none",
+                      display: "flex", alignItems: "center",
+                      borderRadius: 16,
                       border: isProgress ? "1px solid rgba(94,99,87,0.3)" : "1px solid rgba(47,47,47,0.1)",
                       background: isProgress ? "rgba(94,99,87,0.1)" : i % 2 === 0 ? "rgba(233,230,223,0.7)" : "rgba(255,255,255,0.5)",
-                      transition: "opacity 0.15s",
+                      overflow: "hidden",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", minWidth: 32 }}>
-                        {t.chapter} {ch.chapter_number}
-                      </span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
-                        {ch.title || `${t.chapter} ${ch.chapter_number}`}
-                      </span>
-                      {isProgress && (
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 9999,
-                          background: "rgba(94,99,87,0.15)", color: "var(--accent)",
-                        }}>
-                          Last read
+                    <Link
+                      href={`/${locale}/reader/series/${seriesId}/${ch.chapter_number}`}
+                      style={{
+                        flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "14px 20px", textDecoration: "none", transition: "opacity 0.15s",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", minWidth: 32 }}>
+                          {t.chapter} {ch.chapter_number}
                         </span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: "var(--muted)" }}>
-                      {new Date(ch.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                    </span>
-                  </Link>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+                          {ch.title || `${t.chapter} ${ch.chapter_number}`}
+                        </span>
+                        {isProgress && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 9999,
+                            background: "rgba(94,99,87,0.15)", color: "var(--accent)",
+                          }}>
+                            Last read
+                          </span>
+                        )}
+                        {isOwner && !ch.is_published && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
+                            background: "rgba(194,120,0,0.12)", color: "#8a5500",
+                          }}>
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                        {new Date(ch.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                      </span>
+                    </Link>
+                    {isOwner && (
+                      <div style={{ display: "flex", gap: 6, paddingRight: 12, flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleToggleChapterPublish(ch.id, !!ch.is_published)}
+                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(194,120,0,0.45)", background: "rgba(194,120,0,0.08)", color: "#8a5500", cursor: "pointer", whiteSpace: "nowrap" }}
+                        >
+                          {ch.is_published ? "Unpublish" : "Publish"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteChapter(ch.id)}
+                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(185,28,28,0.4)", background: "rgba(185,28,28,0.07)", color: "#b01c1c", cursor: "pointer" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

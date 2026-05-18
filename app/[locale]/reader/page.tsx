@@ -155,6 +155,7 @@ export default function ReaderHomePage() {
   const [series, setSeries] = useState<SeriesRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeType, setActiveType] = useState<string>("all");
+  const [isOwner, setIsOwner] = useState(false);
 
 
   useEffect(() => {
@@ -261,6 +262,11 @@ export default function ReaderHomePage() {
         console.warn("Translation lookup skipped.", e);
       }
 
+      const { data: { session: ownerSess } } = await supabase.auth.getSession();
+      if (ownerSess?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL) {
+        if (!cancelled) setIsOwner(true);
+      }
+
       if (!cancelled) {
         setBooks(translatedBooks);
         setSeries(translatedSeries);
@@ -292,6 +298,35 @@ export default function ReaderHomePage() {
 
   const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url || "";
   const getBookCover = (item: BookRow) => item.cover_url || item.cover_image_url || "";
+
+  async function handleDeleteSeries(id: string) {
+    if (!window.confirm("Delete this series and all its chapters? This cannot be undone.")) return;
+    const { error } = await supabase.rpc("delete_series_cascade", { p_series_id: id });
+    if (error) { alert("Delete failed: " + error.message); return; }
+    setSeries(prev => prev.filter(s => s.id !== id));
+  }
+
+  async function handleUnpublishSeries(id: string) {
+    if (!window.confirm("Unpublish this series? It will be hidden from readers.")) return;
+    const { error } = await supabase.from("series").update({ published: false, published_at: null }).eq("id", id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setSeries(prev => prev.filter(s => s.id !== id));
+  }
+
+  async function handleDeleteBook(id: string) {
+    if (!window.confirm("Delete this book and all its chapters? This cannot be undone.")) return;
+    await supabase.from("chapters").delete().eq("book_id", id);
+    const { error } = await supabase.from("books").delete().eq("id", id);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    setBooks(prev => prev.filter(b => b.id !== id));
+  }
+
+  async function handleUnpublishBook(id: string) {
+    if (!window.confirm("Unpublish this book? It will be hidden from readers.")) return;
+    const { error } = await supabase.from("books").update({ status: "draft" }).eq("id", id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setBooks(prev => prev.filter(b => b.id !== id));
+  }
 
   const filteredSeries = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -567,6 +602,22 @@ export default function ReaderHomePage() {
                         </div>
                       </div>
                     </Link>
+                    {isOwner && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 6, paddingLeft: 2 }}>
+                        <button
+                          onClick={() => handleUnpublishSeries(item.id)}
+                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(194,120,0,0.45)", background: "rgba(194,120,0,0.08)", color: "#8a5500", cursor: "pointer" }}
+                        >
+                          Unpublish
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSeries(item.id)}
+                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(185,28,28,0.4)", background: "rgba(185,28,28,0.07)", color: "#b01c1c", cursor: "pointer" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -699,6 +750,22 @@ export default function ReaderHomePage() {
                         </div>
                       </div>
                     </Link>
+                    {isOwner && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 6, paddingLeft: 2 }}>
+                        <button
+                          onClick={() => handleUnpublishBook(item.id)}
+                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(194,120,0,0.45)", background: "rgba(194,120,0,0.08)", color: "#8a5500", cursor: "pointer" }}
+                        >
+                          Unpublish
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBook(item.id)}
+                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(185,28,28,0.4)", background: "rgba(185,28,28,0.07)", color: "#b01c1c", cursor: "pointer" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </article>
                 );
               })}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
@@ -13,6 +13,7 @@ type BookRow = {
   created_at: string;
   cover_url: string | null;
   language: string | null;
+  status?: string | null;
 };
 
 type ChapterRow = {
@@ -23,6 +24,9 @@ type ChapterRow = {
   created_at: string;
   content: string | null;
   price?: number | null;
+  is_published?: boolean | null;
+  published_at?: string | null;
+  status?: string | null;
 };
 
 const UI_TEXT = {
@@ -120,6 +124,7 @@ type SupportedLang = keyof typeof UI_TEXT;
 
 export default function BookDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const locale = (params?.locale as string) || "en";
   const bookId = (params as Record<string, string>)?.id;
 
@@ -265,6 +270,42 @@ export default function BookDetailPage() {
     setCreating(false);
   };
 
+  async function handleDeleteBook() {
+    if (!book) return;
+    if (!window.confirm("Delete this book and all its chapters? This cannot be undone.")) return;
+    await supabase.from("chapters").delete().eq("book_id", book.id);
+    const { error } = await supabase.from("books").delete().eq("id", book.id);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    router.replace(`/${locale}/studio/books`);
+  }
+
+  async function handleTogglePublishBook() {
+    if (!book) return;
+    const isPublished = book.status === "published";
+    const newStatus = isPublished ? "draft" : "published";
+    if (!window.confirm(isPublished ? "Unpublish this book?" : "Publish this book?")) return;
+    const { error } = await supabase.from("books").update({ status: newStatus }).eq("id", book.id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setBook(prev => prev ? { ...prev, status: newStatus } : prev);
+  }
+
+  async function handleDeleteChapter(id: string) {
+    if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
+    const { error } = await supabase.from("chapters").delete().eq("id", id);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    setChapters(prev => prev.filter(c => c.id !== id));
+  }
+
+  async function handleToggleChapterPublish(id: string) {
+    const chapter = chapters.find(c => c.id === id);
+    if (!chapter) return;
+    const newVal = !chapter.is_published;
+    if (!window.confirm(newVal ? "Publish this chapter?" : "Unpublish this chapter?")) return;
+    const { error } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setChapters(prev => prev.map(c => c.id === id ? { ...c, is_published: newVal } : c));
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-slate-100">
@@ -340,14 +381,30 @@ export default function BookDetailPage() {
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setEditingMeta(true)}
-                className="mt-1 text-[11px] px-3 py-1 rounded-md border border-slate-600
-                           text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
-              >
-                {t.edit}
-              </button>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={handleTogglePublishBook}
+                  className="text-[11px] px-3 py-1 rounded-md border border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/10 transition"
+                >
+                  {book.status === "published" ? "Unpublish" : "Publish"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteBook}
+                  className="text-[11px] px-3 py-1 rounded-md border border-red-500/50 text-red-300 hover:bg-red-500/10 transition"
+                >
+                  Delete Book
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingMeta(true)}
+                  className="mt-0 text-[11px] px-3 py-1 rounded-md border border-slate-600
+                             text-slate-200 hover:border-emerald-400 hover:text-emerald-300 transition"
+                >
+                  {t.edit}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
@@ -518,6 +575,11 @@ export default function BookDetailPage() {
                               ${Number(c.price).toFixed(2)}
                             </span>
                           )}
+                          {c.is_published ? (
+                            <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-emerald-900/40 border border-emerald-500/30 text-emerald-400">Published</span>
+                          ) : (
+                            <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400">Draft</span>
+                          )}
                         </div>
                         {c.content && (
                           <p className="mt-1 text-[11px] text-slate-400 line-clamp-1">
@@ -532,12 +594,26 @@ export default function BookDetailPage() {
                           })}
                         </p>
                       </div>
-                      <Link
-                        href={`/${locale}/studio/books/${bookId}/chapters/${c.id}`}
-                        className="flex-shrink-0 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-black hover:bg-emerald-400 transition"
-                      >
-                        Edit
-                      </Link>
+                      <div className="flex flex-col gap-1.5 flex-shrink-0">
+                        <Link
+                          href={`/${locale}/studio/books/${bookId}/chapters/${c.id}`}
+                          className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-black hover:bg-emerald-400 transition text-center"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handleToggleChapterPublish(c.id)}
+                          className="rounded-full border border-yellow-500/50 px-3 py-1 text-[11px] font-medium text-yellow-300 hover:bg-yellow-500/10 transition"
+                        >
+                          {c.is_published ? "Unpublish" : "Publish"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteChapter(c.id)}
+                          className="rounded-full border border-red-500/50 px-3 py-1 text-[11px] font-medium text-red-300 hover:bg-red-500/10 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}

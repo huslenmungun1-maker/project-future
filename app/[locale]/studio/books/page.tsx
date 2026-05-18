@@ -25,25 +25,23 @@ export default function BooksListPage() {
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     async function loadBooks() {
       setStatus("loading");
       setErrorMessage(null);
 
-      // 1) Get current logged-in user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         setStatus("error");
-        setErrorMessage(
-          userError?.message || "You must be logged in to see your books."
-        );
+        setErrorMessage(userError?.message || "You must be logged in to see your books.");
         return;
       }
 
       const user = userData.user;
+      if (user.email === process.env.NEXT_PUBLIC_OWNER_EMAIL) setIsOwner(true);
 
-      // 2) Load books where creator_id = auth.uid()
       const { data, error } = await supabase
         .from("books")
         .select("id, title, description, status, created_at")
@@ -109,6 +107,24 @@ export default function BooksListPage() {
   function openBook(id: string) {
     const base = locale ? `/${locale}` : "";
     router.push(`${base}/studio/books/${id}`);
+  }
+
+  async function handleDeleteBook(id: string) {
+    if (!window.confirm("Delete this book and all its chapters? This cannot be undone.")) return;
+    await supabase.from("chapters").delete().eq("book_id", id);
+    const { error } = await supabase.from("books").delete().eq("id", id);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    setBooks(prev => prev.filter(b => b.id !== id));
+  }
+
+  async function handleTogglePublishBook(id: string, currentStatus: string | null) {
+    const isPublished = currentStatus === "published";
+    const newStatus = isPublished ? "draft" : "published";
+    const msg = isPublished ? "Unpublish this book?" : "Publish this book?";
+    if (!window.confirm(msg)) return;
+    const { error } = await supabase.from("books").update({ status: newStatus }).eq("id", id);
+    if (error) { alert("Failed: " + error.message); return; }
+    setBooks(prev => prev.map(b => b.id === id ? { ...b, status: newStatus as "draft" | "published" } : b));
   }
 
   const newBookHref = `${locale ? `/${locale}` : ""}/studio/books/create`;
@@ -180,11 +196,11 @@ export default function BooksListPage() {
 
             <ul className="divide-y divide-slate-800">
               {books.map((book) => (
-                <li key={book.id}>
+                <li key={book.id} className="flex items-stretch gap-2 px-4 py-3">
                   <button
                     type="button"
                     onClick={() => openBook(book.id)}
-                    className="flex w-full items-stretch gap-3 px-4 py-3 text-left transition hover:bg-slate-900/60"
+                    className="flex flex-1 items-stretch gap-3 text-left transition hover:opacity-80"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -201,16 +217,27 @@ export default function BooksListPage() {
                         </p>
                       )}
                     </div>
-
                     <div className="flex flex-col items-end justify-between text-right">
-                      <span className="text-xs text-slate-500">
-                        {formatDate(book.created_at)}
-                      </span>
-                      <span className="mt-2 text-[11px] font-medium text-indigo-300">
-                        Open ▸
-                      </span>
+                      <span className="text-xs text-slate-500">{formatDate(book.created_at)}</span>
+                      <span className="mt-2 text-[11px] font-medium text-indigo-300">Open ▸</span>
                     </div>
                   </button>
+                  {isOwner && (
+                    <div className="flex flex-col gap-1.5 justify-center flex-shrink-0">
+                      <button
+                        onClick={() => handleTogglePublishBook(book.id, book.status)}
+                        className="rounded px-2 py-1 text-[10px] font-medium border border-yellow-500/40 bg-yellow-500/10 text-yellow-300 hover:bg-yellow-500/20 transition"
+                      >
+                        {book.status === "published" ? "Unpublish" : "Publish"}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBook(book.id)}
+                        className="rounded px-2 py-1 text-[10px] font-medium border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

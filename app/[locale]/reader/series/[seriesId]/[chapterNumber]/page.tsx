@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -241,9 +241,15 @@ export default function ReaderSeriesChapterPage() {
 
   const [views, setViews] = useState<number>(0);
   const [chapterPages, setChapterPages] = useState<ChapterPageRow[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
-    authClient.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+    authClient.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+      if (data.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL) setIsOwner(true);
+    });
   }, [authClient]);
 
   const localeForDate = useMemo(() => {
@@ -551,6 +557,25 @@ export default function ReaderSeriesChapterPage() {
     (currentChapter.content && currentChapter.content.trim()) ||
     "";
 
+  async function handleDeleteChapter() {
+    if (!currentChapter) return;
+    const chId = currentChapter.id;
+    if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
+    const { error } = await supabase.from("chapters").delete().eq("id", chId);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    router.replace(`/${locale}/reader/series/${seriesId}`);
+  }
+
+  async function handleToggleChapterPublish() {
+    if (!currentChapter) return;
+    const chId = currentChapter.id;
+    const newVal = !currentChapter.is_published;
+    if (!window.confirm(newVal ? "Publish this chapter?" : "Unpublish this chapter?")) return;
+    const { error } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", chId);
+    if (error) { alert("Failed: " + error.message); return; }
+    setChapters(prev => prev.map(c => c.id === chId ? { ...c, is_published: newVal } : c));
+  }
+
   return (
     <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-10">
@@ -699,6 +724,22 @@ export default function ReaderSeriesChapterPage() {
           </aside>
 
           <section className="space-y-6">
+            {isOwner && (
+              <div style={{ display: "flex", gap: 8, padding: "8px 0" }}>
+                <button
+                  onClick={handleToggleChapterPublish}
+                  style={{ fontSize: 11, padding: "4px 12px", borderRadius: 8, border: "1px solid rgba(194,120,0,0.45)", background: "rgba(194,120,0,0.08)", color: "#8a5500", cursor: "pointer" }}
+                >
+                  {currentChapter.is_published ? "Unpublish Chapter" : "Publish Chapter"}
+                </button>
+                <button
+                  onClick={handleDeleteChapter}
+                  style={{ fontSize: 11, padding: "4px 12px", borderRadius: 8, border: "1px solid rgba(185,28,28,0.4)", background: "rgba(185,28,28,0.07)", color: "#b01c1c", cursor: "pointer" }}
+                >
+                  Delete Chapter
+                </button>
+              </div>
+            )}
             <header
               className="rounded-[28px] border p-6"
               style={{
