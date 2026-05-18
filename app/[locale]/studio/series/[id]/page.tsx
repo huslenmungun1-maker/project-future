@@ -8,6 +8,8 @@ import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
 /* ================= TYPES ================= */
 
+type ProjectType = "manga" | "novel" | "webtoon" | "comic" | "artbook";
+
 type SeriesRow = {
   id: string;
   user_id?: string | null;
@@ -19,6 +21,7 @@ type SeriesRow = {
   published: boolean;
   published_at: string | null;
   audience: "all" | "kids" | "adults";
+  project_type: ProjectType | null;
 };
 
 type ChapterRow = {
@@ -530,6 +533,24 @@ export default function SeriesDetailPage() {
     setSeries(data as SeriesRow);
   }
 
+  async function updateProjectType(value: ProjectType | "") {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, project_type: value || null });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ project_type: value || null })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      setSeries(prev);
+      setActionMsg(error ? error.message : t.projectNotFound);
+      return;
+    }
+    setSeries(data as SeriesRow);
+  }
+
   async function togglePublish() {
     if (!series || togglingPublish) return;
 
@@ -861,6 +882,24 @@ export default function SeriesDetailPage() {
                   <option value="all">All ages</option>
                   <option value="kids">Kids only</option>
                   <option value="adults">Adults only</option>
+                </select>
+
+                <select
+                  value={series.project_type ?? ""}
+                  onChange={(e) => updateProjectType(e.target.value as ProjectType | "")}
+                  className="rounded-full px-4 py-2 text-xs outline-none"
+                  style={{
+                    background: "rgba(255,255,255,0.7)",
+                    border: "1px solid rgba(47,47,47,0.12)",
+                    color: series.project_type ? "var(--text)" : "var(--muted)",
+                  }}
+                >
+                  <option value="">Genre…</option>
+                  <option value="manga">Manga</option>
+                  <option value="novel">Novel</option>
+                  <option value="webtoon">Webtoon</option>
+                  <option value="comic">Comic</option>
+                  <option value="artbook">Artbook</option>
                 </select>
 
                 <button
