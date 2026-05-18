@@ -399,6 +399,23 @@ export default function StudioHomePage() {
               ← {t.backHome}
             </Link>
 
+            <Link
+              href={`/${locale}/studio/editor`}
+              className="inline-flex items-center gap-1.5 justify-center rounded-full border px-4 py-2 text-xs font-medium transition"
+              style={{
+                borderColor: "rgba(94,99,87,0.22)",
+                background: "rgba(255,255,255,0.55)",
+                color: "var(--text)",
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <rect x="1" y="1" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                <circle cx="3.5" cy="3.8" r="1" fill="currentColor"/>
+                <path d="M1 7.5l2.5-2 2 2 1.5-1.5L9 8.5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+              </svg>
+              Page Editor
+            </Link>
+
             <button
               onClick={loadSeries}
               className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-medium transition"
