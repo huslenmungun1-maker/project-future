@@ -29,7 +29,7 @@ create policy "owner can read all messages"
   using (
     exists (
       select 1 from profiles
-      where (profiles.id = auth.uid() or profiles.user_id = auth.uid())
+      where profiles.user_id = auth.uid()
         and profiles.role = 'owner'
     )
   );
@@ -40,7 +40,7 @@ create policy "owner can update messages"
   using (
     exists (
       select 1 from profiles
-      where (profiles.id = auth.uid() or profiles.user_id = auth.uid())
+      where profiles.user_id = auth.uid()
         and profiles.role = 'owner'
     )
   );
