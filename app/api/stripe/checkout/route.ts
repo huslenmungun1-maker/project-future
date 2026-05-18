@@ -53,11 +53,18 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency: "usd",
             unit_amount: Math.round(price * 100),
-            product_data: { name: chapterLabel },
+            product_data: {
+              name: `Enkhverse — ${chapterLabel}`,
+              description: "Enkhverse · Single chapter unlock",
+            },
           },
           quantity: 1,
         },
       ],
+      payment_intent_data: {
+        statement_descriptor: "ENKHVERSE",
+        description: `Enkhverse — ${chapterLabel}`,
+      },
       metadata: {
         chapter_id: chapterId,
         user_id: user.id,

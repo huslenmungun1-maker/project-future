@@ -209,7 +209,7 @@ export default function ChapterEditorPage() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px" }}>
 
         {/* Breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28, fontSize: 12, color: MUTED }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 28, fontSize: 12, color: MUTED }}>
           <Link href={`/${locale}/studio`} style={{ color: MUTED, textDecoration: "none" }}>
             Studio
           </Link>
@@ -252,7 +252,7 @@ export default function ChapterEditorPage() {
         </div>
 
         {/* Two-column layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 280px", gap: 20, alignItems: "start" }}>
+        <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,1fr)_280px]">
 
           {/* Editor column */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

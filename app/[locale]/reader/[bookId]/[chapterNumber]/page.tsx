@@ -480,7 +480,7 @@ export default function ReaderChapterPage() {
       <main className="min-h-screen theme-soft">
         <div className="mx-auto max-w-6xl px-6 py-10">
           <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <aside className="space-y-4">
+            <aside className="order-last space-y-4 lg:order-first">
               <div className="skeleton rounded-[28px]" style={{ aspectRatio: "2/3" }} />
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -541,7 +541,7 @@ export default function ReaderChapterPage() {
     <main className="min-h-screen theme-soft">
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="space-y-5">
+          <aside className="order-last space-y-5 lg:order-first">
             <div
               className="rounded-[28px] border p-4"
               style={{

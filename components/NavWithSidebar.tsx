@@ -208,7 +208,7 @@ export default function NavWithSidebar({ locale }: { locale: string }) {
               {session && (
                 <Link
                   href={`/${l}/wallet`}
-                  className="rounded-full border border-stone-300 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
+                  className="hidden sm:inline-flex rounded-full border border-stone-300 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-700 transition hover:border-stone-500 hover:text-stone-900"
                 >
                   {t.wallet}
                 </Link>

@@ -382,7 +382,7 @@ export default function CreatorApplyPage() {
         <StepIndicator current={step} total={TOTAL_STEPS} labels={STEP_LABELS} />
 
         {/* Layout: form + sidebar */}
-        <div style={{ display: "grid", gridTemplateColumns: step > 1 ? "1fr 220px" : "1fr", gap: 12, marginTop: 24 }}>
+        <div className={`grid gap-3 mt-6${step > 1 ? " md:grid-cols-[minmax(0,1fr)_220px]" : ""}`}>
 
           {/* Form card */}
           <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "24px 20px" }}>
