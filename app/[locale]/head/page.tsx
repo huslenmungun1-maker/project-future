@@ -33,6 +33,18 @@ type KidsSubmission = {
   created_at: string;
 };
 
+type MessageRow = {
+  id: string;
+  sender_id: string;
+  sender_name: string;
+  message_type: string;
+  subject: string;
+  body: string;
+  status: string;
+  content_ref: string | null;
+  created_at: string;
+};
+
 type Application = {
   id: string;
   user_id: string;
@@ -74,6 +86,9 @@ export default function HeadPage() {
   const [kidsTab, setKidsTab] = useState(false);
   const [kidsContent, setKidsContent] = useState<KidsSubmission[]>([]);
   const [kidsLoading, setKidsLoading] = useState(false);
+  const [messagesTab, setMessagesTab] = useState(false);
+  const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -178,6 +193,22 @@ export default function HeadPage() {
     showToast("Submission rejected.", true);
   }
 
+  async function loadMessages() {
+    setMessagesLoading(true);
+    const { data } = await supabase
+      .from("owner_messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setMessages((data as MessageRow[]) ?? []);
+    setMessagesLoading(false);
+  }
+
+  async function updateMessageStatus(id: string, newStatus: string) {
+    await supabase.from("owner_messages").update({ status: newStatus }).eq("id", id);
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
+  }
+
   const visible = apps.filter((a) => filter === "all" || a.status === filter);
   const counts = {
     all:      apps.length,
@@ -222,7 +253,7 @@ export default function HeadPage() {
               Admin
             </p>
             <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: TEXT }}>
-              {kidsTab ? "Kids Content Review" : earningsTab ? "Platform Earnings" : "Creator Applications"}
+              {messagesTab ? "Messages" : kidsTab ? "Kids Content Review" : earningsTab ? "Platform Earnings" : "Creator Applications"}
             </h1>
           </div>
           <Link
@@ -250,15 +281,21 @@ export default function HeadPage() {
             { key: "apps",     label: "Applications" },
             { key: "earnings", label: "Earnings" },
             { key: "kids",     label: "Kids" },
+            { key: "messages", label: "Messages" },
           ].map(({ key, label }) => {
-            const active = key === "kids" ? kidsTab : key === "earnings" ? (earningsTab && !kidsTab) : (!earningsTab && !kidsTab);
+            const active =
+              key === "messages" ? messagesTab :
+              key === "kids" ? (kidsTab && !messagesTab) :
+              key === "earnings" ? (earningsTab && !kidsTab && !messagesTab) :
+              (!earningsTab && !kidsTab && !messagesTab);
             return (
               <button
                 key={key}
                 onClick={() => {
-                  if (key === "kids") { setKidsTab(true); setEarningsTab(false); loadKidsContent(); }
-                  else if (key === "earnings") { setEarningsTab(true); setKidsTab(false); }
-                  else { setEarningsTab(false); setKidsTab(false); }
+                  if (key === "messages") { setMessagesTab(true); setKidsTab(false); setEarningsTab(false); loadMessages(); }
+                  else if (key === "kids") { setKidsTab(true); setEarningsTab(false); setMessagesTab(false); loadKidsContent(); }
+                  else if (key === "earnings") { setEarningsTab(true); setKidsTab(false); setMessagesTab(false); }
+                  else { setEarningsTab(false); setKidsTab(false); setMessagesTab(false); }
                 }}
                 style={{
                   padding: "6px 18px",
@@ -278,7 +315,91 @@ export default function HeadPage() {
           })}
         </div>
 
-        {kidsTab ? (
+        {messagesTab ? (
+          /* ── Messages panel ── */
+          messagesLoading ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.4, margin: "0 auto" }} />
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {messages.length === 0 ? (
+                <div style={{ padding: "48px 24px", textAlign: "center", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16 }}>
+                  <p style={{ fontSize: 13, color: MUTED }}>No messages from creators yet.</p>
+                </div>
+              ) : messages.map(msg => {
+                const typeColors: Record<string, string> = {
+                  general: MUTED,
+                  delete_request: "#c85252",
+                  edit_request: "#6ea880",
+                  question: "#c8a840",
+                };
+                const typeColor = typeColors[msg.message_type] ?? MUTED;
+                const isUnread = msg.status === "unread";
+                return (
+                  <div
+                    key={msg.id}
+                    style={{
+                      background: isUnread ? "rgba(255,255,255,0.03)" : SURFACE,
+                      border: `1px solid ${isUnread ? "rgba(255,255,255,0.12)" : BORDER}`,
+                      borderRadius: 14,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: typeColor, background: `${typeColor}18`, borderRadius: 999, padding: "3px 10px", textTransform: "capitalize" }}>
+                            {msg.message_type.replace("_", " ")}
+                          </span>
+                          {isUnread && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#6ea880", background: "rgba(110,168,128,0.12)", borderRadius: 999, padding: "2px 8px" }}>
+                              New
+                            </span>
+                          )}
+                          {msg.status === "resolved" && (
+                            <span style={{ fontSize: 10, color: MUTED, background: "rgba(255,255,255,0.04)", borderRadius: 999, padding: "2px 8px" }}>
+                              Resolved
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: TEXT }}>{msg.subject || "(no subject)"}</div>
+                        <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                          From: {msg.sender_name || msg.sender_id.slice(0, 8)} · {new Date(msg.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                        </div>
+                        {msg.content_ref && (
+                          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Ref: {msg.content_ref}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, color: "#a0a0ac", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{msg.body}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {msg.status !== "read" && msg.status !== "resolved" && (
+                        <button
+                          onClick={() => updateMessageStatus(msg.id, "read")}
+                          style={{ fontSize: 11, padding: "4px 12px", borderRadius: 999, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, cursor: "pointer" }}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                      {msg.status !== "resolved" && (
+                        <button
+                          onClick={() => updateMessageStatus(msg.id, "resolved")}
+                          style={{ fontSize: 11, padding: "4px 12px", borderRadius: 999, border: "1px solid rgba(110,168,128,0.3)", background: "rgba(110,168,128,0.08)", color: "#6ea880", cursor: "pointer" }}
+                        >
+                          Mark resolved
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : kidsTab ? (
           /* ── Kids content panel ── */
           kidsLoading ? (
             <div style={{ padding: "40px 0", textAlign: "center" }}>

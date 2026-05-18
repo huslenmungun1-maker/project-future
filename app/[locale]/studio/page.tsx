@@ -129,6 +129,16 @@ export default function StudioHomePage() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  const [showContact, setShowContact] = useState(false);
+  const [contactType, setContactType] = useState("general");
+  const [contactSubject, setContactSubject] = useState("");
+  const [contactBody, setContactBody] = useState("");
+  const [contactSending, setContactSending] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [seriesList, setSeriesList] = useState<SeriesRow[]>([]);
@@ -231,6 +241,29 @@ export default function StudioHomePage() {
     [supabase, t.confirmDelete]
   );
 
+  async function handleContactSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!contactBody.trim()) return;
+    setContactSending(true);
+    setContactError(null);
+    const { error } = await supabase
+      .from("owner_messages")
+      .insert({
+        sender_id: ownerUserId,
+        sender_name: userEmail,
+        message_type: contactType,
+        subject: contactSubject.trim() || "(no subject)",
+        body: contactBody.trim(),
+      });
+    setContactSending(false);
+    if (error) { setContactError(error.message); return; }
+    setContactSent(true);
+    setContactSubject("");
+    setContactBody("");
+    setContactType("general");
+    setTimeout(() => { setContactSent(false); setShowContact(false); }, 3000);
+  }
+
   useEffect(() => {
     let alive = true;
 
@@ -276,6 +309,8 @@ export default function StudioHomePage() {
       }
 
       setOwnerUserId(user.id);
+      setIsOwner(user.email === process.env.NEXT_PUBLIC_OWNER_EMAIL);
+      setUserEmail(user.email || "");
       setAllowed(true);
       setCheckingAccess(false);
     }
@@ -587,6 +622,109 @@ export default function StudioHomePage() {
                 </Link>
               </article>
             ))}
+          </div>
+        )}
+
+        {/* Contact owner — visible to creators only */}
+        {!isOwner && (
+          <div
+            className="rounded-[24px] border p-6"
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(233,230,223,0.72)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                  Contact the owner
+                </h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                  Request a deletion, ask a question, or send a note.
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowContact(v => !v); setContactSent(false); setContactError(null); }}
+                className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-medium transition"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "rgba(255,255,255,0.55)",
+                  color: "var(--text)",
+                }}
+              >
+                {showContact ? "Cancel" : "Send message"}
+              </button>
+            </div>
+
+            {showContact && (
+              <form onSubmit={handleContactSubmit} className="mt-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                      Type
+                    </label>
+                    <select
+                      value={contactType}
+                      onChange={e => setContactType(e.target.value)}
+                      className="rounded-xl border px-3 py-2 text-sm outline-none"
+                      style={{ background: "rgba(255,255,255,0.7)", borderColor: "var(--border)", color: "var(--text)" }}
+                    >
+                      <option value="general">General</option>
+                      <option value="delete_request">Delete request</option>
+                      <option value="edit_request">Edit request</option>
+                      <option value="question">Question</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={contactSubject}
+                      onChange={e => setContactSubject(e.target.value)}
+                      placeholder="Brief subject…"
+                      className="rounded-xl border px-3 py-2 text-sm outline-none"
+                      style={{ background: "rgba(255,255,255,0.7)", borderColor: "var(--border)", color: "var(--text)" }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                    Message
+                  </label>
+                  <textarea
+                    value={contactBody}
+                    onChange={e => setContactBody(e.target.value)}
+                    required
+                    rows={4}
+                    placeholder="Describe your request…"
+                    className="rounded-xl border px-3 py-2 text-sm outline-none resize-none"
+                    style={{ background: "rgba(255,255,255,0.7)", borderColor: "var(--border)", color: "var(--text)" }}
+                  />
+                </div>
+                {contactError && (
+                  <p className="text-xs" style={{ color: "var(--danger)" }}>{contactError}</p>
+                )}
+                {contactSent && (
+                  <p className="text-xs font-medium" style={{ color: "#6ea880" }}>Message sent! The owner will review it shortly.</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={contactSending || !contactBody.trim()}
+                  className="inline-flex items-center justify-center rounded-full border px-5 py-2 text-sm font-semibold transition"
+                  style={{
+                    borderColor: "rgba(94,99,87,0.28)",
+                    background: "rgba(94,99,87,0.14)",
+                    color: "var(--text)",
+                    opacity: contactSending || !contactBody.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {contactSending ? "Sending…" : "Send"}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>
