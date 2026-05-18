@@ -48,6 +48,7 @@ type MessageRow = {
 type Application = {
   id: string;
   user_id: string;
+  applicant_email: string | null;
   display_name: string;
   bio: string;
   content_types: string[];
@@ -155,7 +156,7 @@ export default function HeadPage() {
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ role: "creator" })
-        .eq("id", app.user_id);
+        .eq("user_id", app.user_id);
 
       if (profileError) {
         showToast("Approved, but failed to update profile: " + profileError.message, false);
@@ -631,9 +632,16 @@ export default function HeadPage() {
                       >
                         {cfg.label}
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {app.display_name}
-                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                          {app.display_name}
+                        </span>
+                        {app.applicant_email && (
+                          <span style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                            {app.applicant_email}
+                          </span>
+                        )}
+                      </div>
                       {app.content_types?.length > 0 && (
                         <span style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "none" }}
                           className="sm:block"
@@ -664,6 +672,13 @@ export default function HeadPage() {
                         background: SURFACE2,
                       }}
                     >
+                      {app.applicant_email && (
+                        <DetailRow label="Email">
+                          <a href={`mailto:${app.applicant_email}`} style={{ color: ACCENT, textDecoration: "none", fontSize: 12 }}>
+                            {app.applicant_email}
+                          </a>
+                        </DetailRow>
+                      )}
                       <DetailRow label="Bio">{app.bio}</DetailRow>
                       <DetailRow label="Content types">
                         {app.content_types?.join(", ") || "—"}

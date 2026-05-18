@@ -88,6 +88,7 @@ export default function CreatorApplyPage() {
 
   const [initialized, setInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState("");
   const [existing, setExisting] = useState<ExistingApplication | null>(null);
 
   const [step, setStep] = useState(1);
@@ -107,6 +108,7 @@ export default function CreatorApplyPage() {
       }
       const uid = session.user.id;
       setUserId(uid);
+      setUserEmail(session.user.email ?? "");
 
       const { data } = await supabase
         .from("creator_applications")
@@ -183,6 +185,7 @@ export default function CreatorApplyPage() {
 
     const { error } = await supabase.from("creator_applications").insert({
       user_id: userId,
+      applicant_email: userEmail,
       display_name: form.display_name.trim(),
       bio: form.bio.trim(),
       content_types: form.content_types,
