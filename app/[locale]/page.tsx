@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabaseServer";
+import HomeSearch from "@/components/HomeSearch";
 
 type Params = { locale: string };
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
@@ -187,6 +188,7 @@ export default async function LocaleHomePage({
                 {t.createButton}
               </Link>
             </div>
+            <HomeSearch />
           </div>
         </section>
 

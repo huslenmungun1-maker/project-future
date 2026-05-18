@@ -5,10 +5,73 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
+import StudioSelect from "@/components/studio/StudioSelect";
 
 /* ================= TYPES ================= */
 
 type ProjectType = "manga" | "novel" | "webtoon" | "comic" | "artbook";
+
+const GENRE_OPTIONS = [
+  { value: "", label: "Genre…" },
+  { value: "Action", label: "Action" },
+  { value: "Adventure", label: "Adventure" },
+  { value: "Comedy", label: "Comedy" },
+  { value: "Drama", label: "Drama" },
+  { value: "Romance", label: "Romance" },
+  { value: "Fantasy", label: "Fantasy" },
+  { value: "Science Fiction", label: "Science Fiction" },
+  { value: "Horror", label: "Horror" },
+  { value: "Mystery", label: "Mystery" },
+  { value: "Thriller", label: "Thriller" },
+  { value: "Slice of Life", label: "Slice of Life" },
+  { value: "Supernatural", label: "Supernatural" },
+  { value: "Historical", label: "Historical" },
+  { value: "Sports", label: "Sports" },
+  { value: "Martial Arts", label: "Martial Arts" },
+  { value: "Psychological", label: "Psychological" },
+  { value: "Tragedy", label: "Tragedy" },
+  { value: "Isekai", label: "Isekai" },
+  { value: "Mecha", label: "Mecha" },
+  { value: "School Life", label: "School Life" },
+  { value: "Cooking", label: "Cooking" },
+  { value: "Music", label: "Music" },
+  { value: "Medical", label: "Medical" },
+  { value: "Legal", label: "Legal" },
+  { value: "War", label: "War" },
+  { value: "Survival", label: "Survival" },
+  { value: "Post-Apocalyptic", label: "Post-Apocalyptic" },
+  { value: "Cyberpunk", label: "Cyberpunk" },
+  { value: "Steampunk", label: "Steampunk" },
+  { value: "Western", label: "Western" },
+  { value: "Mythology", label: "Mythology" },
+  { value: "Folklore", label: "Folklore" },
+  { value: "Political", label: "Political" },
+  { value: "Business", label: "Business" },
+  { value: "Coming of Age", label: "Coming of Age" },
+  { value: "Other", label: "Other" },
+];
+
+const FORMAT_OPTIONS = [
+  { value: "", label: "Format…" },
+  { value: "manga", label: "Manga" },
+  { value: "novel", label: "Novel" },
+  { value: "webtoon", label: "Webtoon" },
+  { value: "comic", label: "Comic" },
+  { value: "artbook", label: "Artbook" },
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "mn", label: "Монгол" },
+  { value: "ko", label: "한국어" },
+  { value: "ja", label: "日本語" },
+];
+
+const AUDIENCE_OPTIONS = [
+  { value: "all", label: "All Ages" },
+  { value: "kids", label: "Teen" },
+  { value: "adults", label: "Adult" },
+];
 
 type SeriesRow = {
   id: string;
@@ -22,6 +85,7 @@ type SeriesRow = {
   published_at: string | null;
   audience: "all" | "kids" | "adults";
   project_type: ProjectType | null;
+  genre: string | null;
 };
 
 type ChapterRow = {
@@ -551,6 +615,24 @@ export default function SeriesDetailPage() {
     setSeries(data as SeriesRow);
   }
 
+  async function updateGenre(value: string) {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, genre: value || null });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ genre: value || null })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      setSeries(prev);
+      setActionMsg(error ? error.message : t.projectNotFound);
+      return;
+    }
+    setSeries(data as SeriesRow);
+  }
+
   async function togglePublish() {
     if (!series || togglingPublish) return;
 
@@ -853,54 +935,35 @@ export default function SeriesDetailPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <select
+                <StudioSelect
                   value={currentLang}
-                  onChange={(e) => updateLanguage(e.target.value as Lang)}
-                  className="rounded-full px-4 py-2 text-xs outline-none"
-                  style={{
-                    background: "rgba(255,255,255,0.7)",
-                    border: "1px solid rgba(47,47,47,0.12)",
-                    color: "var(--text)",
-                  }}
-                >
-                  <option value="en">English</option>
-                  <option value="mn">Монгол</option>
-                  <option value="ko">한국어</option>
-                  <option value="ja">日本語</option>
-                </select>
+                  onChange={(v) => updateLanguage(v as Lang)}
+                  options={LANGUAGE_OPTIONS}
+                  minWidth={100}
+                />
 
-                <select
+                <StudioSelect
                   value={series.audience ?? "all"}
-                  onChange={(e) => updateAudience(e.target.value as "all" | "kids" | "adults")}
-                  className="rounded-full px-4 py-2 text-xs outline-none"
-                  style={{
-                    background: "rgba(255,255,255,0.7)",
-                    border: "1px solid rgba(47,47,47,0.12)",
-                    color: "var(--text)",
-                  }}
-                >
-                  <option value="all">All ages</option>
-                  <option value="kids">Kids only</option>
-                  <option value="adults">Adults only</option>
-                </select>
+                  onChange={(v) => updateAudience(v as "all" | "kids" | "adults")}
+                  options={AUDIENCE_OPTIONS}
+                  minWidth={100}
+                />
 
-                <select
+                <StudioSelect
                   value={series.project_type ?? ""}
-                  onChange={(e) => updateProjectType(e.target.value as ProjectType | "")}
-                  className="rounded-full px-4 py-2 text-xs outline-none"
-                  style={{
-                    background: "rgba(255,255,255,0.7)",
-                    border: "1px solid rgba(47,47,47,0.12)",
-                    color: series.project_type ? "var(--text)" : "var(--muted)",
-                  }}
-                >
-                  <option value="">Genre…</option>
-                  <option value="manga">Manga</option>
-                  <option value="novel">Novel</option>
-                  <option value="webtoon">Webtoon</option>
-                  <option value="comic">Comic</option>
-                  <option value="artbook">Artbook</option>
-                </select>
+                  onChange={(v) => updateProjectType(v as ProjectType | "")}
+                  options={FORMAT_OPTIONS}
+                  placeholder="Format…"
+                  minWidth={100}
+                />
+
+                <StudioSelect
+                  value={series.genre ?? ""}
+                  onChange={updateGenre}
+                  options={GENRE_OPTIONS}
+                  placeholder="Genre…"
+                  minWidth={140}
+                />
 
                 <button
                   type="button"

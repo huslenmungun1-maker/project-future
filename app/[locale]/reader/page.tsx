@@ -34,6 +34,7 @@ type SeriesRow = {
   published_at?: string | null;
   views?: number | null;
   project_type?: string | null;
+  genre?: string | null;
 };
 
 type TranslationRow = {
@@ -144,8 +145,17 @@ export default function ReaderHomePage() {
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [activeType, setActiveType] = useState<string>("all");
   const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q");
+      if (q) setSearchQuery(q);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +173,7 @@ export default function ReaderHomePage() {
 
         supabase
           .from("series")
-          .select("id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views, project_type")
+          .select("id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views, project_type, genre")
           .or("published.eq.true,published_at.not.is.null")
           .order("views", { ascending: false })
           .order("published_at", { ascending: false })
@@ -292,7 +302,10 @@ export default function ReaderHomePage() {
   const filteredSeries = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return series.filter(s => {
-      const matchesSearch = !q || s.title?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q);
+      const matchesSearch = !q ||
+        s.title?.toLowerCase().includes(q) ||
+        s.genre?.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q);
       const matchesType = activeType === "all" || s.project_type === activeType;
       return matchesSearch && matchesType;
     });
@@ -354,19 +367,71 @@ export default function ReaderHomePage() {
 
         {/* Search + filters */}
         <div className="mb-8 space-y-3">
-          <input
-            type="search"
-            placeholder="Search by title…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-2xl px-5 py-3 text-sm outline-none"
+          <div
             style={{
-              background: "rgba(255,255,255,0.72)",
-              border: "1px solid rgba(47,47,47,0.12)",
-              color: "var(--text)",
-              boxShadow: "var(--shadow-soft)",
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: 9999,
+              background: searchFocused ? "rgba(255,255,255,0.96)" : "rgba(255,255,255,0.80)",
+              border: `1.5px solid ${searchFocused ? "rgba(94,99,87,0.32)" : "rgba(94,99,87,0.14)"}`,
+              boxShadow: searchFocused
+                ? "0 0 0 4.5px rgba(94,99,87,0.09), 0 4px 28px rgba(0,0,0,0.10)"
+                : "0 2px 10px rgba(0,0,0,0.055)",
+              transition: "border-color 220ms ease, box-shadow 220ms ease, background 220ms ease",
             }}
-          />
+          >
+            <svg
+              width="15" height="15" viewBox="0 0 15 15" fill="none"
+              style={{ position: "absolute", left: 18, flexShrink: 0, pointerEvents: "none", opacity: searchFocused ? 0.6 : 0.35, transition: "opacity 220ms ease" }}
+            >
+              <circle cx="6.3" cy="6.3" r="4.8" stroke="var(--accent)" strokeWidth="1.6" />
+              <path d="M10 10L13 13" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search titles, genres, series…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              style={{
+                width: "100%",
+                padding: "13px 44px 13px 44px",
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                fontSize: 14,
+                color: "var(--text)",
+                fontWeight: 400,
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "rgba(94,99,87,0.12)",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                  fontSize: 12,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {(["all", "novel", "manga", "webtoon", "comic", "artbook"] as const).map(type => (
               <button
