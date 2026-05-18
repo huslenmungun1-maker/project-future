@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useMemo, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
 type Props = {
   /** if you pass bookId => updates public.books */
@@ -19,6 +19,10 @@ export default function CoverImageUploader({
   initialUrl,
   bucket = "covers",
 }: Props) {
+  const authClient = useMemo(
+    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    []
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(initialUrl);
@@ -44,7 +48,7 @@ export default function CoverImageUploader({
       const ext = file.name.split(".").pop() || "png";
       const path = `${target.prefix}/${target.id}/cover.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await authClient.storage
         .from(bucket)
         .upload(path, file, {
           upsert: true,
@@ -54,11 +58,11 @@ export default function CoverImageUploader({
 
       if (uploadError) throw uploadError;
 
-      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      const { data: pub } = authClient.storage.from(bucket).getPublicUrl(path);
       const publicUrl = pub?.publicUrl ?? null;
       if (!publicUrl) throw new Error("Could not get public URL");
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await authClient
         .from(target.table)
         .update({ [target.column]: publicUrl })
         .eq("id", target.id);
