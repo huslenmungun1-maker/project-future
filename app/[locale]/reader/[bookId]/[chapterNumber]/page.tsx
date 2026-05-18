@@ -544,7 +544,7 @@ export default function ReaderChapterPage() {
   async function handleDeleteChapter() {
     if (!currentChapter) return;
     if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
-    const { error: delErr } = await supabase.from("chapters").delete().eq("id", currentChapter.id);
+    const { error: delErr } = await authClient.from("chapters").delete().eq("id", currentChapter.id);
     if (delErr) { alert("Delete failed: " + delErr.message); return; }
     router.replace(`/${locale}/reader/${bookId}`);
   }
@@ -553,7 +553,7 @@ export default function ReaderChapterPage() {
     if (!currentChapter) return;
     const newVal = !currentChapter.is_published;
     if (!window.confirm(newVal ? "Publish this chapter?" : "Unpublish this chapter?")) return;
-    const { error: updErr } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", currentChapter.id);
+    const { error: updErr } = await authClient.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", currentChapter.id);
     if (updErr) { alert("Failed: " + updErr.message); return; }
     setDisplayChapters(prev => prev.map(c => c.id === currentChapter.id ? { ...c, is_published: newVal } : c));
   }

@@ -561,7 +561,7 @@ export default function ReaderSeriesChapterPage() {
     if (!currentChapter) return;
     const chId = currentChapter.id;
     if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
-    const { error } = await supabase.from("chapters").delete().eq("id", chId);
+    const { error } = await authClient.from("chapters").delete().eq("id", chId);
     if (error) { alert("Delete failed: " + error.message); return; }
     router.replace(`/${locale}/reader/series/${seriesId}`);
   }
@@ -571,7 +571,7 @@ export default function ReaderSeriesChapterPage() {
     const chId = currentChapter.id;
     const newVal = !currentChapter.is_published;
     if (!window.confirm(newVal ? "Publish this chapter?" : "Unpublish this chapter?")) return;
-    const { error } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", chId);
+    const { error } = await authClient.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", chId);
     if (error) { alert("Failed: " + error.message); return; }
     setChapters(prev => prev.map(c => c.id === chId ? { ...c, is_published: newVal } : c));
   }

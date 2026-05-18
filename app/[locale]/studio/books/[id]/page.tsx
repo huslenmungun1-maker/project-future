@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import { supabase } from "@/lib/supabaseClient";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
@@ -127,6 +128,11 @@ export default function BookDetailPage() {
   const router = useRouter();
   const locale = (params?.locale as string) || "en";
   const bookId = (params as Record<string, string>)?.id;
+
+  const authClient = useMemo(
+    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    []
+  );
 
   const [book, setBook] = useState<BookRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
@@ -273,8 +279,9 @@ export default function BookDetailPage() {
   async function handleDeleteBook() {
     if (!book) return;
     if (!window.confirm("Delete this book and all its chapters? This cannot be undone.")) return;
-    await supabase.from("chapters").delete().eq("book_id", book.id);
-    const { error } = await supabase.from("books").delete().eq("id", book.id);
+    await authClient.from("book_chapters").delete().eq("book_id", book.id);
+    await authClient.from("chapters").delete().eq("book_id", book.id);
+    const { error } = await authClient.from("books").delete().eq("id", book.id);
     if (error) { alert("Delete failed: " + error.message); return; }
     router.replace(`/${locale}/studio/books`);
   }
@@ -284,14 +291,14 @@ export default function BookDetailPage() {
     const isPublished = book.status === "published";
     const newStatus = isPublished ? "draft" : "published";
     if (!window.confirm(isPublished ? "Unpublish this book?" : "Publish this book?")) return;
-    const { error } = await supabase.from("books").update({ status: newStatus }).eq("id", book.id);
+    const { error } = await authClient.from("books").update({ status: newStatus }).eq("id", book.id);
     if (error) { alert("Failed: " + error.message); return; }
     setBook(prev => prev ? { ...prev, status: newStatus } : prev);
   }
 
   async function handleDeleteChapter(id: string) {
     if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
-    const { error } = await supabase.from("chapters").delete().eq("id", id);
+    const { error } = await authClient.from("chapters").delete().eq("id", id);
     if (error) { alert("Delete failed: " + error.message); return; }
     setChapters(prev => prev.filter(c => c.id !== id));
   }
@@ -301,7 +308,7 @@ export default function BookDetailPage() {
     if (!chapter) return;
     const newVal = !chapter.is_published;
     if (!window.confirm(newVal ? "Publish this chapter?" : "Unpublish this chapter?")) return;
-    const { error } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", id);
+    const { error } = await authClient.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", id);
     if (error) { alert("Failed: " + error.message); return; }
     setChapters(prev => prev.map(c => c.id === id ? { ...c, is_published: newVal } : c));
   }

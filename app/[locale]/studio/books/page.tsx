@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import { supabase } from "@/lib/supabaseClient";
 
 type LoadStatus = "loading" | "ok" | "error";
@@ -21,6 +22,11 @@ export default function BooksListPage() {
 
   // If you don't use locale segments, this will just default to "en"
   const locale = (params?.locale as string) || "en";
+
+  const authClient = useMemo(
+    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    []
+  );
 
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
@@ -111,8 +117,9 @@ export default function BooksListPage() {
 
   async function handleDeleteBook(id: string) {
     if (!window.confirm("Delete this book and all its chapters? This cannot be undone.")) return;
-    await supabase.from("chapters").delete().eq("book_id", id);
-    const { error } = await supabase.from("books").delete().eq("id", id);
+    await authClient.from("book_chapters").delete().eq("book_id", id);
+    await authClient.from("chapters").delete().eq("book_id", id);
+    const { error } = await authClient.from("books").delete().eq("id", id);
     if (error) { alert("Delete failed: " + error.message); return; }
     setBooks(prev => prev.filter(b => b.id !== id));
   }
@@ -122,7 +129,7 @@ export default function BooksListPage() {
     const newStatus = isPublished ? "draft" : "published";
     const msg = isPublished ? "Unpublish this book?" : "Publish this book?";
     if (!window.confirm(msg)) return;
-    const { error } = await supabase.from("books").update({ status: newStatus }).eq("id", id);
+    const { error } = await authClient.from("books").update({ status: newStatus }).eq("id", id);
     if (error) { alert("Failed: " + error.message); return; }
     setBooks(prev => prev.map(b => b.id === id ? { ...b, status: newStatus as "draft" | "published" } : b));
   }

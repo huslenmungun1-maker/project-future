@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import { supabase } from "@/lib/supabaseClient";
 import { safeLocale } from "@/lib/i18n";
 
@@ -150,6 +151,12 @@ export default function ReaderHomePage() {
   const locale = safeLocale(params?.locale) as SupportedLocale;
   const t = UI_TEXT[locale];
 
+  // Cookie-aware client — required for authenticated mutations (delete, update)
+  const authClient = useMemo(
+    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    []
+  );
+
   const [status, setStatus] = useState<Status>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
@@ -262,7 +269,7 @@ export default function ReaderHomePage() {
         console.warn("Translation lookup skipped.", e);
       }
 
-      const { data: { session: ownerSess } } = await supabase.auth.getSession();
+      const { data: { session: ownerSess } } = await authClient.auth.getSession();
       if (ownerSess?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL) {
         if (!cancelled) setIsOwner(true);
       }
@@ -301,29 +308,30 @@ export default function ReaderHomePage() {
 
   async function handleDeleteSeries(id: string) {
     if (!window.confirm("Delete this series and all its chapters? This cannot be undone.")) return;
-    const { error } = await supabase.rpc("delete_series_cascade", { p_series_id: id });
+    const { error } = await authClient.rpc("delete_series_cascade", { p_series_id: id });
     if (error) { alert("Delete failed: " + error.message); return; }
     setSeries(prev => prev.filter(s => s.id !== id));
   }
 
   async function handleUnpublishSeries(id: string) {
     if (!window.confirm("Unpublish this series? It will be hidden from readers.")) return;
-    const { error } = await supabase.from("series").update({ published: false, published_at: null }).eq("id", id);
+    const { error } = await authClient.from("series").update({ published: false, published_at: null }).eq("id", id);
     if (error) { alert("Failed: " + error.message); return; }
     setSeries(prev => prev.filter(s => s.id !== id));
   }
 
   async function handleDeleteBook(id: string) {
     if (!window.confirm("Delete this book and all its chapters? This cannot be undone.")) return;
-    await supabase.from("chapters").delete().eq("book_id", id);
-    const { error } = await supabase.from("books").delete().eq("id", id);
+    await authClient.from("book_chapters").delete().eq("book_id", id);
+    await authClient.from("chapters").delete().eq("book_id", id);
+    const { error } = await authClient.from("books").delete().eq("id", id);
     if (error) { alert("Delete failed: " + error.message); return; }
     setBooks(prev => prev.filter(b => b.id !== id));
   }
 
   async function handleUnpublishBook(id: string) {
     if (!window.confirm("Unpublish this book? It will be hidden from readers.")) return;
-    const { error } = await supabase.from("books").update({ status: "draft" }).eq("id", id);
+    const { error } = await authClient.from("books").update({ status: "draft" }).eq("id", id);
     if (error) { alert("Failed: " + error.message); return; }
     setBooks(prev => prev.filter(b => b.id !== id));
   }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import { supabase } from "@/lib/supabaseClient";
 
 type SeriesRow = {
@@ -54,6 +55,11 @@ export default function SeriesDetailPage() {
   const t = UI[locale];
   const router = useRouter();
 
+  const authClient = useMemo(
+    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    []
+  );
+
   const [series, setSeries] = useState<SeriesRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [creator, setCreator] = useState<ProfileRow | null>(null);
@@ -67,7 +73,7 @@ export default function SeriesDetailPage() {
     async function load() {
       if (!seriesId) { if (alive) setStatus("error"); return; }
 
-      const { data: { session: authSess } } = await supabase.auth.getSession();
+      const { data: { session: authSess } } = await authClient.auth.getSession();
       const ownerLocal = authSess?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL;
       if (alive) setIsOwner(ownerLocal);
 
@@ -104,7 +110,7 @@ export default function SeriesDetailPage() {
         if (alive) setFollowerCount(count ?? 0);
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await authClient.auth.getSession();
       if (alive && session?.user) {
         const { data: prog } = await supabase
           .from("read_progress")
@@ -134,7 +140,7 @@ export default function SeriesDetailPage() {
   async function handleDeleteSeries() {
     if (!series) return;
     if (!window.confirm("Delete this series and all its chapters? This cannot be undone.")) return;
-    const { error } = await supabase.rpc("delete_series_cascade", { p_series_id: series.id });
+    const { error } = await authClient.rpc("delete_series_cascade", { p_series_id: series.id });
     if (error) { alert("Delete failed: " + error.message); return; }
     router.replace(`/${locale}/reader`);
   }
@@ -144,14 +150,14 @@ export default function SeriesDetailPage() {
     const newPublished = !series.published;
     const msg = newPublished ? "Publish this series?" : "Unpublish this series? Readers won't see it anymore.";
     if (!window.confirm(msg)) return;
-    const { error } = await supabase.from("series").update({ published: newPublished, published_at: newPublished ? new Date().toISOString() : null }).eq("id", series.id);
+    const { error } = await authClient.from("series").update({ published: newPublished, published_at: newPublished ? new Date().toISOString() : null }).eq("id", series.id);
     if (error) { alert("Failed: " + error.message); return; }
     setSeries(prev => prev ? { ...prev, published: newPublished, published_at: newPublished ? new Date().toISOString() : null } : prev);
   }
 
   async function handleDeleteChapter(id: string) {
     if (!window.confirm("Delete this chapter? This cannot be undone.")) return;
-    const { error } = await supabase.from("chapters").delete().eq("id", id);
+    const { error } = await authClient.from("chapters").delete().eq("id", id);
     if (error) { alert("Delete failed: " + error.message); return; }
     setChapters(prev => prev.filter(c => c.id !== id));
   }
@@ -160,7 +166,7 @@ export default function SeriesDetailPage() {
     const newVal = !currentlyPublished;
     const msg = newVal ? "Publish this chapter?" : "Unpublish this chapter?";
     if (!window.confirm(msg)) return;
-    const { error } = await supabase.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", id);
+    const { error } = await authClient.from("chapters").update({ is_published: newVal, published_at: newVal ? new Date().toISOString() : null }).eq("id", id);
     if (error) { alert("Failed: " + error.message); return; }
     setChapters(prev => prev.map(c => c.id === id ? { ...c, is_published: newVal, published_at: newVal ? new Date().toISOString() : null } : c));
   }
