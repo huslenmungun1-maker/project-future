@@ -35,7 +35,11 @@ type SeriesRow = {
   views?: number | null;
   project_type?: string | null;
   genre?: string | null;
+  user_id?: string | null;
+  author_label?: string | null;
 };
+
+type ProfileMeta = { display_name: string | null; role: string | null };
 
 type TranslationRow = {
   content_type: "series" | "book" | "chapter";
@@ -144,10 +148,12 @@ export default function ReaderHomePage() {
   const [status, setStatus] = useState<Status>("loading");
   const [books, setBooks] = useState<BookRow[]>([]);
   const [series, setSeries] = useState<SeriesRow[]>([]);
+  const [profileMap, setProfileMap] = useState<Record<string, ProfileMeta>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeType, setActiveType] = useState<string>("all");
   const [isOwner, setIsOwner] = useState(false);
+  const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -173,7 +179,7 @@ export default function ReaderHomePage() {
 
         supabase
           .from("series")
-          .select("id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views, project_type, genre")
+          .select("id, title, description, created_at, cover_url, cover_image_url, language, published, published_at, views, project_type, genre, user_id, author_label")
           .or("published.eq.true,published_at.not.is.null")
           .order("views", { ascending: false })
           .order("published_at", { ascending: false })
@@ -200,7 +206,9 @@ export default function ReaderHomePage() {
       let translatedSeries = seriesData;
 
       try {
-        const [bookTrRes, seriesTrRes] = await Promise.all([
+        const userIds = [...new Set(seriesData.map(s => s.user_id).filter(Boolean))] as string[];
+
+        const [bookTrRes, seriesTrRes, profilesRes] = await Promise.all([
           bookIds.length > 0
             ? supabase
                 .from("content_translations")
@@ -217,6 +225,13 @@ export default function ReaderHomePage() {
                 .eq("content_type", "series")
                 .eq("locale", locale)
                 .in("content_id", seriesIds)
+            : Promise.resolve({ data: [], error: null }),
+
+          userIds.length > 0
+            ? supabase
+                .from("profiles")
+                .select("user_id, display_name, role")
+                .in("user_id", userIds)
             : Promise.resolve({ data: [], error: null }),
         ]);
 
@@ -238,6 +253,14 @@ export default function ReaderHomePage() {
             const tr = map.get(s.id);
             return { ...s, title: (tr?.title?.trim() ? tr.title : s.title) as string, description: tr?.description?.trim() ? tr.description : s.description };
           });
+        }
+
+        if (!profilesRes.error && profilesRes.data) {
+          const pMap: Record<string, ProfileMeta> = {};
+          for (const p of profilesRes.data as Array<{ user_id: string; display_name: string | null; role: string | null }>) {
+            pMap[p.user_id] = { display_name: p.display_name, role: p.role };
+          }
+          if (!cancelled) setProfileMap(pMap);
         }
       } catch (e) {
         console.warn("Translation lookup skipped.", e);
@@ -562,6 +585,10 @@ export default function ReaderHomePage() {
 
                 // Series card
                 const coverSrc = getSeriesCover(item);
+                const prof = profileMap[item.user_id ?? ""] ?? null;
+                const authorName = prof?.role === "owner" ? "Project Team" : (prof?.display_name || null);
+                const authorLabel = item.author_label || null;
+                const descExpanded = expandedDescId === item.id;
                 return (
                   <article key={item.id} className="group">
                     <Link href={`/${locale}/reader/series/${item.id}`} className="block">
@@ -589,51 +616,80 @@ export default function ReaderHomePage() {
                           </>
                         )}
                       </div>
-                      <div className="mt-3 space-y-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="line-clamp-2 text-sm font-semibold" style={{ color: "var(--text)" }}>
-                              {item.title || t.untitledSeries}
-                            </h3>
-                            {item.project_type && (
-                              <span
-                                className="rounded-full border px-2 py-0.5 text-[10px] capitalize"
-                                style={{ borderColor: "rgba(94,99,87,0.25)", background: "rgba(94,99,87,0.1)", color: "var(--accent)" }}
-                              >
-                                {item.project_type}
-                              </span>
-                            )}
-                            {item.language ? (
-                              <span
-                                className="rounded-full border px-2 py-0.5 text-[10px]"
-                                style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.5)", color: "var(--muted)" }}
-                              >
-                                {item.language.toUpperCase()}
-                              </span>
-                            ) : null}
-                          </div>
-                          {item.description ? (
-                            <p className="line-clamp-2 text-[11px]" style={{ color: "var(--muted)" }}>{item.description}</p>
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {item.project_type && (
+                            <span
+                              className="rounded-full border px-2 py-0.5 text-[10px] capitalize"
+                              style={{ borderColor: "rgba(94,99,87,0.25)", background: "rgba(94,99,87,0.1)", color: "var(--accent)" }}
+                            >
+                              {item.project_type}
+                            </span>
+                          )}
+                          {item.language ? (
+                            <span
+                              className="rounded-full border px-2 py-0.5 text-[10px]"
+                              style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.5)", color: "var(--muted)" }}
+                            >
+                              {item.language.toUpperCase()}
+                            </span>
                           ) : null}
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px]" style={{ color: "var(--muted)" }}>
-                            {t.publishedAt}: {item.published_at ? formatDate(item.published_at) : "—"}
+                        <h3 className="line-clamp-2 text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>
+                          {item.title || t.untitledSeries}
+                        </h3>
+                        {authorName && (
+                          <p style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.01em" }}>
+                            {authorLabel ? <span style={{ fontStyle: "italic" }}>{authorLabel} </span> : null}
+                            <span style={{ fontWeight: 500 }}>{authorName}</span>
                           </p>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px]" style={{ color: "var(--muted)" }}>
-                              {(item.views ?? 0).toLocaleString()} {t.views}
-                            </span>
-                            <span
-                              className="inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold"
-                              style={{ borderColor: "rgba(94,99,87,0.28)", background: "rgba(94,99,87,0.14)", color: "var(--text)" }}
-                            >
-                              {t.startReading}
-                            </span>
-                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 pt-0.5">
+                          <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+                            {(item.views ?? 0).toLocaleString()} {t.views}
+                          </span>
+                          <span
+                            className="inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-semibold"
+                            style={{ borderColor: "rgba(94,99,87,0.28)", background: "rgba(94,99,87,0.14)", color: "var(--text)" }}
+                          >
+                            {t.startReading}
+                          </span>
                         </div>
                       </div>
                     </Link>
+
+                    {/* Expandable description — outside link */}
+                    {item.description && (
+                      <div style={{ paddingTop: 5, paddingLeft: 1 }}>
+                        <button
+                          onClick={() => setExpandedDescId(descExpanded ? null : item.id)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            fontSize: 10, fontWeight: 600, letterSpacing: "0.03em",
+                            color: "var(--accent)", background: "none", border: "none",
+                            cursor: "pointer", padding: 0,
+                          }}
+                        >
+                          <svg
+                            width="8" height="8" viewBox="0 0 8 8" fill="none"
+                            style={{ transition: "transform 240ms cubic-bezier(0.4,0,0.2,1)", transform: descExpanded ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}
+                          >
+                            <path d="M1 2.5L4 5.5L7 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          {descExpanded ? "Close" : "Read description"}
+                        </button>
+                        <div style={{
+                          maxHeight: descExpanded ? "280px" : "0px",
+                          overflow: "hidden",
+                          transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
+                        }}>
+                          <p style={{ fontSize: 11, lineHeight: 1.65, color: "var(--muted)", paddingTop: 6, paddingBottom: 2 }}>
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {isOwner && (
                       <div style={{ display: "flex", gap: 6, marginTop: 6, paddingLeft: 2 }}>
                         <button

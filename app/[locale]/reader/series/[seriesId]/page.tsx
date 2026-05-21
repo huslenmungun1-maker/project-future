@@ -17,6 +17,7 @@ type SeriesRow = {
   language: string | null;
   project_type: string | null;
   user_id: string | null;
+  author_label: string | null;
 };
 
 type ChapterRow = {
@@ -29,10 +30,11 @@ type ChapterRow = {
 };
 
 type ProfileRow = {
-  id: string;
+  user_id: string;
   display_name: string | null;
   username: string | null;
   avatar_url: string | null;
+  role: string | null;
 };
 
 type SupportedLocale = "en" | "mn" | "ko" | "ja";
@@ -79,7 +81,7 @@ export default function SeriesDetailPage() {
 
       const { data: s } = await supabase
         .from("series")
-        .select("id,title,description,cover_image_url,cover_url,published,published_at,language,project_type,user_id")
+        .select("id,title,description,cover_image_url,cover_url,published,published_at,language,project_type,user_id,author_label")
         .eq("id", seriesId)
         .maybeSingle();
 
@@ -98,8 +100,8 @@ export default function SeriesDetailPage() {
       if (s.user_id) {
         const { data: p } = await supabase
           .from("profiles")
-          .select("id,display_name,username,avatar_url")
-          .eq("id", s.user_id)
+          .select("user_id,display_name,username,avatar_url,role")
+          .eq("user_id", s.user_id)
           .maybeSingle();
         if (alive && p) setCreator(p as ProfileRow);
 
@@ -292,31 +294,50 @@ export default function SeriesDetailPage() {
                 </p>
               )}
 
-              {/* Creator */}
-              {creator && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {creator.avatar_url ? (
-                    <img src={creator.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
-                  ) : (
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(94,99,87,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700 }}>
-                        {(creator.display_name || creator.username || "?")[0].toUpperCase()}
-                      </span>
+              {/* Author */}
+              {(creator || series.author_label) && (() => {
+                const isTeam = creator?.role === "owner";
+                const authorName = isTeam ? "Project Team" : (creator?.display_name || creator?.username || null);
+                if (!authorName) return null;
+                const label = series.author_label;
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {isTeam ? (
+                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(94,99,87,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700, letterSpacing: "-0.03em" }}>PT</span>
+                      </div>
+                    ) : creator?.avatar_url ? (
+                      <img src={creator.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(94,99,87,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700 }}>
+                          {authorName[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      {label && (
+                        <p style={{ fontSize: 10, color: "var(--muted)", marginBottom: 1, letterSpacing: "0.02em" }}>{label}</p>
+                      )}
+                      {isTeam ? (
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{authorName}</p>
+                      ) : (
+                        <Link
+                          href={creator?.username ? `/${locale}/creator/${creator.username}` : "#"}
+                          style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none" }}
+                        >
+                          {authorName}
+                        </Link>
+                      )}
+                      {!isTeam && (
+                        <p style={{ fontSize: 11, color: "var(--muted)" }}>
+                          {followerCount.toLocaleString()} {t.followers}
+                        </p>
+                      )}
                     </div>
-                  )}
-                  <div>
-                    <Link
-                      href={creator.username ? `/${locale}/creator/${creator.username}` : "#"}
-                      style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none" }}
-                    >
-                      {creator.display_name || creator.username || "Creator"}
-                    </Link>
-                    <p style={{ fontSize: 11, color: "var(--muted)" }}>
-                      {followerCount.toLocaleString()} {t.followers}
-                    </p>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Stats */}
               <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--muted)" }}>

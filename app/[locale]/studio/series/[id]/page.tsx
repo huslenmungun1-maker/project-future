@@ -11,6 +11,15 @@ import StudioSelect from "@/components/studio/StudioSelect";
 
 type ProjectType = "manga" | "novel" | "webtoon" | "comic" | "artbook";
 
+const AUTHOR_LABEL_OPTIONS = [
+  { value: "", label: "Author label…" },
+  { value: "Written by", label: "Written by" },
+  { value: "Created by", label: "Created by" },
+  { value: "Founded by", label: "Founded by" },
+  { value: "Illustrated by", label: "Illustrated by" },
+  { value: "Drawn by", label: "Drawn by" },
+];
+
 const GENRE_OPTIONS = [
   { value: "", label: "Genre…" },
   { value: "Action", label: "Action" },
@@ -86,6 +95,7 @@ type SeriesRow = {
   audience: "all" | "kids" | "adults";
   project_type: ProjectType | null;
   genre: string | null;
+  author_label: string | null;
 };
 
 type ChapterRow = {
@@ -615,6 +625,20 @@ export default function SeriesDetailPage() {
     setSeries(data as SeriesRow);
   }
 
+  async function updateAuthorLabel(value: string) {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, author_label: value || null });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ author_label: value || null })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) { setSeries(prev); setActionMsg(error ? error.message : t.projectNotFound); return; }
+    setSeries(data as SeriesRow);
+  }
+
   async function updateGenre(value: string) {
     if (!series) return;
     const prev = series;
@@ -963,6 +987,14 @@ export default function SeriesDetailPage() {
                   options={GENRE_OPTIONS}
                   placeholder="Genre…"
                   minWidth={140}
+                />
+
+                <StudioSelect
+                  value={series.author_label ?? ""}
+                  onChange={updateAuthorLabel}
+                  options={AUTHOR_LABEL_OPTIONS}
+                  placeholder="Author label…"
+                  minWidth={130}
                 />
 
                 <button
