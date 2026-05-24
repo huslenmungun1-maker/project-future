@@ -380,49 +380,67 @@ export default function SeriesDetailPage() {
               )}
 
               {/* CTAs */}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
-                {progressChapter ? (
-                  <>
-                    <Link
-                      href={`/${locale}/reader/series/${seriesId}/${progressChapter.chapter_number}`}
-                      style={{
-                        display: "inline-flex", alignItems: "center",
-                        padding: "11px 24px", borderRadius: 9999, fontWeight: 700,
-                        fontSize: 13, background: "var(--accent)", color: "#f8f7f3",
-                        textDecoration: "none",
-                      }}
-                    >
-                      {t.continueReading} · Ch.{progressChapter.chapter_number}
-                    </Link>
-                    {chapters[0] && (
+              {(() => {
+                const isBook = series.project_type === "book";
+                const bookHref = `/${locale}/reader/series/${seriesId}/book`;
+                return (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+                    {isBook ? (
+                      <Link
+                        href={bookHref}
+                        style={{
+                          display: "inline-flex", alignItems: "center",
+                          padding: "11px 28px", borderRadius: 9999, fontWeight: 700,
+                          fontSize: 13, background: "var(--accent)", color: "#f8f7f3",
+                          textDecoration: "none",
+                        }}
+                      >
+                        {progressChapter ? t.continueReading : t.startReading}
+                      </Link>
+                    ) : progressChapter ? (
+                      <>
+                        <Link
+                          href={`/${locale}/reader/series/${seriesId}/${progressChapter.chapter_number}`}
+                          style={{
+                            display: "inline-flex", alignItems: "center",
+                            padding: "11px 24px", borderRadius: 9999, fontWeight: 700,
+                            fontSize: 13, background: "var(--accent)", color: "#f8f7f3",
+                            textDecoration: "none",
+                          }}
+                        >
+                          {t.continueReading} · Ch.{progressChapter.chapter_number}
+                        </Link>
+                        {chapters[0] && (
+                          <Link
+                            href={`/${locale}/reader/series/${seriesId}/${chapters[0].chapter_number}`}
+                            style={{
+                              display: "inline-flex", alignItems: "center",
+                              padding: "11px 24px", borderRadius: 9999, fontWeight: 600,
+                              fontSize: 13, background: "rgba(255,255,255,0.6)",
+                              border: "1px solid rgba(47,47,47,0.12)", color: "var(--text)",
+                              textDecoration: "none",
+                            }}
+                          >
+                            {t.startReading}
+                          </Link>
+                        )}
+                      </>
+                    ) : chapters[0] ? (
                       <Link
                         href={`/${locale}/reader/series/${seriesId}/${chapters[0].chapter_number}`}
                         style={{
                           display: "inline-flex", alignItems: "center",
-                          padding: "11px 24px", borderRadius: 9999, fontWeight: 600,
-                          fontSize: 13, background: "rgba(255,255,255,0.6)",
-                          border: "1px solid rgba(47,47,47,0.12)", color: "var(--text)",
+                          padding: "11px 28px", borderRadius: 9999, fontWeight: 700,
+                          fontSize: 13, background: "var(--accent)", color: "#f8f7f3",
                           textDecoration: "none",
                         }}
                       >
                         {t.startReading}
                       </Link>
-                    )}
-                  </>
-                ) : chapters[0] ? (
-                  <Link
-                    href={`/${locale}/reader/series/${seriesId}/${chapters[0].chapter_number}`}
-                    style={{
-                      display: "inline-flex", alignItems: "center",
-                      padding: "11px 28px", borderRadius: 9999, fontWeight: 700,
-                      fontSize: 13, background: "var(--accent)", color: "#f8f7f3",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {t.startReading}
-                  </Link>
-                ) : null}
-              </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </section>

@@ -320,6 +320,12 @@ export default function ReaderSeriesChapterPage() {
       }
 
       const seriesRow = s as SeriesBaseRow;
+
+      if (seriesRow.project_type === "book") {
+        router.replace(`/${locale}/reader/series/${seriesId}/book`);
+        return;
+      }
+
       setSeriesBase(seriesRow);
       setViews(Number(seriesRow.views ?? 0) + 1);
 
