@@ -18,6 +18,7 @@ type SeriesRow = {
   project_type: string | null;
   user_id: string | null;
   author_label: string | null;
+  price: number | null;
 };
 
 type ChapterRow = {
@@ -81,7 +82,7 @@ export default function SeriesDetailPage() {
 
       const { data: s } = await supabase
         .from("series")
-        .select("id,title,description,cover_image_url,cover_url,published,published_at,language,project_type,user_id,author_label")
+        .select("id,title,description,cover_image_url,cover_url,published,published_at,language,project_type,user_id,author_label,price")
         .eq("id", seriesId)
         .maybeSingle();
 
@@ -340,8 +341,24 @@ export default function SeriesDetailPage() {
               })()}
 
               {/* Stats */}
-              <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--muted)" }}>
+              <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--muted)", alignItems: "center", flexWrap: "wrap" }}>
                 <span>{chapters.length} {t.chapters}</span>
+                {series.price != null && series.price > 0 ? (
+                  <span style={{
+                    fontSize: 12, fontWeight: 700, padding: "4px 14px", borderRadius: 9999,
+                    background: "rgba(94,99,87,0.85)", color: "#f8f7f3",
+                  }}>
+                    Buy — ${series.price.toFixed(2)}
+                  </span>
+                ) : (
+                  <span style={{
+                    fontSize: 12, fontWeight: 600, padding: "4px 14px", borderRadius: 9999,
+                    background: "rgba(110,168,128,0.15)", border: "1px solid rgba(110,168,128,0.3)",
+                    color: "#3d7a58",
+                  }}>
+                    Free
+                  </span>
+                )}
               </div>
 
               {/* Owner actions */}

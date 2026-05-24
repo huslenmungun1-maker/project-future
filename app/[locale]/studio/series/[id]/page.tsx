@@ -82,6 +82,13 @@ const AUDIENCE_OPTIONS = [
   { value: "adults", label: "Adult" },
 ];
 
+const PAGE_SIZE_OPTIONS = [
+  { value: "A4", label: "A4 (210×297mm)" },
+  { value: "A5", label: "A5 (148×210mm)" },
+  { value: "Paperback", label: "Paperback (5.5×8.5in)" },
+  { value: "Letter", label: "US Letter (8.5×11in)" },
+];
+
 type SeriesRow = {
   id: string;
   user_id?: string | null;
@@ -96,6 +103,8 @@ type SeriesRow = {
   project_type: ProjectType | null;
   genre: string | null;
   author_label: string | null;
+  price: number | null;
+  page_size: string | null;
 };
 
 type ChapterRow = {
@@ -364,6 +373,8 @@ export default function SeriesDetailPage() {
   const [draftDescription, setDraftDescription] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
 
+  const [draftPrice, setDraftPrice] = useState("0");
+
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterNumber, setChapterNumber] = useState("");
   const [chapterContent, setChapterContent] = useState("");
@@ -496,6 +507,7 @@ export default function SeriesDetailPage() {
       setSeries(s as SeriesRow);
       setDraftTitle((s as SeriesRow).title);
       setDraftDescription((s as SeriesRow).description ?? "");
+      setDraftPrice(String((s as SeriesRow).price ?? 0));
       setChapters((c as ChapterRow[]) || []);
       setLoading(false);
     } catch (e) {
@@ -512,6 +524,7 @@ export default function SeriesDetailPage() {
     if (series) {
       setDraftTitle(series.title);
       setDraftDescription(series.description ?? "");
+      setDraftPrice(String(series.price ?? 0));
     }
   }, [series]);
 
@@ -535,6 +548,7 @@ export default function SeriesDetailPage() {
         .update({
           title: titleTrim,
           description: descTrim || null,
+          price: Math.max(0, parseFloat(draftPrice) || 0),
         })
         .eq("id", series.id)
         .select()
@@ -657,6 +671,20 @@ export default function SeriesDetailPage() {
     setSeries(data as SeriesRow);
   }
 
+  async function updatePageSize(value: string) {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, page_size: value });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ page_size: value })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) { setSeries(prev); setActionMsg(error ? error.message : t.projectNotFound); return; }
+    setSeries(data as SeriesRow);
+  }
+
   async function togglePublish() {
     if (!series || togglingPublish) return;
 
@@ -665,6 +693,27 @@ export default function SeriesDetailPage() {
     if (!next) {
       const ok = confirm(t.confirmUnpublish);
       if (!ok) return;
+    }
+
+    if (next) {
+      const warnings: string[] = [];
+      if (!series.title?.trim()) warnings.push("• Add a title");
+      if (!series.cover_image_url) warnings.push("• Upload a cover image");
+      if (chapters.length === 0) warnings.push("• Add at least 1 chapter");
+      if (chapters.length > 0) {
+        const { data: pgData } = await supabase
+          .from("pages")
+          .select("chapter_id")
+          .in("chapter_id", chapters.map(c => c.id));
+        const withPages = new Set((pgData || []).map((p: { chapter_id: string }) => p.chapter_id));
+        const missing = chapters.filter(c => !withPages.has(c.id));
+        if (missing.length > 0)
+          warnings.push(`• ${missing.length} chapter(s) have no pages`);
+      }
+      if (warnings.length > 0) {
+        setActionMsg("Pre-publish checklist — fix before publishing:\n" + warnings.join("\n"));
+        return;
+      }
     }
 
     setTogglingPublish(true);
@@ -997,6 +1046,14 @@ export default function SeriesDetailPage() {
                   minWidth={130}
                 />
 
+                <StudioSelect
+                  value={series.page_size ?? "A4"}
+                  onChange={updatePageSize}
+                  options={PAGE_SIZE_OPTIONS}
+                  placeholder="Page size…"
+                  minWidth={160}
+                />
+
                 <button
                   type="button"
                   onClick={togglePublish}
@@ -1102,6 +1159,34 @@ export default function SeriesDetailPage() {
                       onChange={(e) => setDraftDescription(e.target.value)}
                       placeholder={t.descriptionPlaceholder}
                     />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs" style={{ color: "var(--muted)" }}>
+                      Book price (USD)
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--muted)", pointerEvents: "none" }}>$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={draftPrice}
+                        onChange={(e) => setDraftPrice(e.target.value)}
+                        className="w-full rounded-2xl py-3 text-sm outline-none"
+                        style={{
+                          paddingLeft: 28, paddingRight: 16,
+                          background: "rgba(255,255,255,0.8)",
+                          border: "1px solid rgba(47,47,47,0.12)",
+                          color: "var(--text)",
+                        }}
+                      />
+                    </div>
+                    <p className="text-[10px]" style={{ color: "var(--muted)" }}>
+                      {parseFloat(draftPrice) > 0
+                        ? `Readers pay $${parseFloat(draftPrice).toFixed(2)}`
+                        : "Free for all readers"}
+                    </p>
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-1">
