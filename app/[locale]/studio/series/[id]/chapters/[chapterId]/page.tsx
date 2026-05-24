@@ -177,9 +177,10 @@ function PageEditorBlock({
 }: {
   page: PageRow;
   aspectRatio: number;
-  onSave: (id: string, html: string) => void;
+  onSave: (id: string, html: string) => Promise<void>;
   onDelete: (id: string) => void;
-  onSplit: (pageId: string, overflowHtml: string) => void;
+  // pageNumber passed explicitly so handleSplit never needs a stale pages lookup
+  onSplit: (pageId: string, pageNumber: number, overflowHtml: string) => Promise<void>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const divRef = useRef<HTMLDivElement>(null);
@@ -200,7 +201,7 @@ function PageEditorBlock({
       for (const entry of entries) {
         if (entry.contentRect.height > 0) {
           observer.disconnect();
-          checkAndSplit();
+          void doSplit();
           break;
         }
       }
@@ -218,21 +219,17 @@ function PageEditorBlock({
     return div.scrollHeight > container.clientHeight + 2;
   }
 
-  function checkAndSplit() {
-    if (!isOverflow() || splitting.current) return;
-    doSplit();
-  }
-
-  function doSplit() {
+  async function doSplit() {
     const container = containerRef.current;
     const div = divRef.current;
     if (!container || !div || splitting.current) return;
+    if (!isOverflow()) return;
 
     const maxH = container.clientHeight;
     const html = div.innerHTML;
     const { fits, overflow } = measureSplit(html, div, maxH);
 
-    // Guard: if nothing fits or nothing overflows, abort
+    // Guard: nothing fits or nothing overflows — leave page as-is
     if (!overflow || !fits) {
       setOverflowing(false);
       return;
@@ -241,8 +238,12 @@ function PageEditorBlock({
     splitting.current = true;
     div.innerHTML = fits;
     setOverflowing(false);
-    onSave(page.id, fits);
-    onSplit(page.id, overflow);
+
+    // Insert the new page with overflow content FIRST so data is safe in DB,
+    // then overwrite the current page with the trimmed content.
+    await onSplit(page.id, page.page_number, overflow);
+    await onSave(page.id, fits);
+
     splitting.current = false;
   }
 
@@ -258,8 +259,12 @@ function PageEditorBlock({
   function handleBlur(e: React.FocusEvent<HTMLDivElement>) {
     focused.current = false;
     const html = e.currentTarget.innerHTML;
-    onSave(page.id, html);
-    if (isOverflow()) doSplit();
+    if (isOverflow()) {
+      // doSplit handles both the split and saving the trimmed content — don't double-save
+      void doSplit();
+    } else {
+      void onSave(page.id, html);
+    }
   }
 
   const toolBtn: React.CSSProperties = {
@@ -320,7 +325,7 @@ function PageEditorBlock({
               ⚠ Overflow
             </span>
             <button
-              onClick={doSplit}
+              onClick={() => void doSplit()}
               style={{ ...toolBtn, color: WARN, borderColor: WARN }}
               title="Split overflowing content to a new page"
             >
@@ -421,7 +426,23 @@ export default function ChapterEditorPage() {
 
   const [activeTab, setActiveTab] = useState<"script" | "pages">("script");
   const [pages, setPages] = useState<PageRow[]>([]);
+  // pagesRef mirrors pages state so handleSplit always reads the latest list
+  // without depending on a render-cycle closure (critical for cascade splits).
+  const pagesRef = useRef<PageRow[]>([]);
   const [addingPage, setAddingPage] = useState(false);
+
+  function updatePages(updater: PageRow[] | ((prev: PageRow[]) => PageRow[])) {
+    if (typeof updater === "function") {
+      setPages(prev => {
+        const next = updater(prev);
+        pagesRef.current = next;
+        return next;
+      });
+    } else {
+      pagesRef.current = updater;
+      setPages(updater);
+    }
+  }
 
   const backHref = `/${locale}/studio/series/${seriesId}`;
 
@@ -477,7 +498,7 @@ export default function ChapterEditorPage() {
       setIsPublished(Boolean(row.is_published));
       setScheduledAt(row.scheduled_at ? row.scheduled_at.slice(0, 16) : "");
       setChapterNumberEdit(String(row.chapter_number));
-      setPages((pg as PageRow[]) || []);
+      updatePages((pg as PageRow[]) || []);
       setLoadStatus("ok");
     }
 
@@ -547,32 +568,34 @@ export default function ChapterEditorPage() {
       .insert({ chapter_id: chapterId, page_number: nextNum, content: "" })
       .select("id, chapter_id, page_number, content, created_at")
       .maybeSingle();
-    if (data) setPages(prev => [...prev, data as PageRow]);
+    if (data) updatePages(prev => [...prev, data as PageRow]);
     setAddingPage(false);
   }
 
   async function savePage(pageId: string, html: string) {
     await supabase.from("pages").update({ content: html }).eq("id", pageId);
-    setPages(prev => prev.map(p => p.id === pageId ? { ...p, content: html } : p));
+    updatePages(prev => prev.map(p => p.id === pageId ? { ...p, content: html } : p));
   }
 
   async function deletePage(pageId: string) {
     await supabase.from("pages").delete().eq("id", pageId);
-    setPages(prev => prev.filter(p => p.id !== pageId));
+    updatePages(prev => prev.filter(p => p.id !== pageId));
   }
 
-  // Called when a page canvas detects overflow and needs to push content to a new page
-  async function handleSplit(afterPageId: string, overflowHtml: string) {
-    if (!chapterId) return;
+  // Called when a page canvas detects overflow.
+  // afterPageNum is passed explicitly — never rely on a closure over `pages`
+  // because cascade splits (page2→page3→…) may call this before React re-renders.
+  async function handleSplit(afterPageId: string, afterPageNum: number, overflowHtml: string) {
+    if (!chapterId || !overflowHtml.trim()) return;
 
-    const currentPage = pages.find(p => p.id === afterPageId);
-    if (!currentPage) return;
+    const newPageNum = afterPageNum + 1;
 
-    const newPageNum = currentPage.page_number + 1;
+    // Read from ref so we always have the up-to-date list, even mid-cascade
+    const current = pagesRef.current;
 
-    // Shift pages that come after the current one (descending to avoid collisions)
-    const toShift = pages
-      .filter(p => p.page_number >= newPageNum)
+    // Shift pages after the split point in descending order to avoid collisions
+    const toShift = current
+      .filter(p => p.page_number >= newPageNum && p.id !== afterPageId)
       .sort((a, b) => b.page_number - a.page_number);
 
     for (const p of toShift) {
@@ -581,15 +604,22 @@ export default function ChapterEditorPage() {
         .eq("id", p.id);
     }
 
-    const { data: newPage } = await supabase
+    const { data: newPage, error: insertErr } = await supabase
       .from("pages")
       .insert({ chapter_id: chapterId, page_number: newPageNum, content: overflowHtml })
       .select("id, chapter_id, page_number, content, created_at")
       .maybeSingle();
 
-    if (!newPage) return;
+    if (insertErr) {
+      console.error("[handleSplit] insert failed:", insertErr.message, insertErr);
+      return;
+    }
+    if (!newPage) {
+      console.error("[handleSplit] insert returned no data — check RLS policies on public.pages");
+      return;
+    }
 
-    setPages(prev => {
+    updatePages(prev => {
       const shifted = prev.map(p =>
         p.page_number >= newPageNum && p.id !== afterPageId
           ? { ...p, page_number: p.page_number + 1 }
