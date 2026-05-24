@@ -13,6 +13,7 @@ const MUTED = "#7a7870";
 const ACCENT = "#b6a07c";
 const DANGER = "#c97a6a";
 const SUCCESS = "#6ea880";
+const WARN = "#c9a06a";
 
 /* ─── aspect ratios (height / width) ──────────────────────── */
 const PAGE_ASPECT: Record<string, number> = {
@@ -51,31 +52,201 @@ type SeriesRow = {
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+/* ─── measureSplit ───────────────────────────────────────────── */
+// Returns the portion of `html` that fits within `maxHeight` pixels
+// (using `refEl` dimensions/styles for measurement) and the overflow remainder.
+function measureSplit(
+  html: string,
+  refEl: HTMLDivElement,
+  maxHeight: number
+): { fits: string; overflow: string } {
+  if (!html.trim() || maxHeight <= 0) return { fits: html, overflow: "" };
+
+  const cs = window.getComputedStyle(refEl);
+
+  const clone = document.createElement("div");
+  clone.style.cssText =
+    `position:absolute;top:-99999px;left:-99999px;` +
+    `width:${refEl.clientWidth}px;height:auto;overflow:visible;` +
+    `font-size:${cs.fontSize};font-family:${cs.fontFamily};` +
+    `line-height:${cs.lineHeight};padding:${cs.padding};` +
+    `box-sizing:${cs.boxSizing};`;
+  document.body.appendChild(clone);
+
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  const topNodes = Array.from(temp.childNodes);
+
+  let splitAt = topNodes.length; // assume everything fits
+
+  for (let i = 0; i < topNodes.length; i++) {
+    const n = topNodes[i].cloneNode(true);
+    clone.appendChild(n);
+    if (clone.scrollHeight > maxHeight) {
+      clone.removeChild(n);
+      splitAt = i;
+      break;
+    }
+  }
+
+  // Everything fits — no overflow
+  if (splitAt === topNodes.length) {
+    document.body.removeChild(clone);
+    return { fits: html, overflow: "" };
+  }
+
+  let extraFitsNode: Node | null = null;
+  let extraOverflowNode: Node | null = null;
+
+  // First node already overflows — do word-level split
+  if (splitAt === 0 && topNodes.length > 0) {
+    const node = topNodes[0];
+    const rawText = node.textContent || "";
+    const tokens = rawText.split(/(\s+)/); // preserve whitespace tokens
+
+    let fitsText = "";
+    let tokenCount = 0;
+
+    for (let j = 0; j < tokens.length; j++) {
+      const candidate = fitsText + tokens[j];
+      const testEl = document.createElement("span");
+      testEl.textContent = candidate;
+      clone.appendChild(testEl);
+      if (clone.scrollHeight > maxHeight) {
+        clone.removeChild(testEl);
+        break;
+      }
+      clone.removeChild(testEl);
+      fitsText = candidate;
+      tokenCount = j + 1;
+    }
+
+    if (fitsText) {
+      const overflowText = tokens.slice(tokenCount).join("").trimStart();
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const tag = (node as HTMLElement).tagName.toLowerCase();
+        const fe = document.createElement(tag);
+        fe.textContent = fitsText;
+        extraFitsNode = fe;
+        if (overflowText) {
+          const oe = document.createElement(tag);
+          oe.textContent = overflowText;
+          extraOverflowNode = oe;
+        }
+      } else {
+        extraFitsNode = document.createTextNode(fitsText);
+        if (overflowText) {
+          extraOverflowNode = document.createTextNode(overflowText);
+        }
+      }
+      splitAt = 1; // consumed node 0
+    }
+    // else: nothing fits at all — splitAt stays 0, all goes to overflow
+  }
+
+  document.body.removeChild(clone);
+
+  const toHtml = (ns: Node[]) => {
+    const d = document.createElement("div");
+    ns.forEach((n) => d.appendChild(n.cloneNode(true)));
+    return d.innerHTML;
+  };
+
+  const fitsNodes: Node[] = extraFitsNode
+    ? [extraFitsNode, ...topNodes.slice(1, splitAt)]
+    : topNodes.slice(0, splitAt);
+
+  const overflowNodes: Node[] = [
+    ...(extraOverflowNode ? [extraOverflowNode] : []),
+    ...topNodes.slice(splitAt),
+  ];
+
+  return {
+    fits: toHtml(fitsNodes),
+    overflow: toHtml(overflowNodes),
+  };
+}
+
 /* ─── PageEditorBlock ────────────────────────────────────────── */
 function PageEditorBlock({
   page,
   aspectRatio,
   onSave,
   onDelete,
+  onSplit,
 }: {
   page: PageRow;
   aspectRatio: number;
   onSave: (id: string, html: string) => void;
   onDelete: (id: string) => void;
+  onSplit: (pageId: string, overflowHtml: string) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const divRef = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
+  const splitting = useRef(false);
+  const [overflowing, setOverflowing] = useState(false);
 
   useEffect(() => {
-    if (divRef.current && !focused.current) {
-      divRef.current.innerHTML = page.content || "";
-    }
+    if (!divRef.current || focused.current) return;
+    divRef.current.innerHTML = page.content || "";
+
+    // Check for overflow once layout is computed
+    requestAnimationFrame(() => {
+      checkAndSplit();
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function isOverflow(): boolean {
+    const container = containerRef.current;
+    const div = divRef.current;
+    if (!container || !div) return false;
+    return div.scrollHeight > container.clientHeight + 2;
+  }
+
+  function checkAndSplit() {
+    if (!isOverflow() || splitting.current) return;
+    doSplit();
+  }
+
+  function doSplit() {
+    const container = containerRef.current;
+    const div = divRef.current;
+    if (!container || !div || splitting.current) return;
+
+    const maxH = container.clientHeight;
+    const html = div.innerHTML;
+    const { fits, overflow } = measureSplit(html, div, maxH);
+
+    // Guard: if nothing fits or nothing overflows, abort
+    if (!overflow || !fits) {
+      setOverflowing(false);
+      return;
+    }
+
+    splitting.current = true;
+    div.innerHTML = fits;
+    setOverflowing(false);
+    onSave(page.id, fits);
+    onSplit(page.id, overflow);
+    splitting.current = false;
+  }
 
   function exec(cmd: string, val?: string) {
     divRef.current?.focus();
     document.execCommand(cmd, false, val);
+  }
+
+  function handleInput() {
+    setOverflowing(isOverflow());
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLDivElement>) {
+    focused.current = false;
+    const html = e.currentTarget.innerHTML;
+    onSave(page.id, html);
+    if (isOverflow()) doSplit();
   }
 
   const toolBtn: React.CSSProperties = {
@@ -101,7 +272,7 @@ function PageEditorBlock({
           flexWrap: "wrap",
           padding: "8px 12px",
           background: "rgba(255,255,255,0.04)",
-          border: `1px solid ${BORDER}`,
+          border: `1px solid ${overflowing ? WARN : BORDER}`,
           borderBottom: "none",
           borderRadius: "10px 10px 0 0",
         }}
@@ -129,6 +300,13 @@ function PageEditorBlock({
           <option value="5">18pt</option>
           <option value="6">24pt</option>
         </select>
+
+        {overflowing && (
+          <span style={{ fontSize: 10, color: WARN, fontWeight: 600 }}>
+            ⚠ Overflow
+          </span>
+        )}
+
         <button
           onClick={() => {
             if (window.confirm("Remove this page?")) onDelete(page.id);
@@ -145,6 +323,7 @@ function PageEditorBlock({
 
       {/* page canvas */}
       <div
+        ref={containerRef}
         style={{
           background: "#fff",
           boxShadow: "0 6px 40px rgba(0,0,0,0.35)",
@@ -152,6 +331,7 @@ function PageEditorBlock({
           position: "relative",
           overflow: "hidden",
           aspectRatio: `1 / ${aspectRatio}`,
+          outline: overflowing ? `2px solid ${WARN}` : "none",
         }}
       >
         <div
@@ -159,10 +339,8 @@ function PageEditorBlock({
           contentEditable
           suppressContentEditableWarning
           onFocus={() => { focused.current = true; }}
-          onBlur={(e) => {
-            focused.current = false;
-            onSave(page.id, e.currentTarget.innerHTML);
-          }}
+          onInput={handleInput}
+          onBlur={handleBlur}
           style={{
             minHeight: "100%",
             padding: "8% 10%",
@@ -361,6 +539,47 @@ export default function ChapterEditorPage() {
     setPages(prev => prev.filter(p => p.id !== pageId));
   }
 
+  // Called when a page canvas detects overflow and needs to push content to a new page
+  async function handleSplit(afterPageId: string, overflowHtml: string) {
+    if (!chapterId) return;
+
+    const currentPage = pages.find(p => p.id === afterPageId);
+    if (!currentPage) return;
+
+    const newPageNum = currentPage.page_number + 1;
+
+    // Shift pages that come after the current one (descending to avoid collisions)
+    const toShift = pages
+      .filter(p => p.page_number >= newPageNum)
+      .sort((a, b) => b.page_number - a.page_number);
+
+    for (const p of toShift) {
+      await supabase.from("pages")
+        .update({ page_number: p.page_number + 1 })
+        .eq("id", p.id);
+    }
+
+    const { data: newPage } = await supabase
+      .from("pages")
+      .insert({ chapter_id: chapterId, page_number: newPageNum, content: overflowHtml })
+      .select("id, chapter_id, page_number, content, created_at")
+      .maybeSingle();
+
+    if (!newPage) return;
+
+    setPages(prev => {
+      const shifted = prev.map(p =>
+        p.page_number >= newPageNum && p.id !== afterPageId
+          ? { ...p, page_number: p.page_number + 1 }
+          : p
+      );
+      const idx = shifted.findIndex(p => p.id === afterPageId);
+      const result = [...shifted];
+      result.splice(idx + 1, 0, newPage as PageRow);
+      return result;
+    });
+  }
+
   if (loadStatus === "loading") {
     return (
       <main style={{ background: BG, minHeight: "100vh", color: TEXT }}>
@@ -483,7 +702,7 @@ export default function ChapterEditorPage() {
                       Pages — {series?.page_size ?? "A4"}
                     </p>
                     <p style={{ fontSize: 11, color: MUTED, margin: "2px 0 0" }}>
-                      Content saves automatically when you click away from a page.
+                      Content saves and splits automatically when you click away.
                     </p>
                   </div>
                   <button
@@ -512,6 +731,7 @@ export default function ChapterEditorPage() {
                       aspectRatio={pageAspect}
                       onSave={savePage}
                       onDelete={deletePage}
+                      onSplit={handleSplit}
                     />
                   ))
                 )}
