@@ -188,13 +188,26 @@ function PageEditorBlock({
   const [overflowing, setOverflowing] = useState(false);
 
   useEffect(() => {
-    if (!divRef.current || focused.current) return;
+    if (!divRef.current) return;
     divRef.current.innerHTML = page.content || "";
 
-    // Check for overflow once layout is computed
-    requestAnimationFrame(() => {
-      checkAndSplit();
+    const container = containerRef.current;
+    if (!container) return;
+
+    // ResizeObserver fires once the container has real dimensions (aspectRatio resolved).
+    // requestAnimationFrame fires before CSS layout computes the height, so we use this instead.
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.height > 0) {
+          observer.disconnect();
+          checkAndSplit();
+          break;
+        }
+      }
     });
+    observer.observe(container);
+
+    return () => observer.disconnect();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -302,9 +315,18 @@ function PageEditorBlock({
         </select>
 
         {overflowing && (
-          <span style={{ fontSize: 10, color: WARN, fontWeight: 600 }}>
-            ⚠ Overflow
-          </span>
+          <>
+            <span style={{ fontSize: 10, color: WARN, fontWeight: 600 }}>
+              ⚠ Overflow
+            </span>
+            <button
+              onClick={doSplit}
+              style={{ ...toolBtn, color: WARN, borderColor: WARN }}
+              title="Split overflowing content to a new page"
+            >
+              Split now
+            </button>
+          </>
         )}
 
         <button
