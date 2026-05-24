@@ -9,7 +9,7 @@ import StudioSelect from "@/components/studio/StudioSelect";
 
 /* ================= TYPES ================= */
 
-type ProjectType = "manga" | "novel" | "webtoon" | "comic" | "artbook";
+type ProjectType = "book" | "manga" | "comic" | "poetry" | "moodboard" | "shortstory" | "kids" | "novel" | "webtoon" | "artbook";
 
 const AUTHOR_LABEL_OPTIONS = [
   { value: "", label: "Author label…" },
@@ -61,12 +61,14 @@ const GENRE_OPTIONS = [
 ];
 
 const FORMAT_OPTIONS = [
-  { value: "", label: "Format…" },
+  { value: "", label: "Type…" },
+  { value: "book", label: "Book" },
   { value: "manga", label: "Manga" },
-  { value: "novel", label: "Novel" },
-  { value: "webtoon", label: "Webtoon" },
   { value: "comic", label: "Comic" },
-  { value: "artbook", label: "Artbook" },
+  { value: "poetry", label: "Poetry" },
+  { value: "moodboard", label: "Mood Board" },
+  { value: "shortstory", label: "Short Story" },
+  { value: "kids", label: "Kids" },
 ];
 
 const LANGUAGE_OPTIONS = [
@@ -1069,6 +1071,21 @@ export default function SeriesDetailPage() {
                   {togglingPublish ? "..." : series.published ? t.unpublish : t.publish}
                 </button>
 
+                {series.project_type === "book" && (
+                  <Link
+                    href={`/${locale}/studio/series/${seriesId}/book-editor`}
+                    className="rounded-full px-4 py-2 text-xs transition hover:opacity-85"
+                    style={{
+                      background: "#2d4a3e",
+                      border: "1px solid rgba(47,47,47,0.12)",
+                      color: "#a8d5b8",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Open Book Editor
+                  </Link>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setEditingMeta((v) => !v)}
@@ -1400,14 +1417,18 @@ export default function SeriesDetailPage() {
 
                     <div className="ml-3 flex flex-col items-end gap-2">
                       <Link
-                        href={`/${locale}/studio/series/${seriesId}/chapters/${c.id}`}
+                        href={
+                          series.project_type === "book"
+                            ? `/${locale}/studio/series/${seriesId}/book-editor`
+                            : `/${locale}/studio/series/${seriesId}/chapters/${c.id}`
+                        }
                         className="rounded-full px-3 py-1 text-[11px] font-semibold transition hover:opacity-85"
                         style={{
                           background: "var(--accent)",
                           color: "#f8f7f3",
                         }}
                       >
-                        {t.edit}
+                        {series.project_type === "book" ? "Book Editor" : t.edit}
                       </Link>
                       <button
                         type="button"

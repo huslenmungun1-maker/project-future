@@ -502,7 +502,7 @@ export default function ChapterEditorPage() {
 
                 {pages.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "60px 0", color: MUTED, fontSize: 13 }}>
-                    No pages yet. Click "+ Add page" to create the first page.
+                    No pages yet. Click &ldquo;+ Add page&rdquo; to create the first page.
                   </div>
                 ) : (
                   pages.map(pg => (
