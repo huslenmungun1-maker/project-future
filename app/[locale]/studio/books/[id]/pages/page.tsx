@@ -76,7 +76,7 @@ export default function BookPagesManagerPage() {
       }
 
       const { data: pagesData, error: pagesError } = await supabase
-        .from("pages")
+        .from("publisher_pages")
         .select("id, book_id, page_number, page_name, image_url, created_at")
         .eq("book_id", bookId)
         .order("page_number", { ascending: true });
@@ -114,7 +114,7 @@ export default function BookPagesManagerPage() {
         ? Math.max(...pages.map((p) => p.page_number)) + 1
         : 1;
 
-    const { error } = await supabase.from("pages").insert({
+    const { error } = await supabase.from("publisher_pages").insert({
       book_id: bookId,
       page_number: nextNumber,
       page_name: name || null,
@@ -135,7 +135,7 @@ export default function BookPagesManagerPage() {
     setSaveStatus("idle");
 
     const { data } = await supabase
-      .from("pages")
+      .from("publisher_pages")
       .select("id, book_id, page_number, page_name, image_url, created_at")
       .eq("book_id", bookId)
       .order("page_number", { ascending: true });
@@ -146,7 +146,7 @@ export default function BookPagesManagerPage() {
   async function handleDeletePage(page: PageRow) {
     if (!confirm(`Delete page ${page.page_number}?`)) return;
 
-    const { error } = await supabase.from("pages").delete().eq("id", page.id);
+    const { error } = await supabase.from("publisher_pages").delete().eq("id", page.id);
     if (error) {
       setErrorMessage(error.message);
       return;
