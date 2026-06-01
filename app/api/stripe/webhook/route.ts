@@ -53,6 +53,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // Transfer reversed (e.g. bank rejection) — refund creator wallet
+  if (event.type === "transfer.reversed") {
+    const transfer = event.data.object as Stripe.Transfer;
+    const payoutRequestId = transfer.metadata?.payout_request_id;
+    const userId          = transfer.metadata?.user_id;
+    const amount          = (transfer.amount_reversed ?? transfer.amount) / 100;
+
+    if (payoutRequestId && userId && amount > 0) {
+      const db = supabaseServiceRole();
+      await Promise.all([
+        db.rpc("credit_wallet", {
+          p_user_id:     userId,
+          p_amount:      amount,
+          p_description: "Payout reversal",
+        }),
+        db.from("payout_requests")
+          .update({ status: "failed", failure_reason: "Transfer reversed by Stripe", updated_at: new Date().toISOString() })
+          .eq("id", payoutRequestId),
+      ]);
+    }
+  }
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
