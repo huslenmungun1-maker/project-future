@@ -97,6 +97,11 @@ export default function ContractsPage() {
   // Send
   const [sending, setSending] = useState(false);
 
+  // Milestone payments
+  const [approvingId, setApprovingId]   = useState<string | null>(null);
+  const [approveError, setApproveError] = useState<string | null>(null);
+  const [offerorBalance, setOfferorBalance] = useState<number | null>(null);
+
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   function showToast(msg: string, ok: boolean) {
@@ -131,14 +136,53 @@ export default function ContractsPage() {
   async function openDetail(contract: Contract) {
     setView(contract.id);
     setDetail(contract);
+    setApproveError(null);
     setDetailLoading(true);
-    const [msRes, sigRes] = await Promise.all([
+    const fetches: Promise<unknown>[] = [
       supabase.from("contract_milestones").select("*").eq("contract_id", contract.id).order("due_date"),
       supabase.from("contract_signatures").select("*").eq("contract_id", contract.id),
-    ]);
-    setMilestones((msRes.data as Milestone[]) ?? []);
-    setSignatures((sigRes.data as Signature[]) ?? []);
+    ];
+    if (contract.status === "active") fetches.push(fetch("/api/wallet"));
+    const [msRes, sigRes, walletRes] = await Promise.all(fetches) as [
+      { data: Milestone[] | null }, { data: Signature[] | null }, Response | undefined
+    ];
+    setMilestones(msRes.data ?? []);
+    setSignatures(sigRes.data ?? []);
+    if (walletRes?.ok) {
+      const wj = await walletRes.json();
+      setOfferorBalance(wj.wallet?.balance ?? null);
+    }
     setDetailLoading(false);
+  }
+
+  async function handleApprove(milestoneId: string) {
+    if (!detail) return;
+    setApprovingId(milestoneId);
+    setApproveError(null);
+    const res = await fetch(`/api/contracts/${detail.id}/milestones/${milestoneId}/approve`, { method: "PATCH" });
+    const json = await res.json();
+    setApprovingId(null);
+    if (!res.ok) {
+      const msg = json.error === "insufficient_balance"
+        ? `Insufficient balance — need ${fmt(json.required ?? 0)}, have ${fmt(json.balance ?? 0)}. Top up your wallet first.`
+        : (json.error ?? "Approval failed");
+      setApproveError(msg);
+      return;
+    }
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, status: "paid" as const } : m));
+    if (json.allPaid) {
+      setDetail(prev => prev ? { ...prev, status: "completed" } : null);
+      setContracts(prev => prev.map(c => c.id === detail.id ? { ...c, status: "completed" as ContractStatus } : c));
+      showToast("All milestones paid — contract completed!", true);
+    } else {
+      showToast("Milestone paid.", true);
+    }
+    // Refresh balance
+    const walletRes = await fetch("/api/wallet");
+    if (walletRes.ok) {
+      const wj = await walletRes.json();
+      setOfferorBalance(wj.wallet?.balance ?? null);
+    }
   }
 
   async function handleSaveDraft() {
@@ -412,12 +456,21 @@ export default function ContractsPage() {
               {/* Milestones */}
               {milestones.length > 0 && (
                 <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "18px 20px" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED, marginBottom: 12 }}>Milestones</p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED }}>Milestones</p>
+                    {detail.status === "active" && offerorBalance !== null && (
+                      <p style={{ fontSize: 11, color: MUTED2 }}>
+                        Your balance: <span style={{ color: TEXT, fontWeight: 600 }}>{fmt(offerorBalance)}</span>
+                      </p>
+                    )}
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {milestones.map(ms => {
-                      const msCfg = MILESTONE_STATUS_CFG[ms.status];
+                      const msCfg     = MILESTONE_STATUS_CFG[ms.status];
+                      const canApprove = detail.status === "active" && ms.status === "submitted";
+                      const isApproving = approvingId === ms.id;
                       return (
-                        <div key={ms.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: SURFACE2, borderRadius: 10, border: `1px solid ${BORDER}` }}>
+                        <div key={ms.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: canApprove ? "rgba(255,255,255,0.025)" : SURFACE2, borderRadius: 10, border: `1px solid ${canApprove ? "rgba(255,255,255,0.1)" : BORDER}` }}>
                           <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: 13, fontWeight: 500, color: TEXT }}>{ms.title}</p>
                             {ms.due_date && <p style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Due {fmtDate(ms.due_date)}</p>}
@@ -425,11 +478,28 @@ export default function ContractsPage() {
                           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: msCfg.color, background: `${msCfg.color}18`, borderRadius: 999, padding: "2px 8px" }}>{msCfg.label}</span>
                             <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{fmt(ms.amount)}</span>
+                            {canApprove && (
+                              <button
+                                onClick={() => handleApprove(ms.id)}
+                                disabled={isApproving || !!approvingId}
+                                style={{ padding: "5px 14px", borderRadius: 9999, background: GREEN, border: "none", color: "#fff", fontSize: 11, fontWeight: 700, cursor: (isApproving || !!approvingId) ? "not-allowed" : "pointer", opacity: (isApproving || !!approvingId) ? 0.6 : 1, whiteSpace: "nowrap" }}
+                              >
+                                {isApproving ? "…" : `Approve & pay`}
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                  {approveError && (
+                    <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(200,82,82,0.08)", border: "1px solid rgba(200,82,82,0.25)", borderRadius: 10 }}>
+                      <p style={{ fontSize: 12, color: RED }}>{approveError}</p>
+                      <a href={`/${locale}/wallet`} style={{ fontSize: 11, color: ACCENT, textDecoration: "none", marginTop: 4, display: "inline-block" }}>
+                        Top up wallet →
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -80,7 +80,8 @@ export default function StudioContractsPage() {
   const [offerorInfo, setOfferorInfo] = useState<OfferorInfo | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [responding, setResponding] = useState(false);
+  const [responding, setResponding]   = useState(false);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   function showToast(msg: string, ok: boolean) {
@@ -118,6 +119,17 @@ export default function StudioContractsPage() {
     setMilestones((msRes.data as Milestone[]) ?? []);
     setOfferorInfo(offerorRes.data as OfferorInfo | null);
     setDetailLoading(false);
+  }
+
+  async function handleSubmitMilestone(milestoneId: string) {
+    if (!detail) return;
+    setSubmittingId(milestoneId);
+    const res = await fetch(`/api/contracts/${detail.id}/milestones/${milestoneId}/submit`, { method: "PATCH" });
+    const json = await res.json();
+    setSubmittingId(null);
+    if (!res.ok) { showToast(json.error ?? "Failed to submit", false); return; }
+    showToast("Milestone marked as submitted.", true);
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, status: "submitted" as const } : m));
   }
 
   async function handleRespond(action: "accept" | "decline") {
@@ -239,7 +251,9 @@ export default function StudioContractsPage() {
                   </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {milestones.map(ms => {
-                      const msCfg = MILESTONE_STATUS_CFG[ms.status];
+                      const msCfg       = MILESTONE_STATUS_CFG[ms.status];
+                      const canSubmit   = detail.status === "active" && ms.status === "pending";
+                      const isSubmitting = submittingId === ms.id;
                       return (
                         <div key={ms.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", background: SURFACE2, borderRadius: 10, border: `1px solid ${BORDER}` }}>
                           <div style={{ minWidth: 0 }}>
@@ -250,6 +264,15 @@ export default function StudioContractsPage() {
                           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: msCfg.color, background: `${msCfg.color}18`, borderRadius: 999, padding: "2px 8px" }}>{msCfg.label}</span>
                             <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{fmt(ms.amount)}</span>
+                            {canSubmit && (
+                              <button
+                                onClick={() => handleSubmitMilestone(ms.id)}
+                                disabled={isSubmitting || !!submittingId}
+                                style={{ padding: "5px 12px", borderRadius: 9999, background: "rgba(182,160,124,0.14)", border: `1px solid rgba(182,160,124,0.3)`, color: ACCENT, fontSize: 11, fontWeight: 600, cursor: (isSubmitting || !!submittingId) ? "not-allowed" : "pointer", opacity: (isSubmitting || !!submittingId) ? 0.6 : 1, whiteSpace: "nowrap" }}
+                              >
+                                {isSubmitting ? "…" : "Mark submitted"}
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
