@@ -101,8 +101,9 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  const isOwner = role === "owner";
+  const isOwner   = role === "owner";
   const isCreator = role === "creator" || isOwner;
+  const isCompany = role === "company"  || isOwner;
 
   // ---- Owner-only routes ----
   if (restPath.startsWith("/head")) {
@@ -117,6 +118,16 @@ export async function middleware(req: NextRequest) {
   // ---- Creator + owner routes ----
   if (restPath.startsWith("/studio")) {
     if (!isCreator) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${locale}/profile`;
+      return NextResponse.redirect(url);
+    }
+    return res;
+  }
+
+  // ---- Company + owner routes ----
+  if (restPath.startsWith("/contracts")) {
+    if (!isCompany) {
       const url = req.nextUrl.clone();
       url.pathname = `/${locale}/profile`;
       return NextResponse.redirect(url);

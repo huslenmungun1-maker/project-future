@@ -62,6 +62,20 @@ type Application = {
   created_at: string;
 };
 
+type CompanyApp = {
+  id: string;
+  user_id: string;
+  applicant_email: string | null;
+  company_name: string;
+  website: string | null;
+  industry: string | null;
+  description: string;
+  motivation: string;
+  status: AppStatus;
+  review_notes: string | null;
+  created_at: string;
+};
+
 const STATUS_CONFIG = {
   pending:  { label: "Pending",       color: "#c8a840", bg: "rgba(200,168,64,0.1)",  border: "rgba(200,168,64,0.22)"  },
   approved: { label: "Approved",      color: "#6ea880", bg: "rgba(110,168,128,0.1)", border: "rgba(110,168,128,0.22)" },
@@ -90,6 +104,13 @@ export default function HeadPage() {
   const [messagesTab, setMessagesTab] = useState(false);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
+
+  const [companiesTab, setCompaniesTab] = useState(false);
+  const [companyApps, setCompanyApps] = useState<CompanyApp[]>([]);
+  const [companyAppsLoading, setCompanyAppsLoading] = useState(false);
+  const [companyActing, setCompanyActing] = useState<string | null>(null);
+  const [companyReviewNotes, setCompanyReviewNotes] = useState<Record<string, string>>({});
+  const [companyExpanded, setCompanyExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -210,6 +231,56 @@ export default function HeadPage() {
     setMessages(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
   }
 
+  async function loadCompanyApps() {
+    setCompanyAppsLoading(true);
+    const { data } = await supabase
+      .from("company_applications")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setCompanyApps((data as CompanyApp[]) ?? []);
+    setCompanyAppsLoading(false);
+  }
+
+  async function actCompany(id: string, status: "approved" | "rejected") {
+    setCompanyActing(id);
+    const notes = companyReviewNotes[id]?.trim() || null;
+    const app   = companyApps.find(a => a.id === id);
+
+    const { error } = await supabase
+      .from("company_applications")
+      .update({ status, review_notes: notes })
+      .eq("id", id);
+
+    if (error) { showToast(error.message, false); setCompanyActing(null); return; }
+
+    if (status === "approved" && app) {
+      const { error: companyError } = await supabase.from("companies").upsert(
+        { user_id: app.user_id, name: app.company_name, website: app.website },
+        { onConflict: "user_id" }
+      );
+      if (companyError) {
+        showToast("Approved, but failed to create company row: " + companyError.message, false);
+        setCompanyActing(null);
+        return;
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ role: "company" })
+        .eq("user_id", app.user_id);
+
+      if (profileError) {
+        showToast("Approved, but failed to update profile: " + profileError.message, false);
+        setCompanyActing(null);
+        return;
+      }
+    }
+
+    setCompanyApps(prev => prev.map(a => a.id === id ? { ...a, status, review_notes: notes } : a));
+    showToast(status === "approved" ? "Application approved." : "Application rejected.", true);
+    setCompanyActing(null);
+  }
+
   const visible = apps.filter((a) => filter === "all" || a.status === filter);
   const counts = {
     all:      apps.length,
@@ -254,7 +325,7 @@ export default function HeadPage() {
               Admin
             </p>
             <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: TEXT }}>
-              {messagesTab ? "Messages" : kidsTab ? "Kids Content Review" : earningsTab ? "Platform Earnings" : "Creator Applications"}
+              {messagesTab ? "Messages" : companiesTab ? "Company Applications" : kidsTab ? "Kids Content Review" : earningsTab ? "Platform Earnings" : "Creator Applications"}
             </h1>
           </div>
           <Link
@@ -279,24 +350,27 @@ export default function HeadPage() {
           }}
         >
           {[
-            { key: "apps",     label: "Applications" },
-            { key: "earnings", label: "Earnings" },
-            { key: "kids",     label: "Kids" },
-            { key: "messages", label: "Messages" },
+            { key: "apps",      label: "Applications" },
+            { key: "companies", label: "Companies" },
+            { key: "earnings",  label: "Earnings" },
+            { key: "kids",      label: "Kids" },
+            { key: "messages",  label: "Messages" },
           ].map(({ key, label }) => {
             const active =
-              key === "messages" ? messagesTab :
-              key === "kids" ? (kidsTab && !messagesTab) :
-              key === "earnings" ? (earningsTab && !kidsTab && !messagesTab) :
-              (!earningsTab && !kidsTab && !messagesTab);
+              key === "messages"  ? messagesTab :
+              key === "companies" ? (companiesTab && !messagesTab) :
+              key === "kids"      ? (kidsTab && !companiesTab && !messagesTab) :
+              key === "earnings"  ? (earningsTab && !kidsTab && !companiesTab && !messagesTab) :
+              (!earningsTab && !kidsTab && !companiesTab && !messagesTab);
             return (
               <button
                 key={key}
                 onClick={() => {
-                  if (key === "messages") { setMessagesTab(true); setKidsTab(false); setEarningsTab(false); loadMessages(); }
-                  else if (key === "kids") { setKidsTab(true); setEarningsTab(false); setMessagesTab(false); loadKidsContent(); }
-                  else if (key === "earnings") { setEarningsTab(true); setKidsTab(false); setMessagesTab(false); }
-                  else { setEarningsTab(false); setKidsTab(false); setMessagesTab(false); }
+                  if (key === "messages")       { setMessagesTab(true);  setCompaniesTab(false); setKidsTab(false); setEarningsTab(false); loadMessages(); }
+                  else if (key === "companies") { setCompaniesTab(true); setMessagesTab(false);  setKidsTab(false); setEarningsTab(false); loadCompanyApps(); }
+                  else if (key === "kids")      { setKidsTab(true); setCompaniesTab(false); setEarningsTab(false); setMessagesTab(false); loadKidsContent(); }
+                  else if (key === "earnings")  { setEarningsTab(true); setCompaniesTab(false); setKidsTab(false); setMessagesTab(false); }
+                  else { setEarningsTab(false); setCompaniesTab(false); setKidsTab(false); setMessagesTab(false); }
                 }}
                 style={{
                   padding: "6px 18px",
@@ -395,6 +469,109 @@ export default function HeadPage() {
                         </button>
                       )}
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : companiesTab ? (
+          /* ── Company applications panel ── */
+          companyAppsLoading ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.4, margin: "0 auto" }} />
+            </div>
+          ) : companyApps.length === 0 ? (
+            <div style={{ padding: "48px 24px", textAlign: "center", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16 }}>
+              <p style={{ fontSize: 13, color: MUTED }}>No company applications yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {companyApps.map(app => {
+                const cfg = STATUS_CONFIG[app.status];
+                const isOpen = companyExpanded === app.id;
+                return (
+                  <div key={app.id} style={{ background: SURFACE, border: `1px solid ${isOpen ? "rgba(255,255,255,0.1)" : BORDER}`, borderRadius: 14, overflow: "hidden" }}>
+                    <button
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 18px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                      onClick={() => setCompanyExpanded(isOpen ? null : app.id)}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 9999, flexShrink: 0, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}>
+                          {cfg.label}
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                            {app.company_name}
+                          </span>
+                          {app.applicant_email && (
+                            <span style={{ fontSize: 11, color: MUTED, display: "block" }}>{app.applicant_email}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: "#4a4a56" }}>
+                          {new Date(app.created_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}
+                        </span>
+                        <span style={{ fontSize: 10, color: MUTED }}>{isOpen ? "▲" : "▼"}</span>
+                      </div>
+                    </button>
+
+                    {isOpen && (
+                      <div style={{ borderTop: `1px solid ${BORDER}`, padding: "20px 18px", display: "flex", flexDirection: "column", gap: 16, background: SURFACE2 }}>
+                        {app.website && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>Website</p>
+                            <a href={app.website} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: ACCENT, textDecoration: "none" }}>{app.website}</a>
+                          </div>
+                        )}
+                        {app.industry && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>Industry</p>
+                            <p style={{ fontSize: 13, color: "#a8a8b4" }}>{app.industry}</p>
+                          </div>
+                        )}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>Description</p>
+                          <p style={{ fontSize: 13, color: "#a8a8b4", lineHeight: 1.65 }}>{app.description}</p>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>Why Enkhverse</p>
+                          <p style={{ fontSize: 13, color: "#a8a8b4", lineHeight: 1.65 }}>{app.motivation}</p>
+                        </div>
+
+                        {app.status === "pending" && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <label style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED }}>
+                                Review notes (optional)
+                              </label>
+                              <textarea
+                                value={companyReviewNotes[app.id] || ""}
+                                onChange={e => setCompanyReviewNotes(prev => ({ ...prev, [app.id]: e.target.value }))}
+                                rows={2} placeholder="Reason for rejection, or leave blank for approval…"
+                                className="dark-input" style={{ resize: "none" }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button disabled={companyActing === app.id} onClick={() => actCompany(app.id, "approved")} className="btn-dark text-sm">
+                                {companyActing === app.id ? "…" : "Approve"}
+                              </button>
+                              <button disabled={companyActing === app.id} onClick={() => actCompany(app.id, "rejected")}
+                                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "8px 20px", borderRadius: 9999, background: "rgba(200,82,82,0.1)", border: "1px solid rgba(200,82,82,0.25)", color: "#c85252", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                                {companyActing === app.id ? "…" : "Reject"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {app.status !== "pending" && app.review_notes && (
+                          <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+                            <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>Notes</p>
+                            <p style={{ fontSize: 13, color: "#a0a0ac", lineHeight: 1.6 }}>{app.review_notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
