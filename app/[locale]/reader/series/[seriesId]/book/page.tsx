@@ -273,15 +273,18 @@ export default function BookReaderPage() {
 
 /* ─── single page view ───────────────────────────────────────── */
 function PageView({ page, styles, aspect, pageNum }: { page: PageRow; styles: BookStyles; aspect: number; pageNum: number; }) {
+  // minHeight mirrors the width expression so the page is never shorter than
+  // its aspect ratio, but expands freely if the content is taller — ensuring
+  // text split at editor dimensions is never clipped in the reader.
+  const minH = `calc(min(340px, 46vw) * ${aspect})`;
   return (
     <div style={{
       width: "min(340px, 46vw)",
-      aspectRatio: `1 / ${aspect}`,
+      minHeight: minH,
       background: styles.pageBackground,
       boxShadow: "0 8px 40px rgba(0,0,0,0.55)",
       borderRadius: 2,
       position: "relative",
-      overflow: "hidden",
       flexShrink: 0,
     }}>
       <div
@@ -291,8 +294,6 @@ function PageView({ page, styles, aspect, pageNum }: { page: PageRow; styles: Bo
           fontSize: styles.fontSize,
           lineHeight: styles.lineHeight,
           color: styles.textColor,
-          height: "100%",
-          overflow: "hidden",
           boxSizing: "border-box",
         }}
         dangerouslySetInnerHTML={{ __html: page.content || "" }}
