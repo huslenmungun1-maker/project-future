@@ -58,6 +58,14 @@ export default function BookReaderPage() {
   const [dir,      setDir]      = useState<"fwd" | "bwd">("fwd");
   const [animKey,  setAnimKey]  = useState(0);
 
+  // resume + progress
+  const [userId,     setUserId]     = useState<string | null>(null);
+  const [resumeFrom, setResumeFrom] = useState<number | null>(null);
+
+  // search
+  const [searchOpen,  setSearchOpen]  = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     let alive = true;
     async function load() {
@@ -94,6 +102,70 @@ export default function BookReaderPage() {
     load();
     return () => { alive = false; };
   }, [seriesId]);
+
+  // Load auth + progress on mount
+  useEffect(() => {
+    let alive = true;
+    async function loadProgress() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !alive) return;
+      setUserId(user.id);
+      const { data: prog } = await supabase
+        .from("reading_progress")
+        .select("last_page")
+        .eq("user_id", user.id)
+        .eq("content_id", seriesId)
+        .maybeSingle();
+      if (alive && prog && prog.last_page > 0) setResumeFrom(prog.last_page);
+    }
+    loadProgress();
+    return () => { alive = false; };
+  }, [seriesId]);
+
+  // Debounced progress save on spread change
+  useEffect(() => {
+    if (!userId || spread === 0) return;
+    const t = setTimeout(() => {
+      supabase.from("reading_progress").upsert(
+        { user_id: userId, content_id: seriesId, content_type: "book_spread", last_page: spread, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,content_id" }
+      );
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [spread, userId, seriesId]);
+
+  // Search — page number, chapter title, body text (all in memory)
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q || !searchOpen) return [];
+    if (/^\d+$/.test(q)) {
+      const pageNum = parseInt(q, 10);
+      if (pageNum >= 1 && pageNum <= allPages.length) {
+        const targetSpread = 1 + Math.floor((pageNum - 1) / 2);
+        return [{ key: "pn", label: `Jump to page ${pageNum}`, targetSpread }];
+      }
+      return [];
+    }
+    const lower = q.toLowerCase();
+    const out: { key: string; label: string; targetSpread: number }[] = [];
+    for (const ch of chapters) {
+      if (ch.title?.toLowerCase().includes(lower)) {
+        const idx = allPages.findIndex(p => p.chapter_id === ch.id);
+        out.push({ key: `ch-${ch.id}`, label: `Ch. ${ch.chapter_number}: ${ch.title}`, targetSpread: idx >= 0 ? 1 + Math.floor(idx / 2) : 1 });
+      }
+    }
+    for (let i = 0; i < allPages.length && out.length < 20; i++) {
+      const raw = allPages[i].content || "";
+      const text = raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const mi = text.toLowerCase().indexOf(lower);
+      if (mi >= 0) {
+        const s = Math.max(0, mi - 28), e = Math.min(text.length, mi + q.length + 28);
+        const snippet = (s > 0 ? "…" : "") + text.slice(s, e) + (e < text.length ? "…" : "");
+        out.push({ key: `pg-${allPages[i].id}`, label: `Page ${i + 1}: ${snippet}`, targetSpread: 1 + Math.floor(i / 2) });
+      }
+    }
+    return out;
+  }, [searchQuery, searchOpen, allPages, chapters]);
 
   // flatten all pages in reading order
   const allPages = useMemo<PageRow[]>(() => {
@@ -150,6 +222,55 @@ export default function BookReaderPage() {
         .flip-bwd { animation: flipBwd 0.28s cubic-bezier(.22,.61,.36,1); }
       `}</style>
 
+      {/* Search overlay */}
+      {searchOpen && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 80 }}
+        >
+          <div style={{ width: "min(520px, 92vw)", background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, overflow: "hidden" }}>
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === "Escape") setSearchOpen(false); }}
+              placeholder="Page number, chapter name, or text…"
+              style={{ width: "100%", padding: "14px 18px", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.08)", color: "#eceae4", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+            />
+            {searchResults.length === 0 && searchQuery.trim() && (
+              <p style={{ padding: "14px 18px", fontSize: 13, color: "#5e5e6e" }}>No results.</p>
+            )}
+            {!searchQuery.trim() && (
+              <p style={{ padding: "14px 18px", fontSize: 12, color: "#5e5e6e" }}>Type a page number, chapter name, or any text you remember.</p>
+            )}
+            {searchResults.map(r => (
+              <button key={r.key} onClick={() => { setSpread(r.targetSpread); setAnimKey(k => k + 1); setSearchOpen(false); setSearchQuery(""); }}
+                style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 18px", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.05)", color: "#eceae4", fontSize: 13, cursor: "pointer" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resume banner */}
+      {resumeFrom !== null && spread === 0 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "10px 20px", background: "rgba(182,160,124,0.12)", borderBottom: "1px solid rgba(182,160,124,0.2)", fontSize: 13 }}>
+          <span style={{ color: "#eceae4" }}>Resume from page {(resumeFrom - 1) * 2 + 1}?</span>
+          <button onClick={() => { setSpread(resumeFrom); setDir("fwd"); setAnimKey(k => k + 1); setResumeFrom(null); }}
+            style={{ padding: "4px 14px", borderRadius: 9999, background: "#b6a07c", border: "none", color: "#0a0a0c", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Resume
+          </button>
+          <button onClick={() => setResumeFrom(null)}
+            style={{ padding: "4px 14px", borderRadius: 9999, background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#7a7870", fontSize: 12, cursor: "pointer" }}>
+            Start over
+          </button>
+        </div>
+      )}
+
       {/* top bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "#0d0d0f" }}>
         <Link href={`/${locale}/reader/series/${seriesId}`} style={{ fontSize: 12, color: "#7a7870", textDecoration: "none" }}>←</Link>
@@ -166,6 +287,10 @@ export default function BookReaderPage() {
         <span style={{ fontSize: 11, color: "#7a7870" }}>
           {spread === 0 ? "Cover" : `Pages ${(spread - 1) * 2 + 1}–${Math.min((spread - 1) * 2 + 2, allPages.length)} of ${allPages.length}`}
         </span>
+        <button onClick={() => setSearchOpen(true)}
+          style={{ fontSize: 11, padding: "4px 12px", borderRadius: 9999, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#7a7870", cursor: "pointer" }}>
+          ⌕ Search
+        </button>
       </div>
 
       {/* page area */}

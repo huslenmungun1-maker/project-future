@@ -243,6 +243,11 @@ export default function ReaderSeriesChapterPage() {
   const [chapterPages, setChapterPages] = useState<ChapterPageRow[]>([]);
   const [isOwner, setIsOwner] = useState(false);
 
+  // resume
+  const [resumeChapter, setResumeChapter] = useState<number | null>(null);
+  // search
+  const [chapterSearch, setChapterSearch] = useState("");
+
   const router = useRouter();
 
   useEffect(() => {
@@ -397,12 +402,30 @@ export default function ReaderSeriesChapterPage() {
       try {
         const { data: { user } } = await authClient.auth.getUser();
         if (user) {
+          // existing per-chapter tracking
           await authClient
             .from("read_progress")
             .upsert(
               { user_id: user.id, series_id: seriesId, chapter_id: foundCurrent.id, updated_at: new Date().toISOString() },
               { onConflict: "user_id,series_id" }
             );
+          // new resume tracking — save chapter number
+          await authClient
+            .from("reading_progress")
+            .upsert(
+              { user_id: user.id, content_id: seriesId, content_type: "series_chapter", last_page: foundCurrent.chapter_number, updated_at: new Date().toISOString() },
+              { onConflict: "user_id,content_id" }
+            );
+          // if on ch 1, check if there's saved progress at a later chapter
+          if (foundCurrent.chapter_number === 1) {
+            const { data: prog } = await authClient
+              .from("reading_progress")
+              .select("last_page")
+              .eq("user_id", user.id)
+              .eq("content_id", seriesId)
+              .maybeSingle();
+            if (prog && prog.last_page > 1) setResumeChapter(prog.last_page);
+          }
 
           const chapterPrice = Number(foundCurrent.price ?? 0);
           if (chapterPrice > 0 && !stripeVerified.current) {
@@ -691,8 +714,46 @@ export default function ReaderSeriesChapterPage() {
                 </p>
               )}
 
+              {/* Chapter search */}
+              <input
+                type="text"
+                value={chapterSearch}
+                onChange={e => setChapterSearch(e.target.value)}
+                placeholder="Search chapters…"
+                style={{
+                  width: "100%", padding: "7px 12px", marginBottom: 8,
+                  background: "rgba(255,255,255,0.55)", border: "1px solid var(--border)",
+                  borderRadius: 10, fontSize: 12, color: "var(--text)", outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              {/* Resume prompt */}
+              {resumeChapter !== null && (
+                <div style={{ padding: "8px 12px", marginBottom: 8, borderRadius: 10, background: "rgba(182,160,124,0.12)", border: "1px solid rgba(182,160,124,0.22)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <p style={{ fontSize: 12, color: "var(--text)", fontWeight: 500 }}>Resume from chapter {resumeChapter}?</p>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <a href={`${basePath}/${resumeChapter}`} onClick={() => setResumeChapter(null)}
+                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 9999, background: "#b6a07c", color: "#0a0a0c", fontWeight: 700, textDecoration: "none" }}>
+                      Resume
+                    </a>
+                    <button onClick={() => setResumeChapter(null)}
+                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 9999, border: "1px solid rgba(0,0,0,0.15)", background: "transparent", color: "var(--muted)", cursor: "pointer" }}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                {chapters.map((ch) => {
+                {chapters.filter(ch => {
+                  if (!chapterSearch.trim()) return true;
+                  const q = chapterSearch.trim().toLowerCase();
+                  if (/^\d+$/.test(q)) return String(ch.chapter_number).includes(q);
+                  const tr = chapterTranslations.get(ch.id);
+                  const title = tr?.title || ch.title || "";
+                  return title.toLowerCase().includes(q) || String(ch.chapter_number).includes(q);
+                }).map((ch) => {
                   const tr = chapterTranslations.get(ch.id);
                   const itemTitle = tr?.title || ch.title || `${t.chapter} ${ch.chapter_number}`;
                   const href = `${basePath}/${ch.chapter_number}`;

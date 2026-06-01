@@ -185,6 +185,8 @@ export default function ReaderChapterPage() {
   const [displayTitle, setDisplayTitle] = useState<string>("");
   const [displayChapters, setDisplayChapters] = useState<ChapterRow[]>([]);
   const [isOwner, setIsOwner] = useState(false);
+  const [resumeChapter, setResumeChapter] = useState<number | null>(null);
+  const [chapterSearch, setChapterSearch] = useState("");
 
   const router = useRouter();
 
@@ -395,6 +397,19 @@ export default function ReaderChapterPage() {
         baseTitle: bookRow.title,
         baseChapters: publishedChapters,
       });
+
+      // Save reading progress + resume check
+      const { data: { user: progressUser } } = await authClient.auth.getUser();
+      if (progressUser) {
+        await authClient.from("reading_progress").upsert(
+          { user_id: progressUser.id, content_id: bookId, content_type: "book_chapter", last_page: chapterNumber, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,content_id" }
+        );
+        if (chapterNumber === 1) {
+          const { data: prog } = await authClient.from("reading_progress").select("last_page").eq("user_id", progressUser.id).eq("content_id", bookId).maybeSingle();
+          if (prog && prog.last_page > 1) setResumeChapter(prog.last_page);
+        }
+      }
 
       // Check if current chapter is paid and if user has unlocked it
       const currentCh = publishedChapters.find((c) => (c.chapter_number ?? 0) === chapterNumber);
@@ -658,8 +673,39 @@ export default function ReaderChapterPage() {
                 {displayTitle || title || t.untitledBook}
               </h2>
 
+              {/* Chapter search */}
+              <input
+                type="text"
+                value={chapterSearch}
+                onChange={e => setChapterSearch(e.target.value)}
+                placeholder="Search chapters…"
+                style={{ width: "100%", padding: "7px 12px", marginBottom: 8, background: "rgba(255,255,255,0.55)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12, color: "var(--text)", outline: "none", boxSizing: "border-box" }}
+              />
+
+              {/* Resume prompt */}
+              {resumeChapter !== null && (
+                <div style={{ padding: "8px 12px", marginBottom: 8, borderRadius: 10, background: "rgba(182,160,124,0.12)", border: "1px solid rgba(182,160,124,0.22)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <p style={{ fontSize: 12, color: "var(--text)", fontWeight: 500 }}>Resume from chapter {resumeChapter}?</p>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <a href={`${basePath}/${resumeChapter}`} onClick={() => setResumeChapter(null)}
+                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 9999, background: "#b6a07c", color: "#0a0a0c", fontWeight: 700, textDecoration: "none" }}>
+                      Resume
+                    </a>
+                    <button onClick={() => setResumeChapter(null)}
+                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 9999, border: "1px solid rgba(0,0,0,0.15)", background: "transparent", color: "var(--muted)", cursor: "pointer" }}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                {displayChapters.map((ch) => {
+                {displayChapters.filter(ch => {
+                  if (!chapterSearch.trim()) return true;
+                  const q = chapterSearch.trim().toLowerCase();
+                  if (/^\d+$/.test(q)) return String(ch.chapter_number).includes(q);
+                  return (ch.title || "").toLowerCase().includes(q) || String(ch.chapter_number).includes(q);
+                }).map((ch) => {
                   const href = `${basePath}/${ch.chapter_number ?? 1}`;
                   const active = (ch.chapter_number ?? 0) === chapterNumber;
 
