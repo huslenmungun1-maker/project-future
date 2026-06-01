@@ -112,16 +112,16 @@ export default function EditCreatorProfilePage() {
 
       const { data: p } = await supabase
         .from("profiles")
-        .select("id,display_name,username,bio,avatar_url,banner_url,instagram_url,twitter_url,youtube_url,role")
+        .select("user_id,display_name,username,bio,avatar_url,banner_url,instagram_url,twitter_url,youtube_url,role")
         .eq("username", username)
         .maybeSingle();
 
-      if (!p || p.id !== session.user.id) {
+      if (!p || p.user_id !== session.user.id) {
         router.replace(`/${locale}/creator/${username}`);
         return;
       }
 
-      setProfileId(p.id);
+      setProfileId(p.user_id);
       setDisplayName(p.display_name  || "");
       setUsernameVal(p.username      || "");
       setBio(p.bio                   || "");
@@ -134,7 +134,7 @@ export default function EditCreatorProfilePage() {
       const { data: cr } = await supabase
         .from("creators")
         .select("portfolio_url,content_types")
-        .eq("id", p.id)
+        .eq("id", p.user_id)
         .maybeSingle();
 
       if (cr) {
@@ -170,7 +170,7 @@ export default function EditCreatorProfilePage() {
         twitter_url:   twitterUrl.trim()    || null,
         youtube_url:   youtubeUrl.trim()    || null,
       })
-      .eq("id", profileId);
+      .eq("user_id", profileId);
 
     if (profileError) {
       setError(

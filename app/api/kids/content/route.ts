@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Verify user is a kid
-  const { data: profile } = await supabase.from("profiles").select("account_type").eq("id", user.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("account_type").eq("user_id", user.id).maybeSingle();
   if (profile?.account_type !== "kid") {
     return NextResponse.json({ error: "Only kid accounts can submit content" }, { status: 403 });
   }

@@ -13,7 +13,7 @@ const MUTED   = "#7a7870";
 const ACCENT  = "#b6a07c";
 
 type ProfileRow = {
-  id: string;
+  user_id: string;
   display_name: string | null;
   username: string | null;
   bio: string | null;
@@ -92,7 +92,7 @@ export default function CreatorPublicProfilePage() {
 
       const { data: p } = await supabase
         .from("profiles")
-        .select("id,display_name,username,bio,avatar_url,banner_url,instagram_url,twitter_url,youtube_url,role")
+        .select("user_id,display_name,username,bio,avatar_url,banner_url,instagram_url,twitter_url,youtube_url,role")
         .eq("username", username)
         .maybeSingle();
 
@@ -107,17 +107,17 @@ export default function CreatorPublicProfilePage() {
         supabase
           .from("series")
           .select("id,title,cover_image_url,cover_url,project_type,published_at,views")
-          .eq("user_id", p.id)
+          .eq("user_id", p.user_id)
           .or("published.eq.true,published_at.not.is.null")
           .order("published_at", { ascending: false }),
         supabase
           .from("follows")
           .select("*", { count: "exact", head: true })
-          .eq("followed_id", p.id),
+          .eq("followed_id", p.user_id),
         supabase
           .from("creators")
           .select("portfolio_url,content_types")
-          .eq("id", p.id)
+          .eq("id", p.user_id)
           .maybeSingle(),
         supabase.auth.getSession(),
       ]);
@@ -130,12 +130,12 @@ export default function CreatorPublicProfilePage() {
       const session = sessionRes.data.session;
       if (session?.user) {
         setCurrentUserId(session.user.id);
-        if (session.user.id !== p.id) {
+        if (session.user.id !== p.user_id) {
           const { data: followRow } = await supabase
             .from("follows")
             .select("follower_id")
             .eq("follower_id", session.user.id)
-            .eq("followed_id", p.id)
+            .eq("followed_id", p.user_id)
             .maybeSingle();
           if (alive) setIsFollowing(!!followRow);
         }
@@ -148,18 +148,18 @@ export default function CreatorPublicProfilePage() {
   }, [username]);
 
   async function toggleFollow() {
-    if (!profile || !currentUserId || currentUserId === profile.id) return;
+    if (!profile || !currentUserId || currentUserId === profile.user_id) return;
     setFollowLoading(true);
     if (isFollowing) {
       await supabase.from("follows")
         .delete()
         .eq("follower_id", currentUserId)
-        .eq("followed_id", profile.id);
+        .eq("followed_id", profile.user_id);
       setIsFollowing(false);
       setFollowerCount(c => Math.max(0, c - 1));
     } else {
       await supabase.from("follows")
-        .insert({ follower_id: currentUserId, followed_id: profile.id });
+        .insert({ follower_id: currentUserId, followed_id: profile.user_id });
       setIsFollowing(true);
       setFollowerCount(c => c + 1);
     }

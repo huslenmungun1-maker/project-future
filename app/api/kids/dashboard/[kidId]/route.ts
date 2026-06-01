@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ kidI
   if (!link) return NextResponse.json({ error: "Not authorized for this kid" }, { status: 403 });
 
   const [profileRes, historyRes, chatRes, contentRes, flagsRes, permRes] = await Promise.all([
-    supabase.from("profiles").select("display_name, age, kid_theme, account_type").eq("id", kidId).maybeSingle(),
+    supabase.from("profiles").select("display_name, age, kid_theme, account_type").eq("user_id", kidId).maybeSingle(),
     supabase.from("kid_read_history").select("id, content_type, content_title, read_at").eq("kid_user_id", kidId).order("read_at", { ascending: false }).limit(50),
     supabase.from("kid_chat_messages").select("id, sender_id, receiver_id, message, is_flagged, created_at").or(`sender_id.eq.${kidId},receiver_id.eq.${kidId}`).order("created_at", { ascending: false }).limit(100),
     supabase.from("kid_content_submissions").select("id, title, content_type, status, created_at").eq("kid_user_id", kidId).order("created_at", { ascending: false }),

@@ -460,7 +460,7 @@ export default function ChapterEditorPage() {
       if (authErr || !session?.user) { router.replace(`/${locale}/login`); return; }
 
       const { data: profile } = await supabase
-        .from("profiles").select("role").eq("id", session.user.id).maybeSingle();
+        .from("profiles").select("role").eq("user_id", session.user.id).maybeSingle();
       if (!alive) return;
 
       const role = profile?.role ?? "reader";

@@ -46,7 +46,7 @@ export default function CreatorPage() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", uid)
+        .eq("user_id", uid)
         .maybeSingle();
 
       const userRole = profile?.role ?? "reader";
