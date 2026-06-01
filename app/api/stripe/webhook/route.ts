@@ -28,6 +28,15 @@ async function grantUnlock(
     );
 }
 
+async function creditWallet(userId: string, amount: number) {
+  const db = supabaseServiceRole();
+  await db.rpc("credit_wallet", {
+    p_user_id:     userId,
+    p_amount:      amount,
+    p_description: "Wallet top-up",
+  });
+}
+
 export async function POST(req: NextRequest) {
   const sig     = req.headers.get("stripe-signature") ?? "";
   const rawBody = await req.text();
@@ -48,17 +57,25 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
 
     if (session.payment_status === "paid") {
-      const chapterId = session.metadata?.chapter_id;
-      const userId    = session.metadata?.user_id;
+      const type   = session.metadata?.type;
+      const userId = session.metadata?.user_id;
 
-      if (chapterId && userId) {
-        await grantUnlock(
-          chapterId,
-          userId,
-          (session.amount_total ?? 0) / 100,
-          session.currency ?? "usd",
-          session.id
-        );
+      if (type === "wallet_topup") {
+        const amount = Number(session.metadata?.amount);
+        if (userId && amount > 0) {
+          await creditWallet(userId, amount);
+        }
+      } else {
+        const chapterId = session.metadata?.chapter_id;
+        if (chapterId && userId) {
+          await grantUnlock(
+            chapterId,
+            userId,
+            (session.amount_total ?? 0) / 100,
+            session.currency ?? "usd",
+            session.id
+          );
+        }
       }
     }
   }

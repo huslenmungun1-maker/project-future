@@ -172,26 +172,35 @@ export default function WalletPage() {
   useEffect(() => {
     async function init() {
       await fetchWallet();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("topup") === "success") {
+        showToast(t.added, true);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
     }
     init();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleTopup() {
     setAdding(true);
+    const origin = window.location.origin;
     const res = await fetch("/api/wallet/topup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: selectedAmount }),
+      body: JSON.stringify({
+        amount: selectedAmount,
+        successUrl: `${origin}/${locale}/wallet?topup=success`,
+        cancelUrl:  `${origin}/${locale}/wallet`,
+      }),
     });
     const json = await res.json();
-    setAdding(false);
-    setShowTopup(false);
-    if (json.ok) {
-      showToast(t.added, true);
-      fetchWallet();
-    } else {
+    if (!res.ok || !json.url) {
+      setAdding(false);
+      setShowTopup(false);
       showToast(json.error ?? t.error, false);
+      return;
     }
+    window.location.href = json.url;
   }
 
   function showToast(msg: string, ok: boolean) {
@@ -317,7 +326,7 @@ export default function WalletPage() {
                   transition: "opacity 120ms ease",
                 }}
               >
-                {adding ? t.adding : `${t.confirm} $${selectedAmount}`}
+                {adding ? "→ Stripe…" : `${t.confirm} $${selectedAmount}`}
               </button>
             </div>
           </div>
