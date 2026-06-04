@@ -110,13 +110,14 @@ export default function BookReaderPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !alive) return;
       setUserId(user.id);
-      const { data: prog } = await supabase
+      const { data: prog, error: progErr } = await supabase
         .from("reading_progress")
         .select("last_page")
         .eq("user_id", user.id)
         .eq("content_id", seriesId)
         .maybeSingle();
-      if (alive && prog && prog.last_page > 0) setResumeFrom(prog.last_page);
+      // progErr means table doesn't exist yet (migration 033 not applied) — degrade silently
+      if (!progErr && alive && prog && prog.last_page > 0) setResumeFrom(prog.last_page);
     }
     loadProgress();
     return () => { alive = false; };
@@ -125,8 +126,8 @@ export default function BookReaderPage() {
   // Debounced progress save on spread change
   useEffect(() => {
     if (!userId || spread === 0) return;
-    const t = setTimeout(() => {
-      supabase.from("reading_progress").upsert(
+    const t = setTimeout(async () => {
+      await supabase.from("reading_progress").upsert(
         { user_id: userId, content_id: seriesId, content_type: "book_spread", last_page: spread, updated_at: new Date().toISOString() },
         { onConflict: "user_id,content_id" }
       );

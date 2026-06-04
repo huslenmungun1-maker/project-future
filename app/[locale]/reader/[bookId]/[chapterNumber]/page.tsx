@@ -406,8 +406,8 @@ export default function ReaderChapterPage() {
           { onConflict: "user_id,content_id" }
         );
         if (chapterNumber === 1) {
-          const { data: prog } = await authClient.from("reading_progress").select("last_page").eq("user_id", progressUser.id).eq("content_id", bookId).maybeSingle();
-          if (prog && prog.last_page > 1) setResumeChapter(prog.last_page);
+          const { data: prog, error: progErr } = await authClient.from("reading_progress").select("last_page").eq("user_id", progressUser.id).eq("content_id", bookId).maybeSingle();
+          if (!progErr && prog && prog.last_page > 1) setResumeChapter(prog.last_page);
         }
       }
 

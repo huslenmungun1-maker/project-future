@@ -418,13 +418,13 @@ export default function ReaderSeriesChapterPage() {
             );
           // if on ch 1, check if there's saved progress at a later chapter
           if (foundCurrent.chapter_number === 1) {
-            const { data: prog } = await authClient
+            const { data: prog, error: progErr } = await authClient
               .from("reading_progress")
               .select("last_page")
               .eq("user_id", user.id)
               .eq("content_id", seriesId)
               .maybeSingle();
-            if (prog && prog.last_page > 1) setResumeChapter(prog.last_page);
+            if (!progErr && prog && prog.last_page > 1) setResumeChapter(prog.last_page);
           }
 
           const chapterPrice = Number(foundCurrent.price ?? 0);
