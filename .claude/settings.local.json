@@ -24,7 +24,21 @@
       "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\create\")",
       "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\dashboard\\\\[kidId]\")",
       "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\kids\\\\setup\")",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(findstr /i \"deploy\\\\|vercel\\\\|netlify\\\\|heroku\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\api\" -Recurse -File -Filter \"*.ts\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(npm install *)",
+      "Bash(cd C:\\\\Users\\\\User\\\\Desktop\\\\project-future *)",
+      "Bash(git diff *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" \"http://localhost:3009/en/studio\")",
+      "Bash(netstat -ano)",
+      "Bash(curl *)",
+      "Bash(vercel ls *)",
+      "Bash(grep -r \"STRIPE\\\\|stripe\" .env*)",
+      "Bash(grep -r \"STRIPE\\\\|stripe\" .env.local)",
+      "Bash(ls .env*)",
+      "Bash(node _audit.mjs)"
     ],
     "defaultMode": "acceptEdits"
   }
