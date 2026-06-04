@@ -138,7 +138,7 @@ export default function ContractsPage() {
     setDetail(contract);
     setApproveError(null);
     setDetailLoading(true);
-    const fetches: Promise<unknown>[] = [
+    const fetches: PromiseLike<unknown>[] = [
       supabase.from("contract_milestones").select("*").eq("contract_id", contract.id).order("due_date"),
       supabase.from("contract_signatures").select("*").eq("contract_id", contract.id),
     ];
