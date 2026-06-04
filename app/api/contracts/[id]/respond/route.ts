@@ -35,7 +35,7 @@ export async function PATCH(
 
   const newStatus = action === "accept" ? "active" : "declined";
 
-  const ops: Promise<unknown>[] = [
+  const ops: PromiseLike<unknown>[] = [
     db.from("contracts")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", contractId),

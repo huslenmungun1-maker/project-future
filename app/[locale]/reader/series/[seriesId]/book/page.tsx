@@ -134,6 +134,15 @@ export default function BookReaderPage() {
     return () => clearTimeout(t);
   }, [spread, userId, seriesId]);
 
+  // flatten all pages in reading order
+  const allPages = useMemo<PageRow[]>(() => {
+    const out: PageRow[] = [];
+    for (const ch of chapters) {
+      for (const pg of (pagesMap[ch.id] || [])) out.push(pg);
+    }
+    return out;
+  }, [chapters, pagesMap]);
+
   // Search — page number, chapter title, body text (all in memory)
   const searchResults = useMemo(() => {
     const q = searchQuery.trim();
@@ -166,15 +175,6 @@ export default function BookReaderPage() {
     }
     return out;
   }, [searchQuery, searchOpen, allPages, chapters]);
-
-  // flatten all pages in reading order
-  const allPages = useMemo<PageRow[]>(() => {
-    const out: PageRow[] = [];
-    for (const ch of chapters) {
-      for (const pg of (pagesMap[ch.id] || [])) out.push(pg);
-    }
-    return out;
-  }, [chapters, pagesMap]);
 
   const totalSpreads = 1 + Math.ceil(allPages.length / 2); // spread 0 = cover
 
