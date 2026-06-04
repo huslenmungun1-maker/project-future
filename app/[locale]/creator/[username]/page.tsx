@@ -203,7 +203,7 @@ export default function CreatorPublicProfilePage() {
     );
   }
 
-  const isSelf   = currentUserId === profile.id;
+  const isSelf   = currentUserId === profile.user_id;
   const initials = (profile.display_name || profile.username || "?")[0].toUpperCase();
   const contentTypes: string[] = creator?.content_types ?? [];
   const socialLinks = [
