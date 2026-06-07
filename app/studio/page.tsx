@@ -44,7 +44,7 @@ export default function StudioHome() {
   if (!allowed) {
     return (
       <main style={{ padding: 40 }}>
-        <p>Checking access??/p>
+        <p>Checking access…</p>
       </main>
     );
   }
