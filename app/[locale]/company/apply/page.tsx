@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 const BG      = "#0a0a0c";
 const SURFACE = "#111116";
@@ -100,9 +100,7 @@ export default function CompanyApplyPage() {
   const params = useParams();
   const router = useRouter();
   const locale = (params?.locale as string) || "en";
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [initialized, setInitialized] = useState(false);
   const [userId, setUserId]           = useState<string | null>(null);

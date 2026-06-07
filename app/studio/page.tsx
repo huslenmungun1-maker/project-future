@@ -1,15 +1,15 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 export default function StudioHome() {
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const supabase = getBrowserClient();
 
     async function check() {
       const {
@@ -44,7 +44,7 @@ export default function StudioHome() {
   if (!allowed) {
     return (
       <main style={{ padding: 40 }}>
-        <p>Checking access…</p>
+        <p>Checking access??/p>
       </main>
     );
   }

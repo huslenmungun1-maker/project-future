@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import type { Session } from "@supabase/supabase-js";
 
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
@@ -37,7 +37,7 @@ export default function NavBar({ locale }: { locale: string }) {
   const router = useRouter();
   const currentLocale = normalizeLocale(locale);
   const t = UI_TEXT[currentLocale];
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>("reader");
 

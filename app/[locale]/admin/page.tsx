@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 type SeriesRow = {
   id: string;
@@ -20,7 +20,7 @@ export default function AdminHomePage() {
   const locale = (params?.locale as string) || "en";
 
   // ✅ cookie-aware client (required for admin RPC)
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);

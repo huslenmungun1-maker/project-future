@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 function BookIcon({ size = 36 }: { size?: number }) {
   return (
@@ -102,10 +102,7 @@ export default function KidsHomePage({ params }: { params: Promise<{ locale: str
   const [canCreate, setCanCreate] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getBrowserClient();
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;

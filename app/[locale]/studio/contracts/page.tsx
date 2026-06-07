@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 const BG      = "#0a0a0c";
 const SURFACE = "#111116";
@@ -66,9 +66,7 @@ export default function StudioContractsPage() {
   const params = useParams();
   const router = useRouter();
   const locale = (params?.locale as string) || "en";
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [view, setView]             = useState<string>("list");
   const [contracts, setContracts]   = useState<Contract[]>([]);

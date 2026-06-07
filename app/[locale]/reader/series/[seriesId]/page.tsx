@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import { supabase } from "@/lib/supabaseClient";
 
 type SeriesRow = {
@@ -59,7 +59,7 @@ export default function SeriesDetailPage() {
   const router = useRouter();
 
   const authClient = useMemo(
-    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    () => getBrowserClient(),
     []
   );
 
@@ -76,55 +76,48 @@ export default function SeriesDetailPage() {
     async function load() {
       if (!seriesId) { if (alive) setStatus("error"); return; }
 
-      const { data: { session: authSess } } = await authClient.auth.getSession();
-      const ownerLocal = authSess?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL;
-      if (alive) setIsOwner(ownerLocal);
+      try {
+        const { data: { session: authSess } } = await authClient.auth.getSession();
+        const ownerLocal = authSess?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL;
+        if (alive) setIsOwner(ownerLocal);
 
-      const { data: s } = await supabase
-        .from("series")
-        .select("id,title,description,cover_image_url,cover_url,published,published_at,language,project_type,user_id,author_label,price")
-        .eq("id", seriesId)
-        .maybeSingle();
-
-      if (!alive) return;
-      if (!s || (!ownerLocal && !s.published && !s.published_at)) { setStatus("error"); return; }
-      setSeries(s as SeriesRow);
-
-      const { data: chs } = await (ownerLocal
-        ? supabase.from("chapters").select("id,chapter_number,title,is_published,published_at,created_at").eq("series_id", seriesId).order("chapter_number", { ascending: true })
-        : supabase.from("chapters").select("id,chapter_number,title,is_published,published_at,created_at").eq("series_id", seriesId).or("is_published.eq.true,published_at.not.is.null").order("chapter_number", { ascending: true })
-      );
-
-      if (!alive) return;
-      setChapters((chs as ChapterRow[]) || []);
-
-      if (s.user_id) {
-        const { data: p } = await supabase
-          .from("profiles")
-          .select("user_id,display_name,username,avatar_url,role")
-          .eq("user_id", s.user_id)
+        const { data: s } = await supabase
+          .from("series")
+          .select("id,title,description,cover_image_url,cover_url,published,published_at,language,project_type,user_id,author_label,price")
+          .eq("id", seriesId)
           .maybeSingle();
-        if (alive && p) setCreator(p as ProfileRow);
 
-        const { count } = await supabase
-          .from("follows")
-          .select("*", { count: "exact", head: true })
-          .eq("followed_id", s.user_id);
-        if (alive) setFollowerCount(count ?? 0);
+        if (!alive) return;
+        if (!s || (!ownerLocal && !s.published && !s.published_at)) { setStatus("error"); return; }
+        setSeries(s as SeriesRow);
+
+        const { data: chs } = await (ownerLocal
+          ? supabase.from("chapters").select("id,chapter_number,title,is_published,published_at,created_at").eq("series_id", seriesId).order("chapter_number", { ascending: true })
+          : supabase.from("chapters").select("id,chapter_number,title,is_published,published_at,created_at").eq("series_id", seriesId).or("is_published.eq.true,published_at.not.is.null").order("chapter_number", { ascending: true })
+        );
+
+        if (!alive) return;
+        setChapters((chs as ChapterRow[]) || []);
+
+        if (s.user_id) {
+          const { data: p } = await supabase
+            .from("profiles")
+            .select("user_id,display_name,username,avatar_url,role")
+            .eq("user_id", s.user_id)
+            .maybeSingle();
+          if (alive && p) setCreator(p as ProfileRow);
+
+          const { count } = await supabase
+            .from("follows")
+            .select("*", { count: "exact", head: true })
+            .eq("followed_id", s.user_id);
+          if (alive) setFollowerCount(count ?? 0);
+        }
+
+        if (alive) setStatus("ok");
+      } catch {
+        if (alive) setStatus("error");
       }
-
-      const { data: { session } } = await authClient.auth.getSession();
-      if (alive && session?.user) {
-        const { data: prog } = await supabase
-          .from("read_progress")
-          .select("chapter_id")
-          .eq("user_id", session.user.id)
-          .eq("series_id", seriesId)
-          .maybeSingle();
-        if (alive && prog?.chapter_id) setProgressChapterId(prog.chapter_id);
-      }
-
-      if (alive) setStatus("ok");
     }
     load();
     return () => { alive = false; };

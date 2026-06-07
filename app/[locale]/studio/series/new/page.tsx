@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 type InsertedSeries = { id: string };
 
@@ -11,7 +11,7 @@ export default function NewSeriesPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
 
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [error, setError] = useState<string | null>(null);
 

@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import { supabase } from "@/lib/supabaseClient";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
 
@@ -130,7 +130,7 @@ export default function BookDetailPage() {
   const bookId = (params as Record<string, string>)?.id;
 
   const authClient = useMemo(
-    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    () => getBrowserClient(),
     []
   );
 

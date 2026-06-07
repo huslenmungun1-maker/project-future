@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import { CoreAssistantPanel } from "./CoreAssistantPanel";
 
 export default function StudioPage() {
@@ -10,7 +10,7 @@ export default function StudioPage() {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const supabase = getBrowserClient();
 
     async function checkAccess() {
       const {
@@ -45,7 +45,7 @@ export default function StudioPage() {
   if (!authorized) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-sm text-gray-500">Checking access…</p>
+        <p className="text-sm text-gray-500">Checking access??/p>
       </main>
     );
   }

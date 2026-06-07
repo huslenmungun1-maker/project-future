@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import { supabase } from "@/lib/supabaseClient";
 import { safeLocale } from "@/lib/i18n";
 
@@ -141,7 +141,7 @@ export default function ReaderHomePage() {
   const t = UI_TEXT[locale];
 
   const authClient = useMemo(
-    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    () => getBrowserClient(),
     []
   );
 
@@ -456,7 +456,7 @@ export default function ReaderHomePage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {(["all", "novel", "manga", "webtoon", "comic", "artbook"] as const).map(type => (
+            {(["all", "novel", "manga", "webtoon", "comic", "artbook", "moodboard", "poetry", "short_story"] as const).map(type => (
               <button
                 key={type}
                 onClick={() => setActiveType(type)}
@@ -467,7 +467,10 @@ export default function ReaderHomePage() {
                   color: activeType === type ? "var(--accent)" : "var(--muted)",
                 }}
               >
-                {type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1)}
+                {type === "all" ? "All"
+                  : type === "moodboard" ? "Mood Board"
+                  : type === "short_story" ? "Short Story"
+                  : type.charAt(0).toUpperCase() + type.slice(1)}
               </button>
             ))}
           </div>

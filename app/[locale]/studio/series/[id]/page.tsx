@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import CoverImageUploader from "@/components/studio/CoverImageUploader";
 import StudioSelect from "@/components/studio/StudioSelect";
 
@@ -350,7 +350,7 @@ type Lang = keyof typeof UI_TEXT;
 export default function SeriesDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const seriesId =
     (params?.id as string) ||

@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import type { Session } from "@supabase/supabase-js";
 
 type SupportedLocale = "en" | "ko" | "mn" | "ja";
@@ -42,7 +42,7 @@ export default function HoverSidebar({ locale }: { locale: string }) {
   const t = UI_TEXT[l];
   const restPath = stripLeadingLocale(pathname);
 
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>("reader");
 

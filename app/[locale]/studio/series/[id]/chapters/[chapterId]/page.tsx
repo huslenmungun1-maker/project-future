@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 const BG = "#0a0a0c";
 const SURFACE = "rgba(255,255,255,0.03)";
@@ -403,7 +403,7 @@ export default function ChapterEditorPage() {
   const params = useParams();
   const router = useRouter();
   const supabase = useMemo(
-    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    () => getBrowserClient(),
     []
   );
 

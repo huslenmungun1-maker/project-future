@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 type Props = {
   /** if you pass bookId => updates public.books */
@@ -20,7 +20,7 @@ export default function CoverImageUploader({
   bucket = "covers",
 }: Props) {
   const authClient = useMemo(
-    () => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
+    () => getBrowserClient(),
     []
   );
   const [isUploading, setIsUploading] = useState(false);

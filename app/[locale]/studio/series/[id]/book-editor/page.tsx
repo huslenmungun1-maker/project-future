@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 /* ─── constants ──────────────────────────────────────────────── */
 const BG      = "#111113";
@@ -259,9 +259,7 @@ function CoverCanvas({
 export default function BookEditorPage() {
   const params  = useParams();
   const router  = useRouter();
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const locale   = (params?.locale as string) || "en";
   const seriesId = (params?.id as string) || "";

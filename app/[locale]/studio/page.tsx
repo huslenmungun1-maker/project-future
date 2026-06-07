@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 type SeriesRow = {
   id: string;
@@ -124,7 +124,7 @@ export default function StudioHomePage() {
   const locale = normalizeLocale((params?.locale as string) || "en");
   const t = UI_TEXT[locale];
 
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [allowed, setAllowed] = useState(false);
@@ -442,7 +442,7 @@ export default function StudioHomePage() {
             </Link>
 
             <Link
-              href={`/${locale}/studio/settings`}
+              href={`/${locale}/studio/payouts`}
               className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-medium transition"
               style={{
                 borderColor: "var(--border)",

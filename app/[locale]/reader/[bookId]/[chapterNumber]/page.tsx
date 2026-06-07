@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import { supabase } from "@/lib/supabaseClient";
 
 type Status = "loading" | "ok" | "error";
@@ -162,10 +162,7 @@ export default function ReaderChapterPage() {
 
   const authClient = useMemo(
     () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
+      getBrowserClient(),
     []
   );
 

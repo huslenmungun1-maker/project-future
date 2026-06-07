@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 export default function SignOutButton({
   locale,
@@ -14,7 +14,7 @@ export default function SignOutButton({
   style?: React.CSSProperties;
 }) {
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   async function handleSignOut() {
     await supabase.auth.signOut();

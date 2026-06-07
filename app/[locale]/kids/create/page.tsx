@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import { use, useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 const LABELS: Record<string, Record<string, string>> = {
   en: {
@@ -89,10 +89,7 @@ export default function KidsCreatePage({ params }: { params: Promise<{ locale: s
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getBrowserClient();
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return setCanCreate(false);

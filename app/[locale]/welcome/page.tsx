@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 const UI_TEXT = {
   en: {
@@ -51,7 +51,7 @@ export default function WelcomePage() {
   const router = useRouter();
   const locale = safeLocale(params?.locale);
   const t = UI_TEXT[locale];
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [email, setEmail] = useState<string | null>(null);
 

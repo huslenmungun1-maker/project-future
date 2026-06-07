@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 import {
   DndContext,
   closestCenter,
@@ -165,10 +165,7 @@ export default function MangaEditorPage() {
   const locale   = (params?.locale as string) || "en";
   const seriesId = (params?.id    as string) || "";
 
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  ), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [series,       setSeries]       = useState<SeriesRow | null>(null);
   const [chapters,     setChapters]     = useState<ChapterRow[]>([]);

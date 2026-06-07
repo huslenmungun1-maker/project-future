@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { getBrowserClient } from "@/lib/browserClient";
 
 type Mode = "login" | "signup";
 
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const locale = (params?.locale as string) || "en";
   const explicitRedirect = search.get("redirect");
 
-  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
+  const supabase = useMemo(() => getBrowserClient(), []);
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
