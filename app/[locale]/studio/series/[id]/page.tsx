@@ -1097,6 +1097,19 @@ export default function SeriesDetailPage() {
                   >
                     Open Manga Editor
                   </Link>
+                ) : series.project_type === "poetry" ? (
+                  <Link
+                    href={`/${locale}/studio/series/${seriesId}/poetry-editor`}
+                    className="rounded-full px-4 py-2 text-xs transition hover:opacity-85"
+                    style={{
+                      background: "#3a2d4a",
+                      border: "1px solid rgba(47,47,47,0.12)",
+                      color: "#c8a8d8",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Open Poetry Editor
+                  </Link>
                 ) : null}
 
                 <button
@@ -1435,6 +1448,8 @@ export default function SeriesDetailPage() {
                             ? `/${locale}/studio/series/${seriesId}/book-editor`
                             : (["manga", "webtoon", "comic"] as ProjectType[]).includes(series.project_type as ProjectType)
                             ? `/${locale}/studio/series/${seriesId}/manga-editor`
+                            : series.project_type === "poetry"
+                            ? `/${locale}/studio/series/${seriesId}/poetry-editor`
                             : `/${locale}/studio/series/${seriesId}/chapters/${c.id}`
                         }
                         className="rounded-full px-3 py-1 text-[11px] font-semibold transition hover:opacity-85"
@@ -1447,6 +1462,8 @@ export default function SeriesDetailPage() {
                           ? "Book Editor"
                           : (["manga", "webtoon", "comic"] as ProjectType[]).includes(series.project_type as ProjectType)
                           ? "Manga Editor"
+                          : series.project_type === "poetry"
+                          ? "Poetry Editor"
                           : t.edit}
                       </Link>
                       <button

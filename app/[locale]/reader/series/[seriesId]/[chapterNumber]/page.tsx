@@ -331,6 +331,11 @@ export default function ReaderSeriesChapterPage() {
         return;
       }
 
+      if (seriesRow.project_type === "poetry") {
+        router.replace(`/${locale}/reader/series/${seriesId}/poetry`);
+        return;
+      }
+
       setSeriesBase(seriesRow);
       setViews(Number(seriesRow.views ?? 0) + 1);
 
