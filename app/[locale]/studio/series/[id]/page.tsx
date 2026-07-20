@@ -91,6 +91,18 @@ const PAGE_SIZE_OPTIONS = [
   { value: "Letter", label: "US Letter (8.5×11in)" },
 ];
 
+const READING_DIRECTION_OPTIONS = [
+  { value: "ltr", label: "Left → Right" },
+  { value: "rtl", label: "Right → Left (manga)" },
+];
+
+const DISPLAY_MODE_OPTIONS = [
+  { value: "scroll", label: "Vertical scroll (webtoon)" },
+  { value: "paginated", label: "Paginated (page-by-page)" },
+];
+
+const IMAGE_PROJECT_TYPES: ProjectType[] = ["manga", "webtoon", "comic"];
+
 type SeriesRow = {
   id: string;
   user_id?: string | null;
@@ -107,6 +119,8 @@ type SeriesRow = {
   author_label: string | null;
   price: number | null;
   page_size: string | null;
+  reading_direction: string | null;
+  display_mode: string | null;
 };
 
 type ChapterRow = {
@@ -687,6 +701,42 @@ export default function SeriesDetailPage() {
     setSeries(data as SeriesRow);
   }
 
+  async function updateReadingDirection(value: string) {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, reading_direction: value });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ reading_direction: value })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      setSeries(prev);
+      setActionMsg(error ? `${error.message} — did migration 037 get run in Supabase?` : t.projectNotFound);
+      return;
+    }
+    setSeries(data as SeriesRow);
+  }
+
+  async function updateDisplayMode(value: string) {
+    if (!series) return;
+    const prev = series;
+    setSeries({ ...series, display_mode: value });
+    const { data, error } = await supabase
+      .from("series")
+      .update({ display_mode: value })
+      .eq("id", series.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      setSeries(prev);
+      setActionMsg(error ? `${error.message} — did migration 037 get run in Supabase?` : t.projectNotFound);
+      return;
+    }
+    setSeries(data as SeriesRow);
+  }
+
   async function togglePublish() {
     if (!series || togglingPublish) return;
 
@@ -1055,6 +1105,26 @@ export default function SeriesDetailPage() {
                   placeholder="Page size…"
                   minWidth={160}
                 />
+
+                {IMAGE_PROJECT_TYPES.includes(series.project_type as ProjectType) && (
+                  <>
+                    <StudioSelect
+                      value={series.display_mode ?? "scroll"}
+                      onChange={updateDisplayMode}
+                      options={DISPLAY_MODE_OPTIONS}
+                      placeholder="Display mode…"
+                      minWidth={200}
+                    />
+
+                    <StudioSelect
+                      value={series.reading_direction ?? "ltr"}
+                      onChange={updateReadingDirection}
+                      options={READING_DIRECTION_OPTIONS}
+                      placeholder="Reading direction…"
+                      minWidth={170}
+                    />
+                  </>
+                )}
 
                 <button
                   type="button"

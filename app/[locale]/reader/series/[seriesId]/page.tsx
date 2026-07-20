@@ -70,6 +70,7 @@ export default function SeriesDetailPage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [status, setStatus] = useState<"loading"|"ok"|"error">("loading");
   const [isOwner, setIsOwner] = useState(false);
+  const [chapterThumbs, setChapterThumbs] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     let alive = true;
@@ -97,7 +98,23 @@ export default function SeriesDetailPage() {
         );
 
         if (!alive) return;
-        setChapters((chs as ChapterRow[]) || []);
+        const chapterRows = (chs as ChapterRow[]) || [];
+        setChapters(chapterRows);
+
+        if (["manga", "webtoon", "comic"].includes(s.project_type || "") && chapterRows.length > 0) {
+          const { data: pages } = await supabase
+            .from("chapter_pages")
+            .select("chapter_id, order_index, image_url")
+            .in("chapter_id", chapterRows.map((c) => c.id))
+            .order("order_index", { ascending: true });
+          if (alive && pages) {
+            const firstByChapter = new Map<string, string>();
+            for (const p of pages as { chapter_id: string; image_url: string }[]) {
+              if (!firstByChapter.has(p.chapter_id)) firstByChapter.set(p.chapter_id, p.image_url);
+            }
+            setChapterThumbs(firstByChapter);
+          }
+        }
 
         if (s.user_id) {
           const { data: p } = await supabase
@@ -474,6 +491,13 @@ export default function SeriesDetailPage() {
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        {chapterThumbs.has(ch.id) && (
+                          <img
+                            src={chapterThumbs.get(ch.id)}
+                            alt=""
+                            style={{ width: 40, height: 54, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
+                          />
+                        )}
                         <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", minWidth: 32 }}>
                           {t.chapter} {ch.chapter_number}
                         </span>

@@ -243,6 +243,12 @@ export default function ReaderSeriesChapterPage() {
   const [chapterPages, setChapterPages] = useState<ChapterPageRow[]>([]);
   const [isOwner, setIsOwner] = useState(false);
 
+  // manga/webtoon reading settings (migration 037 — falls back to defaults if not yet applied)
+  const [readingDirection, setReadingDirection] = useState<"ltr" | "rtl">("ltr");
+  const [displayMode, setDisplayMode] = useState<"scroll" | "paginated">("scroll");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
+
   // resume
   const [resumeChapter, setResumeChapter] = useState<number | null>(null);
   // search
@@ -296,6 +302,8 @@ export default function ReaderSeriesChapterPage() {
       setChapterTranslations(new Map());
       setViews(0);
       setChapterPages([]);
+      setPageIndex(0);
+      setZoom(1);
 
       if (!seriesId) {
         setStatus("error");
@@ -401,6 +409,20 @@ export default function ReaderSeriesChapterPage() {
           .eq("chapter_id", foundCurrent.id)
           .order("order_index", { ascending: true });
         setChapterPages((pages as ChapterPageRow[]) || []);
+
+        // Separate, isolated query — reading_direction/display_mode (migration 037)
+        // may not exist yet, so this must not break the main page load if it errors.
+        try {
+          const { data: settings } = await supabase
+            .from("series")
+            .select("reading_direction, display_mode")
+            .eq("id", seriesId)
+            .maybeSingle();
+          if (settings?.reading_direction === "rtl") setReadingDirection("rtl");
+          if (settings?.display_mode === "paginated") setDisplayMode("paginated");
+        } catch {
+          // migration 037 not applied yet — keep scroll/ltr defaults
+        }
       }
 
       // Save read progress + check unlock for paid chapters
@@ -467,6 +489,18 @@ export default function ReaderSeriesChapterPage() {
 
     load();
   }, [seriesId, chapterNumber, locale, t.notFound, t.supabaseError]);
+
+  // Keyboard navigation for paginated manga/comic mode
+  useEffect(() => {
+    if (displayMode !== "paginated" || chapterPages.length === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const forward = e.key === "ArrowRight" ? readingDirection !== "rtl" : readingDirection === "rtl";
+      setPageIndex((i) => (forward ? Math.min(chapterPages.length - 1, i + 1) : Math.max(0, i - 1)));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [displayMode, chapterPages.length, readingDirection]);
 
   const chapterPrice = Number(currentChapter?.price ?? 0);
   const isPaidChapter = chapterPrice > 0;
@@ -859,19 +893,128 @@ export default function ReaderSeriesChapterPage() {
             </header>
 
             {chapterPages.length > 0 ? (
-              /* ── Manga / vertical scroll reader ── */
-              <div className="flex flex-col items-center gap-0">
-                {chapterPages.map((page, i) => (
-                  <img
-                    key={page.id}
-                    src={page.image_url}
-                    alt={`Page ${i + 1}`}
-                    className="w-full max-w-2xl"
-                    style={{ display: "block", margin: "0 auto" }}
-                    loading={i < 3 ? "eager" : "lazy"}
-                  />
-                ))}
-              </div>
+              displayMode === "paginated" ? (
+                /* ── Manga / comic paginated reader (RTL-aware, zoomable) ── */
+                <div className="flex flex-col items-center gap-4">
+                  <div
+                    className="flex items-center gap-3 rounded-full border px-4 py-2 text-xs font-medium"
+                    style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.55)", color: "var(--muted)" }}
+                  >
+                    <span>{pageIndex + 1} / {chapterPages.length}</span>
+                    <span style={{ opacity: 0.4 }}>·</span>
+                    <button
+                      type="button"
+                      onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))}
+                      disabled={zoom <= 1}
+                      className="disabled:opacity-40"
+                      aria-label="Zoom out"
+                    >
+                      −
+                    </button>
+                    <span>{Math.round(zoom * 100)}%</span>
+                    <button
+                      type="button"
+                      onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.25).toFixed(2)))}
+                      disabled={zoom >= 2.5}
+                      className="disabled:opacity-40"
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div
+                    className="w-full max-w-2xl overflow-auto rounded-[20px] border"
+                    style={{ borderColor: "var(--border)", background: "rgba(0,0,0,0.03)", maxHeight: "80vh" }}
+                  >
+                    <div
+                      className="relative flex"
+                      style={{ direction: readingDirection === "rtl" ? "rtl" : "ltr" }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPageIndex((i) =>
+                            readingDirection === "rtl"
+                              ? Math.min(chapterPages.length - 1, i + 1)
+                              : Math.max(0, i - 1)
+                          )
+                        }
+                        aria-label="Previous page"
+                        className="w-1/2 shrink-0"
+                        style={{ cursor: "w-resize" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPageIndex((i) =>
+                            readingDirection === "rtl"
+                              ? Math.max(0, i - 1)
+                              : Math.min(chapterPages.length - 1, i + 1)
+                          )
+                        }
+                        aria-label="Next page"
+                        className="absolute right-0 top-0 h-full w-1/2 shrink-0"
+                        style={{ cursor: "e-resize", direction: readingDirection === "rtl" ? "ltr" : "rtl" }}
+                      />
+                      <img
+                        src={chapterPages[pageIndex]?.image_url}
+                        alt={`Page ${pageIndex + 1}`}
+                        className="pointer-events-none mx-auto"
+                        style={{ transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.15s" }}
+                        loading="eager"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPageIndex((i) =>
+                          readingDirection === "rtl"
+                            ? Math.min(chapterPages.length - 1, i + 1)
+                            : Math.max(0, i - 1)
+                        )
+                      }
+                      disabled={readingDirection === "rtl" ? pageIndex >= chapterPages.length - 1 : pageIndex <= 0}
+                      className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.55)", color: "var(--text)", order: readingDirection === "rtl" ? 2 : 1 }}
+                    >
+                      {t.prev}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPageIndex((i) =>
+                          readingDirection === "rtl"
+                            ? Math.max(0, i - 1)
+                            : Math.min(chapterPages.length - 1, i + 1)
+                        )
+                      }
+                      disabled={readingDirection === "rtl" ? pageIndex <= 0 : pageIndex >= chapterPages.length - 1}
+                      className="inline-flex items-center rounded-full border px-5 py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{ borderColor: "var(--border)", background: "rgba(10,10,12,0.88)", color: "#eceae4", order: readingDirection === "rtl" ? 1 : 2 }}
+                    >
+                      {t.next}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Manga / webtoon vertical scroll reader ── */
+                <div className="flex flex-col items-center gap-0">
+                  {chapterPages.map((page, i) => (
+                    <img
+                      key={page.id}
+                      src={page.image_url}
+                      alt={`Page ${i + 1}`}
+                      className="w-full max-w-2xl"
+                      style={{ display: "block", margin: "0 auto" }}
+                      loading={i < 3 ? "eager" : "lazy"}
+                    />
+                  ))}
+                </div>
+              )
             ) : (
               /* ── Prose reader ── */
               <article
