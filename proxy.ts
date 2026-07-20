@@ -9,7 +9,7 @@ function isLocale(x: string): x is Locale {
   return (LOCALES as readonly string[]).includes(x);
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Ignore Next internals + files
