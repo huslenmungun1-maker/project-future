@@ -98,7 +98,7 @@ export default function StudioPayoutsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { fetchAll(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchAll(); }, []); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
 
   async function handleRequestPayout() {
     const amount = parseFloat(requestAmount);

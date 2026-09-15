@@ -40,15 +40,6 @@ export default function BookPagesManagerPage() {
   const baseLocale = locale ? `/${locale}` : "";
   const backHref = `${baseLocale}/studio/books/${bookId}`;
 
-  function formatDate(stamp?: string) {
-    if (!stamp) return "";
-    try {
-      return new Date(stamp).toLocaleString();
-    } catch {
-      return stamp || "";
-    }
-  }
-
   // Load book + pages
   useEffect(() => {
     async function loadAll() {

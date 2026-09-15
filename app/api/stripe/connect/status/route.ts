@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { supabaseServiceRole } from "@/lib/supabaseServiceRole";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-04-22.dahlia" });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-08-26.dahlia" });
 
 export async function GET() {
   const supabase = await supabaseServer();

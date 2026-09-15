@@ -9,7 +9,6 @@ const BG      = "#0a0a0c";
 const SURFACE = "#111116";
 const SURFACE2= "#18181f";
 const BORDER  = "rgba(255,255,255,0.07)";
-const BORDER2 = "rgba(255,255,255,0.11)";
 const TEXT    = "#eceae4";
 const MUTED   = "#5e5e6e";
 const MUTED2  = "#7a7a8a";
@@ -103,7 +102,7 @@ export default function StudioContractsPage() {
   }, [supabase, locale, router]);
 
   useEffect(() => {
-    loadContracts();
+    loadContracts(); // eslint-disable-line react-hooks/set-state-in-effect
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function openDetail(contract: Contract) {

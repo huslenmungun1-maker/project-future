@@ -251,7 +251,7 @@ export default function MangaEditorPage() {
   /* keep sidebar count in sync with live pages state */
   useEffect(() => {
     if (!selChId) return;
-    setPageCounts(prev => ({ ...prev, [selChId]: pages.length }));
+    setPageCounts(prev => ({ ...prev, [selChId]: pages.length })); // eslint-disable-line react-hooks/set-state-in-effect
   }, [pages, selChId]);
 
   /* ── open chapter ── */

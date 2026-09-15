@@ -186,6 +186,7 @@ export default function PoetryEditorPage() {
     if (!selPgId || !selChId) return;
     const page = (pagesMap[selChId] || []).find(p => p.id === selPgId);
     if (!page) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditText(page.content || "");
     setEditFormatting(page.formatting ?? DEFAULT_FORMATTING);
   // eslint-disable-next-line react-hooks/exhaustive-deps

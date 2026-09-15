@@ -186,13 +186,14 @@ export default function BookDetailPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId]);
 
   useEffect(() => {
     if (book) {
-      setDraftTitle(book.title);
+      setDraftTitle(book.title); // eslint-disable-line react-hooks/set-state-in-effect
       setDraftDescription(book.description ?? "");
     }
   }, [book]);
@@ -258,7 +259,7 @@ export default function BookDetailPage() {
         book_id: bookId,
         title: chapterTitle.trim(),
         chapter_number: numberValue,
-        content: chapterContent.trim() || null,
+        content: chapterContent.trim() || "", // never null — chapters.content is NOT NULL
         price: priceValue && priceValue > 0 ? priceValue : null,
       },
     ]);

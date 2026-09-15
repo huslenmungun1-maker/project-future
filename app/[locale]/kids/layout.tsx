@@ -32,7 +32,7 @@ export default function KidsLayout({
 
   // Reset to home when navigating to the home page
   useEffect(() => {
-    if (isHomePage) setPageIndex(TOTAL_PAGES - 1);
+    if (isHomePage) setPageIndex(TOTAL_PAGES - 1); // eslint-disable-line react-hooks/set-state-in-effect
   }, [isHomePage]);
 
   const changePage = (dir: -1 | 1) => {

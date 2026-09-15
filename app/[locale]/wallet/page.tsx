@@ -155,6 +155,11 @@ export default function WalletPage() {
     });
   }, [supabase, router, locale]);
 
+  function showToast(msg: string, ok: boolean) {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3200);
+  }
+
   async function fetchWallet() {
     setLoading(true);
     const res = await fetch("/api/wallet");
@@ -198,11 +203,6 @@ export default function WalletPage() {
       return;
     }
     window.location.href = json.url;
-  }
-
-  function showToast(msg: string, ok: boolean) {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3200);
   }
 
   return (

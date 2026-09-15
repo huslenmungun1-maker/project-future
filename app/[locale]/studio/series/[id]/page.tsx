@@ -533,12 +533,12 @@ export default function SeriesDetailPage() {
   }, [checkAccess, seriesId, supabase, t.projectNotFound, t.seriesIdMissing]);
 
   useEffect(() => {
-    reloadAll();
+    reloadAll(); // eslint-disable-line react-hooks/set-state-in-effect
   }, [reloadAll]);
 
   useEffect(() => {
     if (series) {
-      setDraftTitle(series.title);
+      setDraftTitle(series.title); // eslint-disable-line react-hooks/set-state-in-effect
       setDraftDescription(series.description ?? "");
       setDraftPrice(String(series.price ?? 0));
     }

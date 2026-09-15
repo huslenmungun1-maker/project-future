@@ -288,7 +288,7 @@ function drawBubble(ctx: CanvasRenderingContext2D, b: Bubble, cw: number, ch: nu
       const r = i % 2 === 0 ? 47 : 29;
       const svgX = 50 + Math.cos(angle) * r;
       const svgY = 50 + Math.sin(angle) * r;
-      i === 0 ? ctx.moveTo(px(svgX), py(svgY)) : ctx.lineTo(px(svgX), py(svgY));
+      if (i === 0) ctx.moveTo(px(svgX), py(svgY)); else ctx.lineTo(px(svgX), py(svgY));
     }
     ctx.closePath();
     ctx.fillStyle = f; ctx.fill(); ctx.strokeStyle = s; ctx.lineWidth = lw; ctx.lineJoin = "round"; ctx.stroke();
@@ -815,7 +815,7 @@ export default function EditorPage() {
                   <path d="M3 25l8-7 6 5.5 5-4.5 11 9" stroke="var(--accent)" strokeWidth="1.5" strokeLinejoin="round"/>
                 </svg>
                 <p style={{ fontSize: 12, color: "rgba(94,99,87,0.40)", textAlign: "center", maxWidth: 170, lineHeight: 1.55 }}>
-                  Upload a manga page, or click "+ Add" then click here to place bubbles
+                  Upload a manga page, or click &ldquo;+ Add&rdquo; then click here to place bubbles
                 </p>
               </div>
             )}

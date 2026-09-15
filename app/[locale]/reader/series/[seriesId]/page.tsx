@@ -66,7 +66,7 @@ export default function SeriesDetailPage() {
   const [series, setSeries] = useState<SeriesRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [creator, setCreator] = useState<ProfileRow | null>(null);
-  const [progressChapterId, setProgressChapterId] = useState<string | null>(null);
+  const [progressChapterId] = useState<string | null>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [status, setStatus] = useState<"loading"|"ok"|"error">("loading");
   const [isOwner, setIsOwner] = useState(false);

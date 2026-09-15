@@ -384,13 +384,16 @@ export default function BookEditorPage() {
     if (addingCh) return;
     setAddingCh(true);
     const nextNum = chapters.length > 0 ? Math.max(...chapters.map(c => c.chapter_number)) + 1 : 1;
-    const { data } = await supabase
-      .from("chapters").insert({ series_id: seriesId, chapter_number: nextNum, title: `Chapter ${nextNum}`, content: null, is_published: false })
+    const { data, error } = await supabase
+      .from("chapters").insert({ series_id: seriesId, chapter_number: nextNum, title: `Chapter ${nextNum}`, content: "", is_published: false })
       .select("id, chapter_number, title").maybeSingle();
     if (data) {
       const ch = data as ChapterRow;
       setChapters(prev => [...prev, ch]);
       setPagesMap(prev => ({ ...prev, [ch.id]: [] }));
+    } else if (error) {
+      setSaveMsg("Save failed");
+      setTimeout(() => setSaveMsg(null), 2000);
     }
     setAddingCh(false);
   }

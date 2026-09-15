@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -26,7 +26,6 @@ type BookRow = {
 
 export default function ChapterEditorPage() {
   const params = useParams();
-  const router = useRouter();
 
   const locale = (params?.locale as string) || "en";
   const bookId = params?.id as string;

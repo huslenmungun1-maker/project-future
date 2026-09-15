@@ -226,13 +226,14 @@ export default function SeriesDetailPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesId]);
 
   useEffect(() => {
     if (series) {
-      setDraftTitle(series.title);
+      setDraftTitle(series.title); // eslint-disable-line react-hooks/set-state-in-effect
       setDraftDescription(series.description ?? "");
     }
   }, [series]);

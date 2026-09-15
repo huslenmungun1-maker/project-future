@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getBrowserClient } from "@/lib/browserClient";
 import type { Session } from "@supabase/supabase-js";
 
@@ -13,18 +13,6 @@ function normalizeLocale(raw: string): SupportedLocale {
   return (["en", "ko", "mn", "ja"].includes(raw) ? raw : "en") as SupportedLocale;
 }
 
-function stripLeadingLocale(pathname: string) {
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts.length === 0) return "/";
-  const first = parts[0];
-  if (["en", "ko", "mn", "ja"].includes(first)) {
-    const rest = parts.slice(1).join("/");
-    return rest ? `/${rest}` : "/";
-  }
-  return pathname;
-}
-
-
 const UI_TEXT = {
   en:  { reader: "Reader", studio: "Studio", head: "Admin", profile: "Profile", login: "Login", signout: "Sign Out" },
   ko:  { reader: "리더", studio: "스튜디오", head: "관리자", profile: "프로필", login: "로그인", signout: "로그아웃" },
@@ -33,7 +21,6 @@ const UI_TEXT = {
 } as const;
 
 export default function NavBar({ locale }: { locale: string }) {
-  const pathname = usePathname() || "/";
   const router = useRouter();
   const currentLocale = normalizeLocale(locale);
   const t = UI_TEXT[currentLocale];

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getBrowserClient } from "@/lib/browserClient";
 
@@ -48,7 +48,6 @@ function safeLocale(raw: unknown): SupportedLocale {
 
 export default function WelcomePage() {
   const params = useParams();
-  const router = useRouter();
   const locale = safeLocale(params?.locale);
   const t = UI_TEXT[locale];
   const supabase = useMemo(() => getBrowserClient(), []);

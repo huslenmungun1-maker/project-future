@@ -442,7 +442,7 @@ export default function ReaderChapterPage() {
     };
 
     load();
-  }, [bookId, chapterNumber, locale, t.notFound, authClient]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bookId, chapterNumber, locale, t.notFound, authClient]);
 
   const chapterPrice = Number(currentChapter?.price ?? 0);
   const isPaidChapter = chapterPrice > 0;
@@ -461,7 +461,7 @@ export default function ReaderChapterPage() {
         }
       })
       .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleStripeCheckout() {
     if (!currentChapter) return;

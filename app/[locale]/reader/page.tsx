@@ -159,7 +159,7 @@ export default function ReaderHomePage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const q = params.get("q");
-      if (q) setSearchQuery(q);
+      if (q) setSearchQuery(q); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, []);
 
@@ -282,12 +282,6 @@ export default function ReaderHomePage() {
 
     return () => { cancelled = true; };
   }, [locale]);
-
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleString(
-      locale === "mn" ? "mn-MN" : locale === "ko" ? "ko-KR" : locale === "ja" ? "ja-JP" : "en-GB",
-      { dateStyle: "medium", timeStyle: "short" }
-    );
 
   const getSeriesCover = (item: SeriesRow) => item.cover_url || item.cover_image_url || "";
   const getBookCover = (item: BookRow) => item.cover_url || item.cover_image_url || "";

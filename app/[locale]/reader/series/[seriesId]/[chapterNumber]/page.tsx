@@ -519,7 +519,7 @@ export default function ReaderSeriesChapterPage() {
         }
       })
       .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleStripeCheckout() {
     if (!currentChapter) return;
