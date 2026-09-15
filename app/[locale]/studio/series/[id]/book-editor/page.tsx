@@ -17,6 +17,16 @@ const PAGE_ASPECT: Record<string, number> = {
   A4: 297 / 210, A5: 210 / 148, Paperback: 8.5 / 5.5, Letter: 11 / 8.5,
 };
 
+// Canonical physical page size in px @96dpi — used only for pagination
+// math, independent of whatever width the on-screen canvas happens to
+// render at, so page breaks are deterministic regardless of viewport.
+const PAGE_SIZE_PX: Record<string, { width: number; height: number }> = {
+  A4:        { width: 793.7, height: 1122.5 },
+  A5:        { width: 559.4, height: 793.7  },
+  Paperback: { width: 528,   height: 816    },
+  Letter:    { width: 816,   height: 1056   },
+};
+
 const FONT_OPTIONS = [
   { value: "Georgia, serif",              label: "Georgia" },
   { value: "'Merriweather', serif",       label: "Merriweather" },
@@ -87,21 +97,38 @@ const DEFAULT_COVER: CoverDesign = {
 
 /* ─── PageCanvas ─────────────────────────────────────────────── */
 function PageCanvas({
-  page, styles, aspect, pageNum,
+  page, styles, pageSizeKey, pageNum,
   onSave,
 }: {
-  page: PageRow; styles: BookStyles; aspect: number; pageNum: number;
+  page: PageRow; styles: BookStyles; pageSizeKey: string; pageNum: number;
   onSave: (id: string, html: string) => void;
 }) {
   const divRef  = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  const box = PAGE_SIZE_PX[pageSizeKey] ?? PAGE_SIZE_PX.A4;
+
+  // Render the page at its true physical px size (same reference used for
+  // pagination math) and scale it visually to fit the available width —
+  // like a print-preview zoom. This keeps what fits on-screen identical
+  // to what the pagination logic decided fits, regardless of viewport.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => setScale(el.clientWidth / box.width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [box.width]);
 
   useEffect(() => {
     if (divRef.current && !focused.current) {
       divRef.current.innerHTML = page.content || "";
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page.id]);
+  }, [page.id, page.content]);
 
   function exec(cmd: string, val?: string) { divRef.current?.focus(); document.execCommand(cmd, false, val); }
 
@@ -131,42 +158,48 @@ function PageCanvas({
         <span style={{ fontSize: 11, color: MUTED, marginLeft: 8 }}>Page {pageNum}</span>
       </div>
 
-      <div style={{
-        background: styles.pageBackground,
-        boxShadow: "0 8px 48px rgba(0,0,0,0.55)",
-        borderRadius: 2,
-        aspectRatio: `1 / ${aspect}`,
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        <div
-          ref={divRef}
-          contentEditable
-          suppressContentEditableWarning
-          onFocus={() => { focused.current = true; }}
-          onBlur={e => { focused.current = false; onSave(page.id, e.currentTarget.innerHTML); }}
-          style={{
-            padding: `${styles.marginV}px ${styles.marginH}px`,
-            fontFamily: styles.fontFamily,
-            fontSize: styles.fontSize,
-            lineHeight: styles.lineHeight,
-            color: styles.textColor,
-            minHeight: "100%",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-        {styles.pageNumbers !== "off" && (
-          <div style={{
-            position: "absolute", bottom: 20,
-            left: styles.pageNumbers === "bottom-left" ? styles.marginH : styles.pageNumbers === "bottom-right" ? undefined : "50%",
-            right: styles.pageNumbers === "bottom-right" ? styles.marginH : undefined,
-            transform: styles.pageNumbers === "bottom-center" ? "translateX(-50%)" : undefined,
-            fontSize: 11, color: styles.textColor, opacity: 0.4, fontFamily: styles.fontFamily,
-          }}>
-            {pageNum}
-          </div>
-        )}
+      <div ref={wrapRef} style={{ width: "100%", height: box.height * scale, position: "relative" }}>
+        <div style={{
+          width: box.width,
+          height: box.height,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          background: styles.pageBackground,
+          boxShadow: "0 8px 48px rgba(0,0,0,0.55)",
+          borderRadius: 2,
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          <div
+            ref={divRef}
+            contentEditable
+            suppressContentEditableWarning
+            onFocus={() => { focused.current = true; }}
+            onBlur={e => { focused.current = false; onSave(page.id, e.currentTarget.innerHTML); }}
+            style={{
+              width: box.width,
+              height: box.height,
+              padding: `${styles.marginV}px ${styles.marginH}px`,
+              fontFamily: styles.fontFamily,
+              fontSize: styles.fontSize,
+              lineHeight: styles.lineHeight,
+              color: styles.textColor,
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          {styles.pageNumbers !== "off" && (
+            <div style={{
+              position: "absolute", bottom: 20,
+              left: styles.pageNumbers === "bottom-left" ? styles.marginH : styles.pageNumbers === "bottom-right" ? undefined : "50%",
+              right: styles.pageNumbers === "bottom-right" ? styles.marginH : undefined,
+              transform: styles.pageNumbers === "bottom-center" ? "translateX(-50%)" : undefined,
+              fontSize: 11, color: styles.textColor, opacity: 0.4, fontFamily: styles.fontFamily,
+            }}>
+              {pageNum}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -255,6 +288,120 @@ function CoverCanvas({
   );
 }
 
+/* ─── page pagination helpers ───────────────────────────────────
+   A page is a fixed physical sheet — content that overflows its
+   fillable area (page size minus margins) must flow onto the next
+   page instead of spilling past the visible edge. We measure with
+   a hidden clone at the page's real px width/height (not whatever
+   width the on-screen canvas is scaled to) so breaks are stable
+   across screen sizes. ──────────────────────────────────────── */
+let _measureEl: HTMLDivElement | null = null;
+function getMeasureEl(width: number, styles: BookStyles): HTMLDivElement {
+  if (!_measureEl) {
+    _measureEl = document.createElement("div");
+    _measureEl.style.position = "fixed";
+    _measureEl.style.left = "-99999px";
+    _measureEl.style.top = "0";
+    _measureEl.style.visibility = "hidden";
+    _measureEl.style.pointerEvents = "none";
+    document.body.appendChild(_measureEl);
+  }
+  _measureEl.style.width = `${width}px`;
+  _measureEl.style.fontFamily = styles.fontFamily;
+  _measureEl.style.fontSize = `${styles.fontSize}px`;
+  _measureEl.style.lineHeight = String(styles.lineHeight);
+  return _measureEl;
+}
+
+// Splits `html` into what fits within fillWidth x fillHeight and
+// whatever overflows, at the granularity of top-level child nodes
+// (paragraphs / line divs). If even the first node alone overflows,
+// it's kept anyway so a page is never left empty.
+function splitHtmlToFit(
+  html: string, fillWidth: number, fillHeight: number, styles: BookStyles
+): { fits: string; overflow: string | null } {
+  const container = getMeasureEl(fillWidth, styles);
+  container.innerHTML = html;
+
+  if (container.scrollHeight <= fillHeight) {
+    const fits = container.innerHTML;
+    container.innerHTML = "";
+    return { fits, overflow: null };
+  }
+
+  const nodes: ChildNode[] = [];
+  while (container.firstChild) nodes.push(container.removeChild(container.firstChild));
+
+  let splitIndex = nodes.length;
+  for (let i = 0; i < nodes.length; i++) {
+    container.appendChild(nodes[i]);
+    if (container.scrollHeight > fillHeight) { splitIndex = i; break; }
+  }
+  if (splitIndex === 0) splitIndex = 1;
+
+  container.innerHTML = "";
+  const fitsWrap = document.createElement("div");
+  const overflowWrap = document.createElement("div");
+  nodes.forEach((n, i) => (i < splitIndex ? fitsWrap : overflowWrap).appendChild(n));
+
+  return {
+    fits: fitsWrap.innerHTML,
+    overflow: overflowWrap.childNodes.length > 0 ? overflowWrap.innerHTML : null,
+  };
+}
+
+/* ─── manuscript import helpers ─────────────────────────────────
+   Paste a whole manuscript, split chapters on a lone "---" line,
+   optionally name a chapter with a leading "# Title" line, and
+   pack paragraphs into pages by an approximate word budget. ──── */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function parseChapterChunk(raw: string): { title: string | null; paragraphs: string[] } {
+  const lines = raw.split("\n");
+  let title: string | null = null;
+  let bodyStart = 0;
+  if (lines[0]?.trim().startsWith("# ")) {
+    title = lines[0].trim().slice(2).trim();
+    bodyStart = 1;
+  }
+  const body = lines.slice(bodyStart).join("\n").trim();
+  const paragraphs = body
+    .split(/\n\s*\n/)
+    .map(p => p.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return { title, paragraphs };
+}
+
+function parseManuscript(raw: string): { title: string | null; paragraphs: string[] }[] {
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const chunks: string[][] = [[]];
+  for (const line of lines) {
+    if (line.trim() === "---") chunks.push([]);
+    else chunks[chunks.length - 1].push(line);
+  }
+  return chunks.map(ls => parseChapterChunk(ls.join("\n"))).filter(c => c.paragraphs.length > 0);
+}
+
+function paginateParagraphs(paragraphs: string[], wordsPerPage: number): string[] {
+  const pages: string[][] = [];
+  let current: string[] = [];
+  let wordCount = 0;
+  for (const para of paragraphs) {
+    const paraWords = para.split(/\s+/).filter(Boolean).length;
+    if (current.length > 0 && wordCount + paraWords > wordsPerPage) {
+      pages.push(current);
+      current = [];
+      wordCount = 0;
+    }
+    current.push(para);
+    wordCount += paraWords;
+  }
+  if (current.length > 0) pages.push(current);
+  return pages.map(paras => paras.map(p => `<p>${escapeHtml(p)}</p>`).join(""));
+}
+
 /* ─── main page ──────────────────────────────────────────────── */
 export default function BookEditorPage() {
   const params  = useParams();
@@ -282,6 +429,12 @@ export default function BookEditorPage() {
   const [addingPg,    setAddingPg]    = useState(false);
   const [addingCh,    setAddingCh]    = useState(false);
   const [rightPanel,  setRightPanel]  = useState<"styles" | "cover">("styles");
+
+  const [showImport,  setShowImport]  = useState(false);
+  const [importText,  setImportText]  = useState("");
+  const [importWpp,   setImportWpp]   = useState(450);
+  const [importing,   setImporting]   = useState(false);
+  const [importMsg,   setImportMsg]   = useState<string | null>(null);
 
   /* ── load ── */
   useEffect(() => {
@@ -369,13 +522,73 @@ export default function BookEditorPage() {
   }
 
   async function savePage(pageId: string, html: string) {
-    await supabase.from("pages").update({ content: html }).eq("id", pageId);
-    setPagesMap(prev => {
-      const next = { ...prev };
-      for (const chId of Object.keys(next)) {
-        next[chId] = next[chId].map(p => p.id === pageId ? { ...p, content: html } : p);
+    let chapterId: string | null = null;
+    for (const [chId, pgs] of Object.entries(pagesMap)) {
+      if (pgs.some(p => p.id === pageId)) { chapterId = chId; break; }
+    }
+    if (!chapterId) return;
+    await reflowFromPage(chapterId, pageId, html);
+  }
+
+  // Cascades an edited page's content forward: whatever overflows this
+  // page's fillable area gets pushed onto the front of the next page's
+  // content, which is then re-measured the same way, and so on — new
+  // pages are created at the end of the chapter if the cascade runs out
+  // of existing pages to land on.
+  async function reflowFromPage(chapterId: string, pageId: string, newHtml: string) {
+    const box = PAGE_SIZE_PX[series?.page_size ?? "A4"] ?? PAGE_SIZE_PX.A4;
+    const fillWidth  = box.width  - 2 * bookStyles.marginH;
+    const fillHeight = box.height - 2 * bookStyles.marginV;
+
+    const pages = [...(pagesMap[chapterId] || [])].sort((a, b) => a.page_number - b.page_number);
+    const startIdx = pages.findIndex(p => p.id === pageId);
+    if (startIdx === -1) return;
+
+    const updates: { id: string; content: string }[] = [];
+    const newPageContents: string[] = [];
+
+    let carry: string | null = newHtml;
+    let idx = startIdx;
+    while (carry !== null) {
+      const { fits, overflow } = splitHtmlToFit(carry, fillWidth, fillHeight, bookStyles);
+
+      if (idx < pages.length) updates.push({ id: pages[idx].id, content: fits });
+      else newPageContents.push(fits);
+
+      if (!overflow) {
+        carry = null;
+      } else if (idx + 1 < pages.length) {
+        carry = overflow + (pages[idx + 1].content || "");
+        idx++;
+      } else {
+        carry = overflow;
+        idx++;
       }
-      return next;
+    }
+
+    for (const u of updates) {
+      await supabase.from("pages").update({ content: u.content }).eq("id", u.id);
+    }
+
+    let nextPageNumber = pages.length > 0 ? pages[pages.length - 1].page_number + 1 : 1;
+    const insertedRows: PageRow[] = [];
+    for (const content of newPageContents) {
+      const { data } = await supabase
+        .from("pages")
+        .insert({ chapter_id: chapterId, page_number: nextPageNumber, content })
+        .select("id, chapter_id, page_number, content")
+        .single();
+      if (data) insertedRows.push(data as PageRow);
+      nextPageNumber++;
+    }
+
+    setPagesMap(prev => {
+      const list = [...(prev[chapterId] || [])];
+      for (const u of updates) {
+        const i = list.findIndex(p => p.id === u.id);
+        if (i !== -1) list[i] = { ...list[i], content: u.content };
+      }
+      return { ...prev, [chapterId]: [...list, ...insertedRows].sort((a, b) => a.page_number - b.page_number) };
     });
   }
 
@@ -396,6 +609,66 @@ export default function BookEditorPage() {
       setTimeout(() => setSaveMsg(null), 2000);
     }
     setAddingCh(false);
+  }
+
+  /* ── manuscript import ── */
+  async function runImport() {
+    if (importing) return;
+    const chunks = parseManuscript(importText);
+    if (chunks.length === 0) {
+      setImportMsg("Paste some manuscript text first.");
+      return;
+    }
+    setImporting(true);
+    setImportMsg(null);
+
+    let nextNum = chapters.length > 0 ? Math.max(...chapters.map(c => c.chapter_number)) + 1 : 1;
+    let doneChapters = 0;
+    let donePages = 0;
+
+    for (const chunk of chunks) {
+      const title = chunk.title || `Chapter ${nextNum}`;
+      const { data: ch, error: chErr } = await supabase
+        .from("chapters")
+        .insert({ series_id: seriesId, chapter_number: nextNum, title, content: "", is_published: false })
+        .select("id, chapter_number, title")
+        .single();
+
+      if (chErr || !ch) {
+        setImportMsg(`Imported ${doneChapters} chapter(s) before an error on "${title}". Fix and re-paste the rest to continue.`);
+        setImporting(false);
+        return;
+      }
+
+      const chapterRow = ch as ChapterRow;
+      const pagesHtml = paginateParagraphs(chunk.paragraphs, importWpp);
+      const rows = pagesHtml.map((html, idx) => ({ chapter_id: chapterRow.id, page_number: idx + 1, content: html }));
+
+      let insertedPages: PageRow[] = [];
+      if (rows.length > 0) {
+        const { data: pg, error: pgErr } = await supabase
+          .from("pages").insert(rows)
+          .select("id, chapter_id, page_number, content");
+        if (pgErr) {
+          setChapters(prev => [...prev, chapterRow]);
+          setPagesMap(prev => ({ ...prev, [chapterRow.id]: [] }));
+          setImportMsg(`Chapter "${title}" was created but its pages failed to save. Add pages manually, or delete the chapter and re-import.`);
+          setImporting(false);
+          return;
+        }
+        insertedPages = (pg as PageRow[]) || [];
+      }
+
+      setChapters(prev => [...prev, chapterRow]);
+      setPagesMap(prev => ({ ...prev, [chapterRow.id]: insertedPages }));
+      doneChapters++;
+      donePages += insertedPages.length;
+      nextNum++;
+    }
+
+    setImportMsg(`Imported ${doneChapters} chapter(s), ${donePages} page(s).`);
+    setImportText("");
+    setImporting(false);
   }
 
   /* ── cover design helpers ── */
@@ -448,6 +721,12 @@ export default function BookEditorPage() {
         <span style={{ fontSize: 11, color: saveMsg === "Saved ✓" ? SUCCESS : "#c97a6a", opacity: saveMsg ? 1 : 0, transition: "opacity 0.3s" }}>
           {saveMsg}
         </span>
+        <button
+          onClick={() => setShowImport(true)}
+          style={{ padding: "6px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: "none", color: TEXT, fontSize: 12, cursor: "pointer" }}
+        >
+          Import manuscript
+        </button>
         <button
           onClick={saveBookData}
           disabled={saving}
@@ -546,7 +825,7 @@ export default function BookEditorPage() {
               <PageCanvas
                 page={selPage}
                 styles={bookStyles}
-                aspect={aspect}
+                pageSizeKey={series?.page_size ?? "A4"}
                 pageNum={flatPageNum}
                 onSave={savePage}
               />
@@ -696,6 +975,77 @@ export default function BookEditorPage() {
           </div>
         </aside>
       </div>
+
+      {/* ── Import manuscript modal ── */}
+      {showImport && (
+        <div
+          onClick={() => !importing && setShowImport(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "#16161a", border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24, width: 640, maxWidth: "100%", maxHeight: "85vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Import manuscript</span>
+              <button onClick={() => setShowImport(false)} disabled={importing} style={{ background: "none", border: "none", color: MUTED, fontSize: 18, cursor: "pointer" }}>×</button>
+            </div>
+
+            <p style={{ fontSize: 12, color: MUTED, margin: 0, lineHeight: 1.6 }}>
+              Paste your full manuscript below, or load a text file. Separate chapters with a line
+              containing only <code style={{ background: "rgba(255,255,255,0.08)", padding: "1px 5px", borderRadius: 4 }}>---</code>.
+              Start a chapter with <code style={{ background: "rgba(255,255,255,0.08)", padding: "1px 5px", borderRadius: 4 }}># Chapter Title</code> on
+              its own line to name it — otherwise chapters are numbered automatically. New chapters are added after any that already exist.
+            </p>
+
+            <label style={{ display: "inline-flex", width: "fit-content", padding: "6px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 12, color: TEXT, cursor: "pointer" }}>
+              Load from file (.txt, .md)
+              <input
+                type="file"
+                accept=".txt,.md,text/plain"
+                style={{ display: "none" }}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setImportText(String(reader.result || ""));
+                  reader.readAsText(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+
+            <textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder={"# Chapter 1\n\nYour first paragraph...\n\nAnother paragraph...\n\n---\n\n# Chapter 2\n\n..."}
+              style={{ width: "100%", minHeight: 260, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 12, color: TEXT, fontSize: 13, fontFamily: "Georgia, serif", resize: "vertical", boxSizing: "border-box" }}
+            />
+
+            <Field label={`Words per page (approx) — ${importWpp}`}>
+              <input type="range" min={200} max={800} step={25} value={importWpp}
+                onChange={e => setImportWpp(Number(e.target.value))} style={{ width: "100%" }} />
+            </Field>
+
+            {importMsg && (
+              <p style={{ fontSize: 12, color: importMsg.startsWith("Imported") ? SUCCESS : "#c97a6a", margin: 0 }}>{importMsg}</p>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setShowImport(false)} disabled={importing} style={{ padding: "8px 16px", borderRadius: 9999, background: "none", border: `1px solid ${BORDER}`, color: MUTED, fontSize: 12, cursor: "pointer" }}>
+                Close
+              </button>
+              <button
+                onClick={runImport}
+                disabled={importing || !importText.trim()}
+                style={{ padding: "8px 18px", borderRadius: 9999, background: ACCENT, color: "#0a0a0c", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: importing || !importText.trim() ? 0.5 : 1 }}
+              >
+                {importing ? "Importing…" : "Import"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
