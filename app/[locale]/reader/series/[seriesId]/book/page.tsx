@@ -10,12 +10,28 @@ const PAGE_ASPECT: Record<string, number> = {
   A4: 297 / 210, A5: 210 / 148, Paperback: 8.5 / 5.5, Letter: 11 / 8.5,
 };
 
+// Matches PAGE_SIZE_PX in the Book Editor — strokes are authored in this
+// physical px space, so the reader's SVG viewBox must use the same
+// dimensions for a drawing to line up regardless of the page's actual
+// rendered (responsive) size.
+const PAGE_SIZE_PX: Record<string, { width: number; height: number }> = {
+  A4:        { width: 793.7, height: 1122.5 },
+  A5:        { width: 559.4, height: 793.7  },
+  Paperback: { width: 528,   height: 816    },
+  Letter:    { width: 816,   height: 1056   },
+};
+
 type BookStyles = {
   fontFamily: string; fontSize: number; lineHeight: number;
   textColor: string; pageBackground: string;
   marginH: number; marginV: number;
   pageNumbers: "off" | "bottom-center" | "bottom-left" | "bottom-right";
 };
+
+// Preset border styles for a Phase 3 frame, around either the whole
+// intro page or a single block.
+type FrameStyle = "solid" | "double" | "dashed" | "dotted" | "groove";
+type Frame = { style: FrameStyle; color: string; width: number };
 
 type TextBlock = {
   id: string; type: string;
@@ -25,15 +41,20 @@ type TextBlock = {
   x: number; y: number; fontSize: number;
   fontFamily?: string; rotation?: number;
   color: string; align: "left" | "center" | "right"; bold: boolean;
+  frame?: Frame; // intro blocks only
 };
 
 type CoverDesign = {
   backgroundColor: string; useSeriesCover: boolean; blocks: TextBlock[];
 };
 
+// A single freehand pen stroke — points in the page's physical px space
+// (PAGE_SIZE_PX), same reference frame as pagination math.
+type Stroke = { id: string; points: [number, number][]; color: string; width: number };
+
 // A chapter intro page (page_number 0) stores this shape, as JSON, in
 // the same `content` column regular pages use for HTML.
-type IntroDesign = { blocks: TextBlock[] };
+type IntroDesign = { blocks: TextBlock[]; strokes?: Stroke[]; pageFrame?: Frame };
 
 // Recovers the pre-block-canvas format (a single centered <div>Title</div>)
 // as an equivalent single block, so nothing already in the database breaks.
@@ -374,6 +395,7 @@ export default function BookReaderPage() {
                     page={pg}
                     styles={styles}
                     aspect={aspect}
+                    pageSizeKey={series?.page_size ?? "A4"}
                     pageNum={pageNum}
                   />
                 );
@@ -429,8 +451,8 @@ export default function BookReaderPage() {
 // runImport) stores a set of freeform TextBlocks (same model as the
 // Cover Design tab) instead of flowing HTML — rendered here as
 // absolutely-positioned, non-interactive text over an otherwise blank page.
-function PageView({ page, styles, aspect, pageNum }: {
-  page: PageRow; styles: BookStyles; aspect: number; pageNum: number;
+function PageView({ page, styles, aspect, pageSizeKey, pageNum }: {
+  page: PageRow; styles: BookStyles; aspect: number; pageSizeKey: string; pageNum: number;
 }) {
   const isIntro = page.page_number === 0;
   // Match the editor's 520px page width so the same HTML renders identically.
@@ -439,6 +461,8 @@ function PageView({ page, styles, aspect, pageNum }: {
   // at narrower viewports. Intro pages fix the height instead — their
   // blocks are positioned by %, which needs a definite containing height.
   const minH = `calc(min(520px, 47vw) * ${aspect})`;
+  const introDesign = isIntro ? parseIntroDesign(page.content) : null;
+  const box = PAGE_SIZE_PX[pageSizeKey] ?? PAGE_SIZE_PX.A4;
   return (
     <div style={{
       width: "min(520px, 47vw)",
@@ -448,30 +472,52 @@ function PageView({ page, styles, aspect, pageNum }: {
       boxShadow: "0 8px 40px rgba(0,0,0,0.55)",
       borderRadius: 2,
       position: "relative",
+      overflow: "hidden",
       flexShrink: 0,
       display: "flex",
       flexDirection: "column",
     }}>
-      {isIntro ? (
-        parseIntroDesign(page.content).blocks.map(block => (
-          <div key={block.id} style={{
-            position: "absolute",
-            left: `${block.x}%`, top: `${block.y}%`,
-            transform: `translate(-50%, -50%) rotate(${block.rotation ?? 0}deg)`,
-            fontFamily: block.fontFamily || styles.fontFamily,
-            fontSize: block.fontSize,
-            color: block.color,
-            fontWeight: block.bold ? 700 : 400,
-            textAlign: block.align,
-            pointerEvents: "none",
-            maxWidth: "90%",
-            whiteSpace: "pre-wrap",
-          }}
-            // Intro-block text can contain inline <span style="..."> runs
-            // from the Book Editor's selection-level rich text formatting.
-            dangerouslySetInnerHTML={{ __html: block.text }}
-          />
-        ))
+      {isIntro && introDesign ? (
+        <>
+          {introDesign.pageFrame && (
+            <div style={{
+              position: "absolute", inset: 16,
+              border: `${introDesign.pageFrame.width}px ${introDesign.pageFrame.style} ${introDesign.pageFrame.color}`,
+            }} />
+          )}
+          {introDesign.strokes && introDesign.strokes.length > 0 && (
+            <svg
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+              viewBox={`0 0 ${box.width} ${box.height}`} preserveAspectRatio="none"
+            >
+              {introDesign.strokes.map(s => (
+                <polyline key={s.id} points={s.points.map(p => p.join(",")).join(" ")}
+                  fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" />
+              ))}
+            </svg>
+          )}
+          {introDesign.blocks.map(block => (
+            <div key={block.id} style={{
+              position: "absolute",
+              left: `${block.x}%`, top: `${block.y}%`,
+              transform: `translate(-50%, -50%) rotate(${block.rotation ?? 0}deg)`,
+              fontFamily: block.fontFamily || styles.fontFamily,
+              fontSize: block.fontSize,
+              color: block.color,
+              fontWeight: block.bold ? 700 : 400,
+              textAlign: block.align,
+              border: block.frame ? `${block.frame.width}px ${block.frame.style} ${block.frame.color}` : undefined,
+              padding: block.frame ? "4px 8px" : undefined,
+              pointerEvents: "none",
+              maxWidth: "90%",
+              whiteSpace: "pre-wrap",
+            }}
+              // Intro-block text can contain inline <span style="..."> runs
+              // from the Book Editor's selection-level rich text formatting.
+              dangerouslySetInnerHTML={{ __html: block.text }}
+            />
+          ))}
+        </>
       ) : (
         <div
           style={{

@@ -60,6 +60,11 @@ type BookStyles = {
   pageNumbers: "off" | "bottom-center" | "bottom-left" | "bottom-right";
 };
 
+// Preset border styles for Phase 3 frames — plain CSS border-style
+// values, applied around either the whole intro page or a single block.
+type FrameStyle = "solid" | "double" | "dashed" | "dotted" | "groove";
+type Frame = { style: FrameStyle; color: string; width: number };
+
 type TextBlock = {
   id: string;
   type: "title" | "subtitle" | "author" | "text";
@@ -76,6 +81,7 @@ type TextBlock = {
   color: string;
   align: "left" | "center" | "right";
   bold: boolean;
+  frame?: Frame; // intro blocks only — a border drawn around this block
 };
 
 type CoverDesign = {
@@ -84,11 +90,18 @@ type CoverDesign = {
   blocks: TextBlock[];
 };
 
+// A single freehand pen stroke on an intro page's drawing layer. Points
+// are in the page's physical px space (PAGE_SIZE_PX), same reference
+// frame as pagination math, so the SVG viewBox scales uniformly with
+// everything else and never distorts (a % viewBox would, since pages
+// aren't square).
+type Stroke = { id: string; points: [number, number][]; color: string; width: number };
+
 // A chapter intro page (pages.page_number === 0) stores this shape, as
 // JSON, in the same `content` column regular pages use for HTML — same
 // TextBlock model the Cover Design tab uses, just page-local instead of
-// series-level.
-type IntroDesign = { blocks: TextBlock[] };
+// series-level, plus a drawing layer and an optional page-wide frame.
+type IntroDesign = { blocks: TextBlock[]; strokes?: Stroke[]; pageFrame?: Frame };
 
 type PageRow    = { id: string; chapter_id: string; page_number: number; content: string | null; };
 type ChapterRow = { id: string; chapter_number: number; title: string; };
@@ -113,11 +126,22 @@ const DEFAULT_COVER: CoverDesign = {
   ],
 };
 
+const DEFAULT_FRAME: Frame = { style: "solid", color: "#1a1a1a", width: 2 };
+const FRAME_STYLE_OPTIONS: { value: FrameStyle; label: string }[] = [
+  { value: "solid",  label: "Solid" },
+  { value: "double", label: "Double" },
+  { value: "dashed", label: "Dashed" },
+  { value: "dotted", label: "Dotted" },
+  { value: "groove", label: "Groove" },
+];
+const DRAW_COLOR_PRESETS = ["#c0392b", "#1a1a1a", "#2980b9", "#27ae60", "#f39c12", "#ffffff"];
+
 /* ─── PageCanvas ─────────────────────────────────────────────── */
 function PageCanvas({
   page, styles, pageSizeKey, pageNum,
   onSave,
   introBlocks, selIntroBlockId, onSelectIntroBlock, onUpdateIntroBlock, onCommitIntroBlocks, onEditIntroBlock, onAddIntroBlock,
+  introStrokes, onAddStroke, onUndoStroke, onClearStrokes, introPageFrame,
 }: {
   page: PageRow; styles: BookStyles; pageSizeKey: string; pageNum: number;
   onSave: (id: string, html: string) => void;
@@ -128,14 +152,24 @@ function PageCanvas({
   onCommitIntroBlocks?: () => void;
   onEditIntroBlock?: (id: string, delta: Partial<TextBlock>) => void;
   onAddIntroBlock?: () => void;
+  introStrokes?: Stroke[];
+  onAddStroke?: (stroke: Stroke) => void;
+  onUndoStroke?: () => void;
+  onClearStrokes?: () => void;
+  introPageFrame?: Frame;
 }) {
   const divRef  = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const boxRef  = useRef<HTMLDivElement>(null);
   const dragging = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const drawingStroke = useRef<Stroke | null>(null);
   const [scale, setScale] = useState(1);
   const [guide, setGuide] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const [drawMode,  setDrawMode]  = useState(false);
+  const [drawColor, setDrawColor] = useState(DRAW_COLOR_PRESETS[0]);
+  const [drawWidth, setDrawWidth] = useState(4);
+  const [liveStroke, setLiveStroke] = useState<Stroke | null>(null);
 
   // Intro-block rich text: each block is its own contentEditable node, kept
   // in a ref map (not React children) so typing/selection never fights a
@@ -172,6 +206,15 @@ function PageCanvas({
       divRef.current.innerHTML = page.content || "";
     }
   }, [page.id, page.content, isIntro]);
+
+  // Leaving pen mode on when switching pages would be surprising —
+  // reset it (and any in-progress stroke) on every page change.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDrawMode(false);
+    drawingStroke.current = null;
+    setLiveStroke(null);
+  }, [page.id]);
 
   // Sync each intro block's rendered HTML from state — except the one
   // currently being typed into, which owns its own DOM until it blurs.
@@ -317,6 +360,40 @@ function PageCanvas({
     if (dragging.current) { dragging.current = null; setGuide({ x: null, y: null }); onCommitIntroBlocks?.(); }
   }
 
+  // Pen tool — points are stored in the page's physical px space (see
+  // Stroke type), not screen px, so they render correctly at any zoom.
+  function toPagePoint(e: React.MouseEvent): [number, number] {
+    const rect = boxRef.current!.getBoundingClientRect();
+    return [
+      ((e.clientX - rect.left) / rect.width) * box.width,
+      ((e.clientY - rect.top) / rect.height) * box.height,
+    ];
+  }
+  function onDrawMouseDown(e: React.MouseEvent) {
+    if (!boxRef.current) return;
+    const stroke: Stroke = { id: `stroke-${Date.now()}`, points: [toPagePoint(e)], color: drawColor, width: drawWidth };
+    drawingStroke.current = stroke;
+    setLiveStroke(stroke);
+  }
+  function onDrawMouseMove(e: React.MouseEvent) {
+    if (!drawingStroke.current || !boxRef.current) return;
+    drawingStroke.current.points.push(toPagePoint(e));
+    setLiveStroke({ ...drawingStroke.current, points: [...drawingStroke.current.points] });
+  }
+  function onDrawMouseUp() {
+    if (!drawingStroke.current) return;
+    const finished = drawingStroke.current;
+    drawingStroke.current = null;
+    setLiveStroke(null);
+    if (finished.points.length > 1) onAddStroke?.(finished);
+  }
+
+  // CSS border shorthand for a Frame preset, used for both the page-wide
+  // frame and a per-block frame.
+  function frameBorder(frame: Frame): string {
+    return `${frame.width}px ${frame.style} ${frame.color}`;
+  }
+
   const toolBtn: React.CSSProperties = {
     background: "rgba(255,255,255,0.06)", border: `1px solid ${BORDER}`,
     borderRadius: 5, color: TEXT, cursor: "pointer", fontSize: 11, padding: "3px 7px",
@@ -360,6 +437,32 @@ function PageCanvas({
               style={{ width: 26, height: 22, borderRadius: 5, border: `1px solid ${BORDER}`, background: "none", cursor: "pointer", padding: 0 }}
               title="Selection color"
             />
+            <span style={{ width: 1, height: 14, background: BORDER, margin: "0 2px" }} />
+            <button
+              onClick={() => setDrawMode(d => !d)}
+              style={{ ...toolBtn, background: drawMode ? ACCENT : toolBtn.background, color: drawMode ? "#0a0a0c" : TEXT }}
+              title="Pen tool — draw freehand on the page"
+            >✏ Draw</button>
+            {drawMode && (
+              <>
+                {DRAW_COLOR_PRESETS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setDrawColor(c)}
+                    title={c}
+                    style={{
+                      width: 18, height: 18, borderRadius: "50%", padding: 0, cursor: "pointer",
+                      background: c, border: drawColor === c ? `2px solid ${ACCENT}` : "1px solid rgba(255,255,255,0.3)",
+                    }}
+                  />
+                ))}
+                <input type="range" min={1} max={16} step={1} value={drawWidth}
+                  onChange={e => setDrawWidth(Number(e.target.value))}
+                  style={{ width: 60 }} title={`Stroke width — ${drawWidth}px`} />
+                <button onClick={() => onUndoStroke?.()} style={toolBtn} disabled={!introStrokes?.length}>Undo stroke</button>
+                <button onClick={() => onClearStrokes?.()} style={toolBtn} disabled={!introStrokes?.length}>Clear</button>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -386,10 +489,11 @@ function PageCanvas({
       <div ref={wrapRef} style={{ width: "100%", height: box.height * scale, position: "relative" }}>
         <div
           ref={boxRef}
-          onMouseMove={isIntro ? onBlockMouseMove : undefined}
-          onMouseUp={isIntro ? onBlockMouseUp : undefined}
-          onMouseLeave={isIntro ? onBlockMouseUp : undefined}
-          onClick={isIntro ? () => onSelectIntroBlock?.(null) : undefined}
+          onMouseDown={isIntro && drawMode ? onDrawMouseDown : undefined}
+          onMouseMove={isIntro ? (drawMode ? onDrawMouseMove : onBlockMouseMove) : undefined}
+          onMouseUp={isIntro ? (drawMode ? onDrawMouseUp : onBlockMouseUp) : undefined}
+          onMouseLeave={isIntro ? (drawMode ? onDrawMouseUp : onBlockMouseUp) : undefined}
+          onClick={isIntro && !drawMode ? () => onSelectIntroBlock?.(null) : undefined}
           style={{
             width: box.width,
             height: box.height,
@@ -400,9 +504,29 @@ function PageCanvas({
             borderRadius: 2,
             position: "relative",
             overflow: "hidden",
+            cursor: isIntro && drawMode ? "crosshair" : undefined,
           }}>
           {isIntro ? (
             <>
+              {introPageFrame && (
+                <div style={{
+                  position: "absolute", inset: 16,
+                  border: frameBorder(introPageFrame), pointerEvents: "none",
+                }} />
+              )}
+              <svg
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+                viewBox={`0 0 ${box.width} ${box.height}`} preserveAspectRatio="none"
+              >
+                {(introStrokes || []).map(s => (
+                  <polyline key={s.id} points={s.points.map(p => p.join(",")).join(" ")}
+                    fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" />
+                ))}
+                {liveStroke && (
+                  <polyline points={liveStroke.points.map(p => p.join(",")).join(" ")}
+                    fill="none" stroke={liveStroke.color} strokeWidth={liveStroke.width} strokeLinecap="round" strokeLinejoin="round" />
+                )}
+              </svg>
               {guide.x !== null && (
                 <div style={{
                   position: "absolute", left: `${guide.x}%`, top: 0, bottom: 0, width: 1,
@@ -457,9 +581,14 @@ function PageCanvas({
                   textAlign: block.align,
                   padding: "4px 8px",
                   outline: selIntroBlockId === block.id ? "2px dashed rgba(255,255,255,0.6)" : "none",
+                  border: block.frame ? frameBorder(block.frame) : undefined,
                   borderRadius: 4,
                   whiteSpace: "pre-wrap",
                   maxWidth: "90%",
+                  // Pen mode paints straight onto the box beneath — blocks
+                  // step out of the way entirely rather than intercepting
+                  // clicks meant for the drawing layer.
+                  pointerEvents: drawMode ? "none" : "auto",
                 }}
               />
               ))}
@@ -760,11 +889,13 @@ export default function BookEditorPage() {
   const [coverDesign, setCoverDesign] = useState<CoverDesign>(DEFAULT_COVER);
   const [selBlockId,  setSelBlockId]  = useState<string | null>(null);
 
-  // Intro-page block editing (chapter intro pages, page_number 0) — a
+  // Intro-page canvas editing (chapter intro pages, page_number 0) — a
   // local draft mirroring the selected intro page's parsed content,
   // synced from the DB when the selected page changes and written back
   // via savePage() on drag-end / blur / property-panel edits.
   const [introDraft,      setIntroDraft]      = useState<TextBlock[] | null>(null);
+  const [introStrokes,    setIntroStrokes]    = useState<Stroke[]>([]);
+  const [introPageFrame,  setIntroPageFrame]  = useState<Frame | undefined>(undefined);
   const [selIntroBlockId, setSelIntroBlockId] = useState<string | null>(null);
 
   const [saving,      setSaving]      = useState(false);
@@ -1049,23 +1180,23 @@ export default function BookEditorPage() {
   const selBlock = coverDesign.blocks.find(b => b.id === selBlockId) ?? null;
   const selIntroBlock = (introDraft || []).find(b => b.id === selIntroBlockId) ?? null;
 
-  /* ── intro-page block helpers ──
+  /* ── intro-page canvas helpers ──
      Sync the local draft from the DB only when the selected page id
      changes (not on every pagesMap update, including the ones our own
      saves cause below) so an in-progress drag/edit is never clobbered. */
-  // introSaveBlocks holds exactly what a pending debounced timer will
+  // introSavePayload holds exactly what a pending debounced timer will
   // write — a ref, not state, so unmount/page-switch cleanup can flush
-  // it without a stale closure over introDraft.
-  const introSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const introSavePageId = useRef<string | null>(null);
-  const introSaveBlocks = useRef<TextBlock[] | null>(null);
+  // it without a stale closure over introDraft/introStrokes/introPageFrame.
+  const introSaveTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const introSavePageId  = useRef<string | null>(null);
+  const introSavePayload = useRef<IntroDesign | null>(null);
 
   function flushIntroSave() {
     if (!introSaveTimer.current) return;
     clearTimeout(introSaveTimer.current);
     introSaveTimer.current = null;
-    if (introSavePageId.current && introSaveBlocks.current) {
-      savePage(introSavePageId.current, JSON.stringify({ blocks: introSaveBlocks.current }));
+    if (introSavePageId.current && introSavePayload.current) {
+      savePage(introSavePageId.current, JSON.stringify(introSavePayload.current));
     }
   }
 
@@ -1074,18 +1205,59 @@ export default function BookEditorPage() {
     // the page being left — otherwise the last keystroke there is lost.
     flushIntroSave();
     if (selPage && selPage.page_number === 0) {
+      const design = parseIntroDesign(selPage.content);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIntroDraft(parseIntroDesign(selPage.content).blocks);
+      setIntroDraft(design.blocks);
+      setIntroStrokes(design.strokes || []);
+      setIntroPageFrame(design.pageFrame);
     } else {
       setIntroDraft(null);
+      setIntroStrokes([]);
+      setIntroPageFrame(undefined);
       setSelIntroBlockId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selPage?.id]);
 
-  // Flush a pending debounced intro-block write if the editor unmounts
+  // Flush a pending debounced intro-canvas write if the editor unmounts
   // (navigating away) before the timer fires.
   useEffect(() => flushIntroSave, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Builds the full design to persist, defaulting any piece not passed
+  // explicitly to the current state — 'key' in overrides (not just a
+  // truthy check) so pageFrame can be explicitly cleared to undefined.
+  function buildIntroDesign(overrides: Partial<IntroDesign> = {}): IntroDesign {
+    return {
+      blocks: overrides.blocks ?? introDraft ?? [],
+      strokes: overrides.strokes ?? introStrokes,
+      pageFrame: "pageFrame" in overrides ? overrides.pageFrame : introPageFrame,
+    };
+  }
+
+  // Immediate write — for discrete/rare actions (drag-end, add/delete
+  // block, add/undo/clear stroke, frame style changes).
+  function commitIntroDesign(design: IntroDesign) {
+    if (!selPage) return;
+    if (introSaveTimer.current) { clearTimeout(introSaveTimer.current); introSaveTimer.current = null; }
+    introSavePayload.current = null;
+    savePage(selPage.id, JSON.stringify(design));
+  }
+
+  // Debounced write — for high-frequency controls (text keystrokes,
+  // slider drags). Un-debounced concurrent writes for the same page can
+  // resolve out of order and leave a stale value in the DB even though
+  // the UI shows the latest edit (caught in Phase 1 testing).
+  function debounceIntroDesign(design: IntroDesign) {
+    if (!selPage) return;
+    if (introSaveTimer.current) clearTimeout(introSaveTimer.current);
+    introSavePageId.current = selPage.id;
+    introSavePayload.current = design;
+    introSaveTimer.current = setTimeout(() => {
+      savePage(selPage.id, JSON.stringify(design));
+      introSaveTimer.current = null;
+      introSavePayload.current = null;
+    }, 400);
+  }
 
   // Local-only update, used while dragging — commitIntroBlocks() (no
   // args, reading the latest introDraft) fires separately on drag-end.
@@ -1094,34 +1266,18 @@ export default function BookEditorPage() {
   }
 
   function commitIntroBlocks(blocks?: TextBlock[]) {
-    if (!selPage) return;
-    if (introSaveTimer.current) { clearTimeout(introSaveTimer.current); introSaveTimer.current = null; }
-    introSaveBlocks.current = null;
-    savePage(selPage.id, JSON.stringify({ blocks: blocks ?? introDraft ?? [] }));
+    commitIntroDesign(buildIntroDesign(blocks ? { blocks } : {}));
   }
 
   // Update + commit in one step, computing the new array explicitly
   // rather than reading introDraft right back (setIntroDraft is async,
   // so a bare updateIntroBlock() + commitIntroBlocks() pair in the same
-  // handler would commit the stale pre-update blocks). The actual write
-  // is debounced — property-panel controls (text keystrokes, slider
-  // drags) fire this on every change, and un-debounced concurrent writes
-  // for the same page can resolve out of order and leave a stale value
-  // in the DB even though the UI shows the latest edit. Only the drag
-  // path (its own commit on mouseup, a single natural endpoint) and
-  // add/delete block (discrete, rare) commit immediately.
+  // handler would commit the stale pre-update blocks).
   function editIntroBlock(id: string, delta: Partial<TextBlock>) {
-    if (!introDraft || !selPage) return;
+    if (!introDraft) return;
     const updated = introDraft.map(b => b.id === id ? { ...b, ...delta } : b);
     setIntroDraft(updated);
-    if (introSaveTimer.current) clearTimeout(introSaveTimer.current);
-    introSavePageId.current = selPage.id;
-    introSaveBlocks.current = updated;
-    introSaveTimer.current = setTimeout(() => {
-      savePage(selPage.id, JSON.stringify({ blocks: updated }));
-      introSaveTimer.current = null;
-      introSaveBlocks.current = null;
-    }, 400);
+    debounceIntroDesign(buildIntroDesign({ blocks: updated }));
   }
 
   function addIntroBlock() {
@@ -1143,6 +1299,42 @@ export default function BookEditorPage() {
     setIntroDraft(updated);
     if (selIntroBlockId === id) setSelIntroBlockId(null);
     commitIntroBlocks(updated);
+  }
+
+  // Phase 3 — drawing layer. Strokes are added whole (on pen-up), so
+  // these are all discrete/immediate, no debounce needed.
+  function addStroke(stroke: Stroke) {
+    const updated = [...introStrokes, stroke];
+    setIntroStrokes(updated);
+    commitIntroDesign(buildIntroDesign({ strokes: updated }));
+  }
+  function undoLastStroke() {
+    if (introStrokes.length === 0) return;
+    const updated = introStrokes.slice(0, -1);
+    setIntroStrokes(updated);
+    commitIntroDesign(buildIntroDesign({ strokes: updated }));
+  }
+  function clearStrokes() {
+    if (introStrokes.length === 0) return;
+    setIntroStrokes([]);
+    commitIntroDesign(buildIntroDesign({ strokes: [] }));
+  }
+
+  // Phase 3 — frame/border presets, page-wide or per-block.
+  function updatePageFrame(delta: Partial<Frame> | undefined) {
+    const updated = delta === undefined ? undefined : { ...(introPageFrame ?? DEFAULT_FRAME), ...delta };
+    setIntroPageFrame(updated);
+    debounceIntroDesign(buildIntroDesign({ pageFrame: updated }));
+  }
+  function updateBlockFrame(blockId: string, delta: Partial<Frame> | undefined) {
+    if (!introDraft) return;
+    const updated = introDraft.map(b => {
+      if (b.id !== blockId) return b;
+      const frame = delta === undefined ? undefined : { ...(b.frame ?? DEFAULT_FRAME), ...delta };
+      return { ...b, frame };
+    });
+    setIntroDraft(updated);
+    debounceIntroDesign(buildIntroDesign({ blocks: updated }));
   }
 
   // flat page counter for page numbers
@@ -1296,6 +1488,11 @@ export default function BookEditorPage() {
                 onCommitIntroBlocks={commitIntroBlocks}
                 onEditIntroBlock={editIntroBlock}
                 onAddIntroBlock={addIntroBlock}
+                introStrokes={introStrokes}
+                onAddStroke={addStroke}
+                onUndoStroke={undoLastStroke}
+                onClearStrokes={clearStrokes}
+                introPageFrame={introPageFrame}
               />
             ) : (
               <div style={{ textAlign: "center", color: MUTED, fontSize: 13, paddingTop: 80 }}>
@@ -1448,6 +1645,32 @@ export default function BookEditorPage() {
                   Click a text block to select it, drag to reposition. &quot;+ Add text block&quot; above the page adds another.
                 </p>
 
+                <div style={{ height: 1, background: BORDER }} />
+                <p style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Page frame</p>
+                <Field label="Style">
+                  <select
+                    value={introPageFrame?.style ?? ""}
+                    onChange={e => updatePageFrame(e.target.value ? { style: e.target.value as FrameStyle } : undefined)}
+                    style={selectStyle}
+                  >
+                    <option value="">None</option>
+                    {FRAME_STYLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </Field>
+                {introPageFrame && (
+                  <>
+                    <Field label={`Width — ${introPageFrame.width}px`}>
+                      <input type="range" min={1} max={16} step={1} value={introPageFrame.width}
+                        onChange={e => updatePageFrame({ width: Number(e.target.value) })} style={{ width: "100%" }} />
+                    </Field>
+                    <Field label="Color">
+                      <input type="color" value={introPageFrame.color} onChange={e => updatePageFrame({ color: e.target.value })}
+                        style={{ width: 32, height: 28, borderRadius: 6, border: "none", cursor: "pointer" }} />
+                    </Field>
+                  </>
+                )}
+                <div style={{ height: 1, background: BORDER }} />
+
                 {selIntroBlock ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <Field label="Text">
@@ -1486,6 +1709,29 @@ export default function BookEditorPage() {
                       <input type="checkbox" checked={selIntroBlock.bold} onChange={e => editIntroBlock(selIntroBlock.id, { bold: e.target.checked })} />
                       Bold
                     </label>
+                    <Field label="Block frame">
+                      <select
+                        value={selIntroBlock.frame?.style ?? ""}
+                        onChange={e => updateBlockFrame(selIntroBlock.id, e.target.value ? { style: e.target.value as FrameStyle } : undefined)}
+                        style={selectStyle}
+                      >
+                        <option value="">None</option>
+                        {FRAME_STYLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </Field>
+                    {selIntroBlock.frame && (
+                      <>
+                        <Field label={`Frame width — ${selIntroBlock.frame.width}px`}>
+                          <input type="range" min={1} max={16} step={1} value={selIntroBlock.frame.width}
+                            onChange={e => updateBlockFrame(selIntroBlock.id, { width: Number(e.target.value) })} style={{ width: "100%" }} />
+                        </Field>
+                        <Field label="Frame color">
+                          <input type="color" value={selIntroBlock.frame.color}
+                            onChange={e => updateBlockFrame(selIntroBlock.id, { color: e.target.value })}
+                            style={{ width: 32, height: 28, borderRadius: 6, border: "none", cursor: "pointer" }} />
+                        </Field>
+                      </>
+                    )}
                     <button onClick={() => deleteIntroBlock(selIntroBlock.id)}
                       style={{ fontSize: 11, color: "#c97a6a", background: "none", border: "1px solid rgba(201,122,106,0.3)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", marginTop: 4 }}>
                       Delete block
