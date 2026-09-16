@@ -448,7 +448,7 @@ function PageView({ page, styles, aspect, pageNum, chapterHeading }: {
           right: styles.pageNumbers === "bottom-right" ? styles.marginH : undefined,
           transform: styles.pageNumbers === "bottom-center" ? "translateX(-50%)" : undefined,
           fontSize: 10, color: styles.textColor, opacity: 0.35,
-          fontFamily: styles.fontFamily,
+          fontFamily: styles.fontFamily, paddingTop: 14,
         }}>
           {pageNum}
         </div>
