@@ -103,12 +103,17 @@ type Stroke = { id: string; points: [number, number][]; color: string; width: nu
 // series-level, plus a drawing layer and an optional page-wide frame.
 type IntroDesign = { blocks: TextBlock[]; strokes?: Stroke[]; pageFrame?: Frame };
 
+// Phase 4 — a saved intro-page design, reusable across chapters in this
+// series. Stored series-wide (series.intro_templates), not per-page.
+type IntroTemplate = { id: string; name: string; design: IntroDesign; createdAt: string };
+
 type PageRow    = { id: string; chapter_id: string; page_number: number; content: string | null; };
 type ChapterRow = { id: string; chapter_number: number; title: string; };
 type SeriesRow  = {
   id: string; title: string; cover_image_url: string | null;
   page_size: string | null; published: boolean;
   book_styles: BookStyles | null; cover_design: CoverDesign | null;
+  intro_templates: IntroTemplate[] | null;
 };
 
 const DEFAULT_STYLES: BookStyles = {
@@ -371,7 +376,7 @@ function PageCanvas({
   }
   function onDrawMouseDown(e: React.MouseEvent) {
     if (!boxRef.current) return;
-    const stroke: Stroke = { id: `stroke-${Date.now()}`, points: [toPagePoint(e)], color: drawColor, width: drawWidth };
+    const stroke: Stroke = { id: `stroke-${crypto.randomUUID()}`, points: [toPagePoint(e)], color: drawColor, width: drawWidth };
     drawingStroke.current = stroke;
     setLiveStroke(stroke);
   }
@@ -897,6 +902,8 @@ export default function BookEditorPage() {
   const [introStrokes,    setIntroStrokes]    = useState<Stroke[]>([]);
   const [introPageFrame,  setIntroPageFrame]  = useState<Frame | undefined>(undefined);
   const [selIntroBlockId, setSelIntroBlockId] = useState<string | null>(null);
+  const [introTemplates, setIntroTemplates] = useState<IntroTemplate[]>([]);
+  const [newTemplateName, setNewTemplateName] = useState("");
 
   const [saving,      setSaving]      = useState(false);
   const [saveMsg,     setSaveMsg]     = useState<string | null>(null);
@@ -920,7 +927,7 @@ export default function BookEditorPage() {
 
       const { data: s } = await supabase
         .from("series")
-        .select("id, title, cover_image_url, page_size, published, book_styles, cover_design")
+        .select("id, title, cover_image_url, page_size, published, book_styles, cover_design, intro_templates")
         .eq("id", seriesId).eq("user_id", session.user.id).maybeSingle();
       if (!alive) return;
       if (!s) { setStatus("error"); return; }
@@ -929,6 +936,7 @@ export default function BookEditorPage() {
       setSeries(row);
       if (row.book_styles) setBookStyles(row.book_styles);
       if (row.cover_design) setCoverDesign(row.cover_design);
+      setIntroTemplates(row.intro_templates || []);
 
       const { data: chs } = await supabase
         .from("chapters")
@@ -1283,7 +1291,7 @@ export default function BookEditorPage() {
   function addIntroBlock() {
     if (!introDraft) return;
     const newBlock: TextBlock = {
-      id: `block-${Date.now()}`, type: "text", text: "New text",
+      id: `block-${crypto.randomUUID()}`, type: "text", text: "New text",
       x: 50, y: 50, fontSize: 18, rotation: 0,
       color: bookStyles.textColor, align: "center", bold: false,
     };
@@ -1335,6 +1343,48 @@ export default function BookEditorPage() {
     });
     setIntroDraft(updated);
     debounceIntroDesign(buildIntroDesign({ blocks: updated }));
+  }
+
+  // Phase 4 — save/reuse whole intro-page designs as templates, series-wide
+  // (series.intro_templates), independent of any single page.
+  async function persistIntroTemplates(templates: IntroTemplate[]) {
+    if (!series) return;
+    setIntroTemplates(templates);
+    await supabase.from("series").update({ intro_templates: templates }).eq("id", series.id);
+  }
+
+  function saveIntroTemplate() {
+    const name = newTemplateName.trim();
+    if (!name) return;
+    const template: IntroTemplate = {
+      id: `template-${crypto.randomUUID()}`, name,
+      design: buildIntroDesign(),
+      createdAt: new Date().toISOString(),
+    };
+    persistIntroTemplates([...introTemplates, template]);
+    setNewTemplateName("");
+  }
+
+  function deleteIntroTemplate(id: string) {
+    persistIntroTemplates(introTemplates.filter(t => t.id !== id));
+  }
+
+  // Applies a saved template to the currently open intro page — every
+  // block/stroke/frame copied as-is, except each "title" block's text is
+  // swapped for this chapter's own title, so the template's layout and
+  // styling carry over without carrying over the source chapter's name.
+  function applyIntroTemplate(id: string) {
+    const template = introTemplates.find(t => t.id === id);
+    if (!template || !selChId) return;
+    const chapter = chapters.find(c => c.id === selChId);
+    const chapterTitle = chapter?.title || `Chapter ${chapter?.chapter_number ?? ""}`;
+    const blocks = template.design.blocks.map(b =>
+      b.type === "title" ? { ...b, text: escapeHtml(chapterTitle) } : { ...b }
+    );
+    setIntroDraft(blocks);
+    setIntroStrokes(template.design.strokes || []);
+    setIntroPageFrame(template.design.pageFrame);
+    commitIntroDesign({ blocks, strokes: template.design.strokes || [], pageFrame: template.design.pageFrame });
   }
 
   // flat page counter for page numbers
@@ -1668,6 +1718,43 @@ export default function BookEditorPage() {
                         style={{ width: 32, height: 28, borderRadius: 6, border: "none", cursor: "pointer" }} />
                     </Field>
                   </>
+                )}
+                <div style={{ height: 1, background: BORDER }} />
+
+                <p style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Templates</p>
+                <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>
+                  Save this page&apos;s whole design (blocks, frame, drawing) and reuse it on other chapters — title text swaps to match automatically.
+                </p>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    value={newTemplateName}
+                    onChange={e => setNewTemplateName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") saveIntroTemplate(); }}
+                    placeholder="Template name"
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <button onClick={saveIntroTemplate} disabled={!newTemplateName.trim()}
+                    style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${BORDER}`, background: ACCENT, color: "#0a0a0c", fontSize: 11, fontWeight: 700, cursor: "pointer", opacity: newTemplateName.trim() ? 1 : 0.5 }}>
+                    Save
+                  </button>
+                </div>
+                {introTemplates.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {introTemplates.map(t => (
+                      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                        <span style={{ flex: 1, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                        <button onClick={() => applyIntroTemplate(t.id)}
+                          style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.06)", color: TEXT, cursor: "pointer" }}>
+                          Apply
+                        </button>
+                        <button onClick={() => deleteIntroTemplate(t.id)}
+                          style={{ background: "none", border: "none", color: "rgba(201,122,106,0.6)", cursor: "pointer", fontSize: 13, padding: 0, lineHeight: 1 }}
+                          title="Delete template">×</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>No saved templates yet.</p>
                 )}
                 <div style={{ height: 1, background: BORDER }} />
 
