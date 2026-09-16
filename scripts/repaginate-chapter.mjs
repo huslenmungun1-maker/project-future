@@ -4,11 +4,10 @@
 // change after content was already paginated (e.g. a global font-size
 // bump leaves old pages under-filled or overflowing).
 //
-// Does NOT touch wording — only re-chunks the same paragraph nodes
-// across page boundaries, same as if you'd resaved each page in the
-// Book Editor after a style change (that live reflow only ever cascades
-// forward from the page you touch; this rebuilds a whole chapter in one
-// pass using the same word-wrap line-count estimate as import-manuscript.mjs).
+// Preserves the exact original top-level node sequence (paragraph divs
+// AND blank-line spacer divs, in original order, byte-for-byte) and only
+// changes which nodes land on which page — it does not touch wording,
+// reorder nodes, or normalize spacing between them.
 //
 // Usage:
 //   node scripts/repaginate-chapter.mjs <series-id> --only=1,2 [--dry-run]
@@ -100,25 +99,55 @@ function estimateLineCount(plainText, charsPerLine) {
 
 const DIV_RE = /<div\b[^>]*>[\s\S]*?<\/div>/g;
 
-// Splits stored page HTML (a flat stream of <div>line</div> nodes, with
-// "<div><br></div>" spacers between paragraphs — the Book Editor's own
-// contentEditable output shape) into content-node strings, dropping the
-// spacer nodes (repacking regenerates spacing between whatever ends up
-// adjacent on a page).
-function extractContentNodes(html) {
-  const matches = html.match(DIV_RE) || [];
-  const coveredLen = matches.join("").length;
-  if (html.length > 0 && coveredLen < html.length * 0.9) {
+// Splits stored page HTML into its exact top-level node sequence —
+// content divs AND spacer "<div><br></div>" divs alike, in original
+// order, byte-for-byte. Deliberately does NOT drop spacer nodes or
+// normalize spacing: whether two paragraphs originally had a blank-line
+// divider between them (or none, e.g. tight back-to-back dialogue) is
+// part of the content, not an artifact to regenerate. Any text found
+// outside a <div> wrapper (browsers can leave the very first line of a
+// freshly-typed contentEditable div unwrapped) is recovered as its own
+// node rather than silently dropped — this is exactly the bug that ate
+// the opening line of chapter 1 on the first version of this script.
+function extractNodes(html) {
+  const nodes = [];
+  let lastIndex = 0;
+  let m;
+  DIV_RE.lastIndex = 0;
+  while ((m = DIV_RE.exec(html)) !== null) {
+    if (m.index > lastIndex) {
+      const between = html.slice(lastIndex, m.index);
+      if (between.trim() !== "") {
+        nodes.push(`<div>${between.trim()}</div>`);
+        console.log(`    (recovered unwrapped text outside a <div>: ${JSON.stringify(between.trim().slice(0, 60))})`);
+      }
+    }
+    nodes.push(m[0]);
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < html.length) {
+    const tail = html.slice(lastIndex);
+    if (tail.trim() !== "") {
+      nodes.push(`<div>${tail.trim()}</div>`);
+      console.log(`    (recovered unwrapped trailing text: ${JSON.stringify(tail.trim().slice(0, 60))})`);
+    }
+  }
+
+  const coveredLen = nodes.join("").length;
+  if (html.length > 0 && coveredLen < html.length * 0.999) {
     throw new Error(
-      `Unrecognized page content shape (only matched ${coveredLen}/${html.length} chars as <div> nodes) — aborting to avoid data loss.`
+      `Node extraction only covered ${coveredLen}/${html.length} chars — unrecognized markup shape, aborting to avoid data loss.`
     );
   }
-  return matches.filter(node => {
-    const inner = node.replace(/^<div\b[^>]*>/, "").replace(/<\/div>$/, "").trim();
-    return inner !== "" && inner !== "<br>" && inner !== "<br/>";
-  });
+  return nodes;
 }
 
+// Repacks the exact original node sequence across new page boundaries —
+// same granularity as the Book Editor's splitHtmlToFit (never splits a
+// node, never leaves a page empty), but never invents, drops, or
+// reorders a node. Concatenated with no separator: each node (content
+// or spacer) is already a self-contained <div>...</div>, exactly as
+// stored originally.
 function repaginate(nodes, box, styles) {
   const fillWidth  = box.width  - 2 * styles.marginH;
   const fillHeight = box.height - 2 * styles.marginV;
@@ -132,19 +161,18 @@ function repaginate(nodes, box, styles) {
 
   for (const node of nodes) {
     const plain = node.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    const nodeLines = estimateLineCount(plain, charsPerLine);
-    const costIfSamePage = current.length > 0 ? nodeLines + 1 : nodeLines;
-    if (current.length > 0 && currentLines + costIfSamePage > linesPerPage) {
+    const nodeLines = Math.max(1, estimateLineCount(plain, charsPerLine));
+    if (current.length > 0 && currentLines + nodeLines > linesPerPage) {
       pages.push(current);
       current = [];
       currentLines = 0;
     }
     current.push(node);
-    currentLines += current.length > 1 ? nodeLines + 1 : nodeLines;
+    currentLines += nodeLines;
   }
   if (current.length > 0) pages.push(current);
 
-  return pages.map(ns => ns.join("<div><br></div>"));
+  return pages.map(ns => ns.join(""));
 }
 
 async function main() {
@@ -170,10 +198,13 @@ async function main() {
     if (pgErr) throw pgErr;
     if (!pages || pages.length === 0) { console.log(`[Ch.${ch.chapter_number}] no pages — skipping`); continue; }
 
-    const combinedHtml = pages.map(p => p.content || "").join("<div><br></div>");
+    // No separator between pages: a page break is just where the physical
+    // sheet ended, not an implied paragraph gap — the node stream is
+    // continuous across it.
+    const combinedHtml = pages.map(p => p.content || "").join("");
     let nodes;
     try {
-      nodes = extractContentNodes(combinedHtml);
+      nodes = extractNodes(combinedHtml);
     } catch (e) {
       console.log(`[Ch.${ch.chapter_number}] SKIPPED — ${e.message}`);
       continue;
