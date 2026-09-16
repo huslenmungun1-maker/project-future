@@ -55,7 +55,14 @@
       "Bash(node -e ' *)",
       "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\studio\\\\series\\\\[id]\\\\poetry-editor\")",
       "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Desktop\\\\project-future\\\\app\\\\[locale]\\\\reader\\\\series\\\\[seriesId]\\\\poetry\")",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Skill(run)",
+      "WebSearch",
+      "WebFetch(domain:stripe.com)",
+      "Bash(npx @next/codemod@canary middleware-to-proxy .)",
+      "Bash(npx @next/codemod@canary middleware-to-proxy . --force)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(node -e 'let d=\"\";process.stdin.on\\(\"data\",c=>d+=c\\);process.stdin.on\\(\"end\",\\(\\)=>{const a=JSON.parse\\(d\\);console.log\\(JSON.stringify\\({id:a[0]?.id, display_mode:a[0]?.display_mode, reading_direction:a[0]?.reading_direction}\\)\\);}\\);')"
     ],
     "defaultMode": "acceptEdits"
   }

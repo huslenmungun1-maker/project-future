@@ -39,6 +39,10 @@ yarn-error.log*
 # supabase CLI local cache
 /supabase/.temp
 
+# raw manuscript drafts (private content, not code)
+/scripts/manuscript/*
+!/scripts/manuscript/.gitkeep
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

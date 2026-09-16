@@ -81,7 +81,7 @@ type SeriesRow  = {
 };
 
 const DEFAULT_STYLES: BookStyles = {
-  fontFamily: "Georgia, serif", fontSize: 13, lineHeight: 1.8,
+  fontFamily: "Georgia, serif", fontSize: 16, lineHeight: 2,
   textColor: "#1a1a1a", pageBackground: "#ffffff",
   marginH: 72, marginV: 72, pageNumbers: "bottom-center",
 };
