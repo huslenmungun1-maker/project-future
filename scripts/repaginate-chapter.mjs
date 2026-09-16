@@ -193,10 +193,15 @@ async function main() {
   console.log(`Repaginating ${chapters.length} chapter(s)${DRY_RUN ? " (dry-run)" : ""}\n`);
 
   for (const ch of chapters) {
-    const { data: pages, error: pgErr } = await supabase
+    const { data: allPages, error: pgErr } = await supabase
       .from("pages").select("id, page_number, content").eq("chapter_id", ch.id).order("page_number");
     if (pgErr) throw pgErr;
-    if (!pages || pages.length === 0) { console.log(`[Ch.${ch.chapter_number}] no pages — skipping`); continue; }
+    if (!allPages || allPages.length === 0) { console.log(`[Ch.${ch.chapter_number}] no pages — skipping`); continue; }
+
+    // The intro page (page_number 0) is a block-canvas design (JSON), not
+    // flowing HTML — never part of repagination, never deleted/touched here.
+    const pages = allPages.filter(p => p.page_number !== 0);
+    if (pages.length === 0) { console.log(`[Ch.${ch.chapter_number}] only an intro page — skipping`); continue; }
 
     // No separator between pages: a page break is just where the physical
     // sheet ended, not an implied paragraph gap — the node stream is
@@ -215,7 +220,7 @@ async function main() {
 
     if (DRY_RUN) continue;
 
-    const { error: delErr } = await supabase.from("pages").delete().eq("chapter_id", ch.id);
+    const { error: delErr } = await supabase.from("pages").delete().eq("chapter_id", ch.id).neq("page_number", 0);
     if (delErr) throw delErr;
 
     const rows = newPagesHtml.map((html, idx) => ({ chapter_id: ch.id, page_number: idx + 1, content: html }));

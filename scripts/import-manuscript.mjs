@@ -116,10 +116,17 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// A chapter's intro page (page_number 0) holds only its centered title —
-// mirrors introPageHtml() in the Book Editor.
-function introPageHtml(title) {
-  return `<div style="text-align:center;font-weight:700;font-size:2em;">${escapeHtml(title)}</div>`;
+// A chapter's intro page (page_number 0) starts as a single centered
+// title text-block — same TextBlock/IntroDesign JSON shape the Book
+// Editor's addChapter()/runImport() write (see defaultIntroContent there).
+function defaultIntroContent(title) {
+  return JSON.stringify({
+    blocks: [{
+      id: "title", type: "title", text: title,
+      x: 50, y: 50, fontSize: 32, rotation: 0,
+      color: "#1a1a1a", align: "center", bold: true,
+    }],
+  });
 }
 
 function paragraphsFromBody(body) {
@@ -333,7 +340,7 @@ async function main() {
     }
 
     const rows = [
-      { chapter_id: chapter.id, page_number: 0, content: introPageHtml(chapterTitle) },
+      { chapter_id: chapter.id, page_number: 0, content: defaultIntroContent(chapterTitle) },
       ...pagesHtml.map((html, idx) => ({ chapter_id: chapter.id, page_number: idx + 1, content: html })),
     ];
 

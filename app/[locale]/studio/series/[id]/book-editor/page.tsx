@@ -56,11 +56,13 @@ type BookStyles = {
 
 type TextBlock = {
   id: string;
-  type: "title" | "subtitle" | "author";
+  type: "title" | "subtitle" | "author" | "text";
   text: string;
   x: number; // % of canvas width
   y: number; // % of canvas height
   fontSize: number;
+  fontFamily?: string; // falls back to the book's font when unset
+  rotation?: number;   // degrees, falls back to 0
   color: string;
   align: "left" | "center" | "right";
   bold: boolean;
@@ -71,6 +73,12 @@ type CoverDesign = {
   useSeriesCover: boolean;
   blocks: TextBlock[];
 };
+
+// A chapter intro page (pages.page_number === 0) stores this shape, as
+// JSON, in the same `content` column regular pages use for HTML — same
+// TextBlock model the Cover Design tab uses, just page-local instead of
+// series-level.
+type IntroDesign = { blocks: TextBlock[] };
 
 type PageRow    = { id: string; chapter_id: string; page_number: number; content: string | null; };
 type ChapterRow = { id: string; chapter_number: number; title: string; };
@@ -99,13 +107,23 @@ const DEFAULT_COVER: CoverDesign = {
 function PageCanvas({
   page, styles, pageSizeKey, pageNum,
   onSave,
+  introBlocks, selIntroBlockId, onSelectIntroBlock, onUpdateIntroBlock, onCommitIntroBlocks, onEditIntroBlock, onAddIntroBlock,
 }: {
   page: PageRow; styles: BookStyles; pageSizeKey: string; pageNum: number;
   onSave: (id: string, html: string) => void;
+  introBlocks?: TextBlock[] | null;
+  selIntroBlockId?: string | null;
+  onSelectIntroBlock?: (id: string | null) => void;
+  onUpdateIntroBlock?: (id: string, delta: Partial<TextBlock>) => void;
+  onCommitIntroBlocks?: () => void;
+  onEditIntroBlock?: (id: string, delta: Partial<TextBlock>) => void;
+  onAddIntroBlock?: () => void;
 }) {
   const divRef  = useRef<HTMLDivElement>(null);
   const focused = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const boxRef  = useRef<HTMLDivElement>(null);
+  const dragging = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [scale, setScale] = useState(1);
 
   const box = PAGE_SIZE_PX[pageSizeKey] ?? PAGE_SIZE_PX.A4;
@@ -126,12 +144,26 @@ function PageCanvas({
   }, [box.width]);
 
   useEffect(() => {
-    if (divRef.current && !focused.current) {
+    if (!isIntro && divRef.current && !focused.current) {
       divRef.current.innerHTML = page.content || "";
     }
-  }, [page.id, page.content]);
+  }, [page.id, page.content, isIntro]);
 
   function exec(cmd: string, val?: string) { divRef.current?.focus(); document.execCommand(cmd, false, val); }
+
+  function onBlockMouseMove(e: React.MouseEvent) {
+    if (!dragging.current || !boxRef.current || !onUpdateIntroBlock) return;
+    const rect = boxRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - dragging.current.startX) / rect.width) * 100;
+    const dy = ((e.clientY - dragging.current.startY) / rect.height) * 100;
+    onUpdateIntroBlock(dragging.current.id, {
+      x: Math.max(2, Math.min(98, dragging.current.origX + dx)),
+      y: Math.max(2, Math.min(98, dragging.current.origY + dy)),
+    });
+  }
+  function onBlockMouseUp() {
+    if (dragging.current) { dragging.current = null; onCommitIntroBlocks?.(); }
+  }
 
   const toolBtn: React.CSSProperties = {
     background: "rgba(255,255,255,0.06)", border: `1px solid ${BORDER}`,
@@ -141,55 +173,101 @@ function PageCanvas({
   return (
     <div>
       <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <button onClick={() => exec("bold")} style={toolBtn}><b>B</b></button>
-        <button onClick={() => exec("italic")} style={toolBtn}><i style={{ fontStyle: "italic" }}>I</i></button>
-        <span style={{ width: 1, height: 14, background: BORDER, margin: "0 2px" }} />
-        <button onClick={() => exec("justifyLeft")} style={toolBtn}>⬱</button>
-        <button onClick={() => exec("justifyCenter")} style={toolBtn}>☰</button>
-        <button onClick={() => exec("justifyRight")} style={toolBtn}>⬰</button>
-        <span style={{ width: 1, height: 14, background: BORDER, margin: "0 2px" }} />
-        <select onChange={e => exec("fontSize", e.target.value)} defaultValue="3"
-          style={{ fontSize: 11, borderRadius: 5, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.06)", color: TEXT, padding: "2px 5px" }}>
-          <option value="2">10pt</option>
-          <option value="3">12pt</option>
-          <option value="4">14pt</option>
-          <option value="5">18pt</option>
-          <option value="6">24pt</option>
-        </select>
+        {isIntro ? (
+          <button onClick={onAddIntroBlock} style={toolBtn}>+ Add text block</button>
+        ) : (
+          <>
+            <button onClick={() => exec("bold")} style={toolBtn}><b>B</b></button>
+            <button onClick={() => exec("italic")} style={toolBtn}><i style={{ fontStyle: "italic" }}>I</i></button>
+            <span style={{ width: 1, height: 14, background: BORDER, margin: "0 2px" }} />
+            <button onClick={() => exec("justifyLeft")} style={toolBtn}>⬱</button>
+            <button onClick={() => exec("justifyCenter")} style={toolBtn}>☰</button>
+            <button onClick={() => exec("justifyRight")} style={toolBtn}>⬰</button>
+            <span style={{ width: 1, height: 14, background: BORDER, margin: "0 2px" }} />
+            <select onChange={e => exec("fontSize", e.target.value)} defaultValue="3"
+              style={{ fontSize: 11, borderRadius: 5, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.06)", color: TEXT, padding: "2px 5px" }}>
+              <option value="2">10pt</option>
+              <option value="3">12pt</option>
+              <option value="4">14pt</option>
+              <option value="5">18pt</option>
+              <option value="6">24pt</option>
+            </select>
+          </>
+        )}
         <span style={{ fontSize: 11, color: MUTED, marginLeft: 8 }}>Page {pageNum}</span>
       </div>
 
       <div ref={wrapRef} style={{ width: "100%", height: box.height * scale, position: "relative" }}>
-        <div style={{
-          width: box.width,
-          height: box.height,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-          background: styles.pageBackground,
-          boxShadow: "0 8px 48px rgba(0,0,0,0.55)",
-          borderRadius: 2,
-          position: "relative",
-          overflow: "hidden",
-        }}>
-          <div
-            ref={divRef}
-            contentEditable
-            suppressContentEditableWarning
-            onFocus={() => { focused.current = true; }}
-            onBlur={e => { focused.current = false; onSave(page.id, e.currentTarget.innerHTML); }}
-            style={{
-              width: box.width,
-              height: box.height,
-              padding: `${styles.marginV}px ${styles.marginH}px`,
-              fontFamily: styles.fontFamily,
-              fontSize: styles.fontSize,
-              lineHeight: styles.lineHeight,
-              color: styles.textColor,
-              outline: "none",
-              boxSizing: "border-box",
-              ...(isIntro ? { display: "flex", flexDirection: "column", justifyContent: "center" } as const : {}),
-            }}
-          />
+        <div
+          ref={boxRef}
+          onMouseMove={isIntro ? onBlockMouseMove : undefined}
+          onMouseUp={isIntro ? onBlockMouseUp : undefined}
+          onMouseLeave={isIntro ? onBlockMouseUp : undefined}
+          onClick={isIntro ? () => onSelectIntroBlock?.(null) : undefined}
+          style={{
+            width: box.width,
+            height: box.height,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            background: styles.pageBackground,
+            boxShadow: "0 8px 48px rgba(0,0,0,0.55)",
+            borderRadius: 2,
+            position: "relative",
+            overflow: "hidden",
+          }}>
+          {isIntro ? (
+            (introBlocks || []).map(block => (
+              <div
+                key={block.id}
+                contentEditable
+                suppressContentEditableWarning
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => {
+                  e.stopPropagation();
+                  onSelectIntroBlock?.(block.id);
+                  dragging.current = { id: block.id, startX: e.clientX, startY: e.clientY, origX: block.x, origY: block.y };
+                }}
+                onBlur={e => onEditIntroBlock?.(block.id, { text: e.currentTarget.innerText })}
+                style={{
+                  position: "absolute",
+                  left: `${block.x}%`, top: `${block.y}%`,
+                  transform: `translate(-50%, -50%) rotate(${block.rotation ?? 0}deg)`,
+                  cursor: "grab",
+                  fontFamily: block.fontFamily || styles.fontFamily,
+                  fontSize: block.fontSize,
+                  color: block.color,
+                  fontWeight: block.bold ? 700 : 400,
+                  textAlign: block.align,
+                  padding: "4px 8px",
+                  outline: selIntroBlockId === block.id ? "2px dashed rgba(255,255,255,0.6)" : "none",
+                  borderRadius: 4,
+                  whiteSpace: "pre-wrap",
+                  maxWidth: "90%",
+                }}
+              >
+                {block.text}
+              </div>
+            ))
+          ) : (
+            <div
+              ref={divRef}
+              contentEditable
+              suppressContentEditableWarning
+              onFocus={() => { focused.current = true; }}
+              onBlur={e => { focused.current = false; onSave(page.id, e.currentTarget.innerHTML); }}
+              style={{
+                width: box.width,
+                height: box.height,
+                padding: `${styles.marginV}px ${styles.marginH}px`,
+                fontFamily: styles.fontFamily,
+                fontSize: styles.fontSize,
+                lineHeight: styles.lineHeight,
+                color: styles.textColor,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          )}
           {styles.pageNumbers !== "off" && (
             <div style={{
               position: "absolute", bottom: 20,
@@ -361,10 +439,35 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// A chapter's intro page (page_number 0) holds only its centered title —
-// see isIntro handling in PageCanvas / the reader's PageView.
-function introPageHtml(title: string): string {
-  return `<div style="text-align:center;font-weight:700;font-size:2em;">${escapeHtml(title)}</div>`;
+// A chapter's intro page (page_number 0) starts as a single centered
+// title block — see isIntro handling in PageCanvas / the reader's
+// PageView. The user can then add/move/restyle blocks freely.
+function defaultIntroBlock(title: string): TextBlock {
+  return {
+    id: "title", type: "title", text: title,
+    x: 50, y: 50, fontSize: 32, rotation: 0,
+    color: "#1a1a1a", align: "center", bold: true,
+  };
+}
+
+function defaultIntroContent(title: string): string {
+  return JSON.stringify({ blocks: [defaultIntroBlock(title)] });
+}
+
+// Parses stored intro-page content. Recovers the old plain-HTML format
+// (a single centered <div>Title</div>, from before intro pages were
+// block-based) as an equivalent single block, so nothing already in the
+// database breaks.
+function parseIntroDesign(content: string | null): IntroDesign {
+  if (!content) return { blocks: [] };
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && Array.isArray(parsed.blocks)) return parsed as IntroDesign;
+  } catch {
+    const text = content.replace(/<[^>]+>/g, "").trim();
+    if (text) return { blocks: [defaultIntroBlock(text)] };
+  }
+  return { blocks: [] };
 }
 
 function parseChapterChunk(raw: string): { title: string | null; paragraphs: string[] } {
@@ -433,11 +536,18 @@ export default function BookEditorPage() {
   const [coverDesign, setCoverDesign] = useState<CoverDesign>(DEFAULT_COVER);
   const [selBlockId,  setSelBlockId]  = useState<string | null>(null);
 
+  // Intro-page block editing (chapter intro pages, page_number 0) — a
+  // local draft mirroring the selected intro page's parsed content,
+  // synced from the DB when the selected page changes and written back
+  // via savePage() on drag-end / blur / property-panel edits.
+  const [introDraft,      setIntroDraft]      = useState<TextBlock[] | null>(null);
+  const [selIntroBlockId, setSelIntroBlockId] = useState<string | null>(null);
+
   const [saving,      setSaving]      = useState(false);
   const [saveMsg,     setSaveMsg]     = useState<string | null>(null);
   const [addingPg,    setAddingPg]    = useState(false);
   const [addingCh,    setAddingCh]    = useState(false);
-  const [rightPanel,  setRightPanel]  = useState<"styles" | "cover">("styles");
+  const [rightPanel,  setRightPanel]  = useState<"styles" | "cover" | "intro">("styles");
 
   const [showImport,  setShowImport]  = useState(false);
   const [importText,  setImportText]  = useState("");
@@ -627,7 +737,7 @@ export default function BookEditorPage() {
     if (data) {
       const ch = data as ChapterRow;
       const { data: introPg } = await supabase
-        .from("pages").insert({ chapter_id: ch.id, page_number: 0, content: introPageHtml(title) })
+        .from("pages").insert({ chapter_id: ch.id, page_number: 0, content: defaultIntroContent(title) })
         .select("id, chapter_id, page_number, content").maybeSingle();
       setChapters(prev => [...prev, ch]);
       setPagesMap(prev => ({ ...prev, [ch.id]: introPg ? [introPg as PageRow] : [] }));
@@ -670,7 +780,7 @@ export default function BookEditorPage() {
       const chapterRow = ch as ChapterRow;
       const pagesHtml = paginateParagraphs(chunk.paragraphs, importWpp);
       const rows = [
-        { chapter_id: chapterRow.id, page_number: 0, content: introPageHtml(title) },
+        { chapter_id: chapterRow.id, page_number: 0, content: defaultIntroContent(title) },
         ...pagesHtml.map((html, idx) => ({ chapter_id: chapterRow.id, page_number: idx + 1, content: html })),
       ];
 
@@ -713,6 +823,103 @@ export default function BookEditorPage() {
   const aspect   = PAGE_ASPECT[series?.page_size ?? "A4"] ?? (297 / 210);
   const selPage  = selChId && selPgId ? (pagesMap[selChId] || []).find(p => p.id === selPgId) : null;
   const selBlock = coverDesign.blocks.find(b => b.id === selBlockId) ?? null;
+  const selIntroBlock = (introDraft || []).find(b => b.id === selIntroBlockId) ?? null;
+
+  /* ── intro-page block helpers ──
+     Sync the local draft from the DB only when the selected page id
+     changes (not on every pagesMap update, including the ones our own
+     saves cause below) so an in-progress drag/edit is never clobbered. */
+  // introSaveBlocks holds exactly what a pending debounced timer will
+  // write — a ref, not state, so unmount/page-switch cleanup can flush
+  // it without a stale closure over introDraft.
+  const introSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const introSavePageId = useRef<string | null>(null);
+  const introSaveBlocks = useRef<TextBlock[] | null>(null);
+
+  function flushIntroSave() {
+    if (!introSaveTimer.current) return;
+    clearTimeout(introSaveTimer.current);
+    introSaveTimer.current = null;
+    if (introSavePageId.current && introSaveBlocks.current) {
+      savePage(introSavePageId.current, JSON.stringify({ blocks: introSaveBlocks.current }));
+    }
+  }
+
+  useEffect(() => {
+    // A page switch mid-edit must flush any pending debounced write for
+    // the page being left — otherwise the last keystroke there is lost.
+    flushIntroSave();
+    if (selPage && selPage.page_number === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIntroDraft(parseIntroDesign(selPage.content).blocks);
+    } else {
+      setIntroDraft(null);
+      setSelIntroBlockId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selPage?.id]);
+
+  // Flush a pending debounced intro-block write if the editor unmounts
+  // (navigating away) before the timer fires.
+  useEffect(() => flushIntroSave, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Local-only update, used while dragging — commitIntroBlocks() (no
+  // args, reading the latest introDraft) fires separately on drag-end.
+  function updateIntroBlock(id: string, delta: Partial<TextBlock>) {
+    setIntroDraft(prev => prev ? prev.map(b => b.id === id ? { ...b, ...delta } : b) : prev);
+  }
+
+  function commitIntroBlocks(blocks?: TextBlock[]) {
+    if (!selPage) return;
+    if (introSaveTimer.current) { clearTimeout(introSaveTimer.current); introSaveTimer.current = null; }
+    introSaveBlocks.current = null;
+    savePage(selPage.id, JSON.stringify({ blocks: blocks ?? introDraft ?? [] }));
+  }
+
+  // Update + commit in one step, computing the new array explicitly
+  // rather than reading introDraft right back (setIntroDraft is async,
+  // so a bare updateIntroBlock() + commitIntroBlocks() pair in the same
+  // handler would commit the stale pre-update blocks). The actual write
+  // is debounced — property-panel controls (text keystrokes, slider
+  // drags) fire this on every change, and un-debounced concurrent writes
+  // for the same page can resolve out of order and leave a stale value
+  // in the DB even though the UI shows the latest edit. Only the drag
+  // path (its own commit on mouseup, a single natural endpoint) and
+  // add/delete block (discrete, rare) commit immediately.
+  function editIntroBlock(id: string, delta: Partial<TextBlock>) {
+    if (!introDraft || !selPage) return;
+    const updated = introDraft.map(b => b.id === id ? { ...b, ...delta } : b);
+    setIntroDraft(updated);
+    if (introSaveTimer.current) clearTimeout(introSaveTimer.current);
+    introSavePageId.current = selPage.id;
+    introSaveBlocks.current = updated;
+    introSaveTimer.current = setTimeout(() => {
+      savePage(selPage.id, JSON.stringify({ blocks: updated }));
+      introSaveTimer.current = null;
+      introSaveBlocks.current = null;
+    }, 400);
+  }
+
+  function addIntroBlock() {
+    if (!introDraft) return;
+    const newBlock: TextBlock = {
+      id: `block-${Date.now()}`, type: "text", text: "New text",
+      x: 50, y: 50, fontSize: 18, rotation: 0,
+      color: bookStyles.textColor, align: "center", bold: false,
+    };
+    const updated = [...introDraft, newBlock];
+    setIntroDraft(updated);
+    setSelIntroBlockId(newBlock.id);
+    commitIntroBlocks(updated);
+  }
+
+  function deleteIntroBlock(id: string) {
+    if (!introDraft) return;
+    const updated = introDraft.filter(b => b.id !== id);
+    setIntroDraft(updated);
+    if (selIntroBlockId === id) setSelIntroBlockId(null);
+    commitIntroBlocks(updated);
+  }
 
   // flat page counter for page numbers
   const flatPageNum = useMemo(() => {
@@ -809,7 +1016,7 @@ export default function BookEditorPage() {
                     color: selPgId === pg.id ? ACCENT : MUTED,
                     borderLeft: selPgId === pg.id ? `2px solid ${ACCENT}` : "2px solid transparent",
                   }}
-                  onClick={() => { setView("page"); setSelChId(ch.id); setSelPgId(pg.id); setRightPanel("styles"); }}
+                  onClick={() => { setView("page"); setSelChId(ch.id); setSelPgId(pg.id); setRightPanel(pg.page_number === 0 ? "intro" : "styles"); }}
                 >
                   <span>{pg.page_number === 0 ? "Intro" : `Page ${pg.page_number}`}</span>
                   <button
@@ -858,6 +1065,13 @@ export default function BookEditorPage() {
                 pageSizeKey={series?.page_size ?? "A4"}
                 pageNum={flatPageNum}
                 onSave={savePage}
+                introBlocks={introDraft}
+                selIntroBlockId={selIntroBlockId}
+                onSelectIntroBlock={setSelIntroBlockId}
+                onUpdateIntroBlock={updateIntroBlock}
+                onCommitIntroBlocks={commitIntroBlocks}
+                onEditIntroBlock={editIntroBlock}
+                onAddIntroBlock={addIntroBlock}
               />
             ) : (
               <div style={{ textAlign: "center", color: MUTED, fontSize: 13, paddingTop: 80 }}>
@@ -872,7 +1086,7 @@ export default function BookEditorPage() {
 
           {/* Panel tab */}
           <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}` }}>
-            {(["styles", "cover"] as const).map(tab => (
+            {(["styles", "cover", ...(selPage?.page_number === 0 ? ["intro"] as const : [])] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setRightPanel(tab)}
@@ -883,7 +1097,7 @@ export default function BookEditorPage() {
                   borderBottom: rightPanel === tab ? `2px solid ${ACCENT}` : "2px solid transparent",
                 }}
               >
-                {tab === "styles" ? "Page Styles" : "Cover Design"}
+                {tab === "styles" ? "Page Styles" : tab === "cover" ? "Cover Design" : "Intro Blocks"}
               </button>
             ))}
           </div>
@@ -999,6 +1213,62 @@ export default function BookEditorPage() {
                   </div>
                 ) : (
                   <p style={{ fontSize: 11, color: MUTED }}>Click a text block on the cover to edit it.</p>
+                )}
+              </div>
+            )}
+
+            {/* ── Intro Page Blocks ── */}
+            {rightPanel === "intro" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>
+                  Click a text block to select it, drag to reposition. &quot;+ Add text block&quot; above the page adds another.
+                </p>
+
+                {selIntroBlock ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Field label="Text">
+                      <input value={selIntroBlock.text} onChange={e => editIntroBlock(selIntroBlock.id, { text: e.target.value })}
+                        style={{ ...inputStyle, width: "100%" }} />
+                    </Field>
+                    <Field label="Font family">
+                      <select value={selIntroBlock.fontFamily || bookStyles.fontFamily}
+                        onChange={e => editIntroBlock(selIntroBlock.id, { fontFamily: e.target.value })} style={selectStyle}>
+                        {FONT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </Field>
+                    <Field label={`Size — ${selIntroBlock.fontSize}pt`}>
+                      <input type="range" min={10} max={96} step={1} value={selIntroBlock.fontSize}
+                        onChange={e => editIntroBlock(selIntroBlock.id, { fontSize: Number(e.target.value) })} style={{ width: "100%" }} />
+                    </Field>
+                    <Field label={`Rotation — ${selIntroBlock.rotation ?? 0}°`}>
+                      <input type="range" min={-180} max={180} step={1} value={selIntroBlock.rotation ?? 0}
+                        onChange={e => editIntroBlock(selIntroBlock.id, { rotation: Number(e.target.value) })} style={{ width: "100%" }} />
+                    </Field>
+                    <Field label="Color">
+                      <input type="color" value={selIntroBlock.color} onChange={e => editIntroBlock(selIntroBlock.id, { color: e.target.value })}
+                        style={{ width: 32, height: 28, borderRadius: 6, border: "none", cursor: "pointer" }} />
+                    </Field>
+                    <Field label="Alignment">
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {(["left", "center", "right"] as const).map(a => (
+                          <button key={a} onClick={() => editIntroBlock(selIntroBlock.id, { align: a })}
+                            style={{ flex: 1, padding: "4px 0", fontSize: 11, borderRadius: 6, border: `1px solid ${BORDER}`, background: selIntroBlock.align === a ? ACCENT : "transparent", color: selIntroBlock.align === a ? "#0a0a0c" : MUTED, cursor: "pointer" }}>
+                            {a[0].toUpperCase() + a.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: TEXT, cursor: "pointer" }}>
+                      <input type="checkbox" checked={selIntroBlock.bold} onChange={e => editIntroBlock(selIntroBlock.id, { bold: e.target.checked })} />
+                      Bold
+                    </label>
+                    <button onClick={() => deleteIntroBlock(selIntroBlock.id)}
+                      style={{ fontSize: 11, color: "#c97a6a", background: "none", border: "1px solid rgba(201,122,106,0.3)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", marginTop: 4 }}>
+                      Delete block
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 11, color: MUTED }}>Click a text block on the page to edit it.</p>
                 )}
               </div>
             )}

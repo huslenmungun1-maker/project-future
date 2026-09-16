@@ -20,12 +20,36 @@ type BookStyles = {
 type TextBlock = {
   id: string; type: string; text: string;
   x: number; y: number; fontSize: number;
+  fontFamily?: string; rotation?: number;
   color: string; align: "left" | "center" | "right"; bold: boolean;
 };
 
 type CoverDesign = {
   backgroundColor: string; useSeriesCover: boolean; blocks: TextBlock[];
 };
+
+// A chapter intro page (page_number 0) stores this shape, as JSON, in
+// the same `content` column regular pages use for HTML.
+type IntroDesign = { blocks: TextBlock[] };
+
+// Recovers the pre-block-canvas format (a single centered <div>Title</div>)
+// as an equivalent single block, so nothing already in the database breaks.
+function parseIntroDesign(content: string | null): IntroDesign {
+  if (!content) return { blocks: [] };
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && Array.isArray(parsed.blocks)) return parsed as IntroDesign;
+  } catch {
+    const text = content.replace(/<[^>]+>/g, "").trim();
+    if (text) {
+      return { blocks: [{
+        id: "title", type: "title", text, x: 50, y: 50, fontSize: 32,
+        rotation: 0, color: "#1a1a1a", align: "center", bold: true,
+      }] };
+    }
+  }
+  return { blocks: [] };
+}
 
 type SeriesRow = {
   id: string; title: string | null; cover_image_url: string | null;
@@ -399,8 +423,9 @@ export default function BookReaderPage() {
 
 /* ─── single page view ───────────────────────────────────────── */
 // A chapter's intro page (page_number 0 — see book-editor's addChapter/
-// runImport) holds only the centered chapter title, so its content area
-// centers vertically instead of flowing from the top like a normal page.
+// runImport) stores a set of freeform TextBlocks (same model as the
+// Cover Design tab) instead of flowing HTML — rendered here as
+// absolutely-positioned, non-interactive text over an otherwise blank page.
 function PageView({ page, styles, aspect, pageNum }: {
   page: PageRow; styles: BookStyles; aspect: number; pageNum: number;
 }) {
@@ -408,12 +433,14 @@ function PageView({ page, styles, aspect, pageNum }: {
   // Match the editor's 520px page width so the same HTML renders identically.
   // 47vw keeps two pages side-by-side on large screens and scales down gracefully;
   // minHeight (not height) ensures content is never clipped even if it wraps more
-  // at narrower viewports.
+  // at narrower viewports. Intro pages fix the height instead — their
+  // blocks are positioned by %, which needs a definite containing height.
   const minH = `calc(min(520px, 47vw) * ${aspect})`;
   return (
     <div style={{
       width: "min(520px, 47vw)",
       minHeight: minH,
+      height: isIntro ? minH : undefined,
       background: styles.pageBackground,
       boxShadow: "0 8px 40px rgba(0,0,0,0.55)",
       borderRadius: 2,
@@ -422,20 +449,39 @@ function PageView({ page, styles, aspect, pageNum }: {
       display: "flex",
       flexDirection: "column",
     }}>
-      <div
-        style={{
-          flex: 1,
-          padding: `${styles.marginV}px ${styles.marginH}px`,
-          fontFamily: styles.fontFamily,
-          fontSize: styles.fontSize,
-          lineHeight: styles.lineHeight,
-          color: styles.textColor,
-          boxSizing: "border-box",
-          ...(isIntro ? { display: "flex", flexDirection: "column", justifyContent: "center" } as const : {}),
-        }}
-      >
-        <div dangerouslySetInnerHTML={{ __html: page.content || "" }} />
-      </div>
+      {isIntro ? (
+        parseIntroDesign(page.content).blocks.map(block => (
+          <div key={block.id} style={{
+            position: "absolute",
+            left: `${block.x}%`, top: `${block.y}%`,
+            transform: `translate(-50%, -50%) rotate(${block.rotation ?? 0}deg)`,
+            fontFamily: block.fontFamily || styles.fontFamily,
+            fontSize: block.fontSize,
+            color: block.color,
+            fontWeight: block.bold ? 700 : 400,
+            textAlign: block.align,
+            pointerEvents: "none",
+            maxWidth: "90%",
+            whiteSpace: "pre-wrap",
+          }}>
+            {block.text}
+          </div>
+        ))
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            padding: `${styles.marginV}px ${styles.marginH}px`,
+            fontFamily: styles.fontFamily,
+            fontSize: styles.fontSize,
+            lineHeight: styles.lineHeight,
+            color: styles.textColor,
+            boxSizing: "border-box",
+          }}
+        >
+          <div dangerouslySetInnerHTML={{ __html: page.content || "" }} />
+        </div>
+      )}
       {styles.pageNumbers !== "off" && (
         <div style={{
           position: "absolute", bottom: 16,
