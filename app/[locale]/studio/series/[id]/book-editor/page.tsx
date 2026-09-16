@@ -17,6 +17,12 @@ const PAGE_ASPECT: Record<string, number> = {
   A4: 297 / 210, A5: 210 / 148, Paperback: 8.5 / 5.5, Letter: 11 / 8.5,
 };
 
+// Intro-page block canvas: smart alignment guides (Figma/PowerPoint-style)
+// snap a dragged block's edges/center to the page's edges/center or
+// another block's edges/center, within this many px. Editor-only —
+// guide lines are computed at render time, never part of saved content.
+const SNAP_PX = 7;
+
 // Canonical physical page size in px @96dpi — used only for pagination
 // math, independent of whatever width the on-screen canvas happens to
 // render at, so page breaks are deterministic regardless of viewport.
@@ -57,6 +63,10 @@ type BookStyles = {
 type TextBlock = {
   id: string;
   type: "title" | "subtitle" | "author" | "text";
+  // Plain text for Cover Design blocks (read/written as innerText).
+  // Intro-page blocks (see PageCanvas) treat this as inline HTML instead —
+  // a <span style="..."> for each differently-styled run within the
+  // block, so a single block can mix fonts/sizes/colors mid-string.
   text: string;
   x: number; // % of canvas width
   y: number; // % of canvas height
@@ -125,6 +135,20 @@ function PageCanvas({
   const boxRef  = useRef<HTMLDivElement>(null);
   const dragging = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [scale, setScale] = useState(1);
+  const [guide, setGuide] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+
+  // Intro-block rich text: each block is its own contentEditable node, kept
+  // in a ref map (not React children) so typing/selection never fights a
+  // React re-render — same reasoning as the single-page divRef below, just
+  // for a dynamic list. focusedBlockId tracks which one is actively being
+  // edited so the sync effect never clobbers live typing.
+  const blockEls = useRef<Map<string, HTMLDivElement>>(new Map());
+  const focusedBlockId = useRef<string | null>(null);
+  // Selection captured just before a toolbar control (a <select> or
+  // <input type=color>) steals focus natively, so the formatting command
+  // still has something to apply to once that control's onChange fires.
+  const savedRange   = useRef<Range | null>(null);
+  const savedBlockId = useRef<string | null>(null);
 
   const box = PAGE_SIZE_PX[pageSizeKey] ?? PAGE_SIZE_PX.A4;
   const isIntro = page.page_number === 0;
@@ -149,20 +173,148 @@ function PageCanvas({
     }
   }, [page.id, page.content, isIntro]);
 
+  // Sync each intro block's rendered HTML from state — except the one
+  // currently being typed into, which owns its own DOM until it blurs.
+  useEffect(() => {
+    if (!isIntro) return;
+    for (const block of introBlocks || []) {
+      if (block.id === focusedBlockId.current) continue;
+      const el = blockEls.current.get(block.id);
+      if (el && el.innerHTML !== block.text) el.innerHTML = block.text;
+    }
+  }, [introBlocks, isIntro]);
+
   function exec(cmd: string, val?: string) { divRef.current?.focus(); document.execCommand(cmd, false, val); }
+
+  // Rich-text-on-selection helpers (intro blocks only) — bold/font/color
+  // apply via execCommand (robust across selections that cross existing
+  // <span> boundaries); font size doesn't have a reliable px-accurate
+  // execCommand, so it's a manual Range wrap instead.
+  function execOnSelection(cmd: string, val?: string) {
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand(cmd, false, val);
+  }
+  function applyFontSizeToSelection(px: number) {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    const span = document.createElement("span");
+    span.style.fontSize = `${px}px`;
+    try {
+      range.surroundContents(span);
+    } catch {
+      const frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+    }
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  // Call on mousedown of any toolbar control that will steal focus
+  // natively (a <select>, an <input type=color>) — captures the live
+  // selection before that happens. Buttons don't need this (their own
+  // mousedown already preventDefaults, so focus/selection never moves).
+  function captureSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && focusedBlockId.current) {
+      savedRange.current = sel.getRangeAt(0).cloneRange();
+      savedBlockId.current = focusedBlockId.current;
+    }
+  }
+  // Re-focuses the target block, restores its saved selection (or just
+  // uses the live one, if focus never left), runs the formatting command,
+  // then saves the block's resulting HTML directly — a blur→save won't
+  // fire here since a <select>/color-input interaction already blurred
+  // the block before its onChange runs.
+  function applyToSelection(fn: () => void) {
+    const blockId = savedBlockId.current ?? focusedBlockId.current;
+    if (!blockId) return;
+    const el = blockEls.current.get(blockId);
+    if (!el) return;
+    el.focus();
+    if (savedRange.current) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange.current);
+    }
+    fn();
+    onEditIntroBlock?.(blockId, { text: el.innerHTML });
+    savedRange.current = null;
+    savedBlockId.current = null;
+  }
+
+  // Smart alignment guides: snaps the dragged block's left/center/right
+  // (and top/center/bottom) to the page's edges/center or another
+  // block's edges/center, within SNAP_PX — same idea as Figma/PowerPoint.
+  // Works in real px via getBoundingClientRect/offsetWidth so it accounts
+  // for each block's actual rendered size, not just its stored x/y.
+  function computeSmartSnap(
+    draggedEl: HTMLElement, boxRect: DOMRect, rawXPct: number, rawYPct: number,
+    others: HTMLElement[]
+  ): { x: number; y: number; guideX: number | null; guideY: number | null } {
+    const dw = draggedEl.offsetWidth, dh = draggedEl.offsetHeight;
+    const rawCx = (rawXPct / 100) * boxRect.width;
+    const rawCy = (rawYPct / 100) * boxRect.height;
+
+    const targetsX = [0, boxRect.width / 2, boxRect.width];
+    const targetsY = [0, boxRect.height / 2, boxRect.height];
+    for (const el of others) {
+      const r = el.getBoundingClientRect();
+      const left = r.left - boxRect.left, right = r.right - boxRect.left;
+      const top = r.top - boxRect.top, bottom = r.bottom - boxRect.top;
+      targetsX.push(left, (left + right) / 2, right);
+      targetsY.push(top, (top + bottom) / 2, bottom);
+    }
+
+    let bestX = rawCx, bestDX = SNAP_PX, guideXpx: number | null = null;
+    for (const t of targetsX) {
+      for (const off of [-dw / 2, 0, dw / 2]) {
+        const candidate = t - off;
+        const d = Math.abs(rawCx - candidate);
+        if (d < bestDX) { bestDX = d; bestX = candidate; guideXpx = t; }
+      }
+    }
+    let bestY = rawCy, bestDY = SNAP_PX, guideYpx: number | null = null;
+    for (const t of targetsY) {
+      for (const off of [-dh / 2, 0, dh / 2]) {
+        const candidate = t - off;
+        const d = Math.abs(rawCy - candidate);
+        if (d < bestDY) { bestDY = d; bestY = candidate; guideYpx = t; }
+      }
+    }
+
+    return {
+      x: (bestX / boxRect.width) * 100,
+      y: (bestY / boxRect.height) * 100,
+      guideX: guideXpx !== null ? (guideXpx / boxRect.width) * 100 : null,
+      guideY: guideYpx !== null ? (guideYpx / boxRect.height) * 100 : null,
+    };
+  }
 
   function onBlockMouseMove(e: React.MouseEvent) {
     if (!dragging.current || !boxRef.current || !onUpdateIntroBlock) return;
     const rect = boxRef.current.getBoundingClientRect();
     const dx = ((e.clientX - dragging.current.startX) / rect.width) * 100;
     const dy = ((e.clientY - dragging.current.startY) / rect.height) * 100;
-    onUpdateIntroBlock(dragging.current.id, {
-      x: Math.max(2, Math.min(98, dragging.current.origX + dx)),
-      y: Math.max(2, Math.min(98, dragging.current.origY + dy)),
-    });
+    const rawX = Math.max(2, Math.min(98, dragging.current.origX + dx));
+    const rawY = Math.max(2, Math.min(98, dragging.current.origY + dy));
+
+    const draggedEl = blockEls.current.get(dragging.current.id);
+    const others = (introBlocks || [])
+      .filter(b => b.id !== dragging.current!.id)
+      .map(b => blockEls.current.get(b.id))
+      .filter((el): el is HTMLDivElement => !!el);
+
+    if (draggedEl) {
+      const snap = computeSmartSnap(draggedEl, rect, rawX, rawY, others);
+      setGuide({ x: snap.guideX, y: snap.guideY });
+      onUpdateIntroBlock(dragging.current.id, { x: snap.x, y: snap.y });
+    } else {
+      onUpdateIntroBlock(dragging.current.id, { x: rawX, y: rawY });
+    }
   }
   function onBlockMouseUp() {
-    if (dragging.current) { dragging.current = null; onCommitIntroBlocks?.(); }
+    if (dragging.current) { dragging.current = null; setGuide({ x: null, y: null }); onCommitIntroBlocks?.(); }
   }
 
   const toolBtn: React.CSSProperties = {
@@ -174,7 +326,41 @@ function PageCanvas({
     <div>
       <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
         {isIntro ? (
-          <button onClick={onAddIntroBlock} style={toolBtn}>+ Add text block</button>
+          <>
+            <button onClick={onAddIntroBlock} style={toolBtn}>+ Add text block</button>
+            <span style={{ width: 1, height: 14, background: BORDER, margin: "0 2px" }} />
+            <span style={{ fontSize: 10, color: MUTED }}>Selection:</span>
+            <button
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => applyToSelection(() => execOnSelection("bold"))}
+              style={toolBtn}
+            ><b>B</b></button>
+            <select
+              onMouseDown={captureSelection}
+              onChange={e => applyToSelection(() => execOnSelection("fontName", e.target.value))}
+              defaultValue=""
+              style={{ fontSize: 11, borderRadius: 5, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.06)", color: TEXT, padding: "2px 5px" }}
+            >
+              <option value="" disabled>Font…</option>
+              {FONT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select
+              onMouseDown={captureSelection}
+              onChange={e => applyToSelection(() => applyFontSizeToSelection(Number(e.target.value)))}
+              defaultValue=""
+              style={{ fontSize: 11, borderRadius: 5, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.06)", color: TEXT, padding: "2px 5px" }}
+            >
+              <option value="" disabled>Size…</option>
+              {[10, 12, 14, 16, 18, 24, 32, 48, 64, 96].map(s => <option key={s} value={s}>{s}pt</option>)}
+            </select>
+            <input
+              type="color"
+              onMouseDown={captureSelection}
+              onChange={e => applyToSelection(() => execOnSelection("foreColor", e.target.value))}
+              style={{ width: 26, height: 22, borderRadius: 5, border: `1px solid ${BORDER}`, background: "none", cursor: "pointer", padding: 0 }}
+              title="Selection color"
+            />
+          </>
         ) : (
           <>
             <button onClick={() => exec("bold")} style={toolBtn}><b>B</b></button>
@@ -216,18 +402,49 @@ function PageCanvas({
             overflow: "hidden",
           }}>
           {isIntro ? (
-            (introBlocks || []).map(block => (
+            <>
+              {guide.x !== null && (
+                <div style={{
+                  position: "absolute", left: `${guide.x}%`, top: 0, bottom: 0, width: 1,
+                  background: "#e05a8a", pointerEvents: "none", zIndex: 5,
+                }} />
+              )}
+              {guide.y !== null && (
+                <div style={{
+                  position: "absolute", top: `${guide.y}%`, left: 0, right: 0, height: 1,
+                  background: "#e05a8a", pointerEvents: "none", zIndex: 5,
+                }} />
+              )}
+              {(introBlocks || []).map(block => (
               <div
                 key={block.id}
+                ref={el => { if (el) blockEls.current.set(block.id, el); else blockEls.current.delete(block.id); }}
                 contentEditable
                 suppressContentEditableWarning
                 onClick={e => e.stopPropagation()}
+                onFocus={() => { focusedBlockId.current = block.id; }}
                 onMouseDown={e => {
                   e.stopPropagation();
-                  onSelectIntroBlock?.(block.id);
-                  dragging.current = { id: block.id, startX: e.clientX, startY: e.clientY, origX: block.x, origY: block.y };
+                  if (selIntroBlockId !== block.id) {
+                    // Not yet selected: select it and arm a position-drag.
+                    // preventDefault stops the browser's native
+                    // text-selection/drag from also kicking in — caught in
+                    // testing: a real drag gesture without this silently
+                    // mangled the block's text (inserted a stray newline).
+                    e.preventDefault();
+                    e.currentTarget.focus();
+                    onSelectIntroBlock?.(block.id);
+                    dragging.current = { id: block.id, startX: e.clientX, startY: e.clientY, origX: block.x, origY: block.y };
+                  }
+                  // Already selected: let the native click/selection
+                  // behavior proceed instead — this is how you place a
+                  // cursor or select a substring to format. Click the page
+                  // background to deselect, then click-drag to reposition.
                 }}
-                onBlur={e => onEditIntroBlock?.(block.id, { text: e.currentTarget.innerText })}
+                onBlur={e => {
+                  if (focusedBlockId.current === block.id) focusedBlockId.current = null;
+                  onEditIntroBlock?.(block.id, { text: e.currentTarget.innerHTML });
+                }}
                 style={{
                   position: "absolute",
                   left: `${block.x}%`, top: `${block.y}%`,
@@ -244,10 +461,9 @@ function PageCanvas({
                   whiteSpace: "pre-wrap",
                   maxWidth: "90%",
                 }}
-              >
-                {block.text}
-              </div>
-            ))
+              />
+              ))}
+            </>
           ) : (
             <div
               ref={divRef}
@@ -341,7 +557,13 @@ function CoverCanvas({
           suppressContentEditableWarning
           onClick={e => e.stopPropagation()}
           onMouseDown={e => {
+            // See the matching comment in PageCanvas's intro-block
+            // onMouseDown — without preventDefault, dragging inside a
+            // contentEditable node triggers the browser's native
+            // text-selection/drag instead of our own position-drag.
+            e.preventDefault();
             e.stopPropagation();
+            e.currentTarget.focus();
             onSelectBlock(block.id);
             dragging.current = { id: block.id, startX: e.clientX, startY: e.clientY, origX: block.x, origY: block.y };
           }}
@@ -444,7 +666,9 @@ function escapeHtml(s: string): string {
 // PageView. The user can then add/move/restyle blocks freely.
 function defaultIntroBlock(title: string): TextBlock {
   return {
-    id: "title", type: "title", text: title,
+    // Intro-block text is rendered as HTML now (rich text) — escape a
+    // plain chapter title so stray <, >, & display literally.
+    id: "title", type: "title", text: escapeHtml(title),
     x: 50, y: 50, fontSize: 32, rotation: 0,
     color: "#1a1a1a", align: "center", bold: true,
   };

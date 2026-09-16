@@ -122,7 +122,9 @@ function escapeHtml(s) {
 function defaultIntroContent(title) {
   return JSON.stringify({
     blocks: [{
-      id: "title", type: "title", text: title,
+      // Intro-block text renders as HTML (rich text) — escape a plain
+      // chapter title so stray <, >, & display literally.
+      id: "title", type: "title", text: escapeHtml(title),
       x: 50, y: 50, fontSize: 32, rotation: 0,
       color: "#1a1a1a", align: "center", bold: true,
     }],

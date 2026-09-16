@@ -18,7 +18,10 @@ type BookStyles = {
 };
 
 type TextBlock = {
-  id: string; type: string; text: string;
+  id: string; type: string;
+  // Plain text for Cover Design blocks; intro-page blocks store inline
+  // HTML instead (per-substring rich text from the Book Editor).
+  text: string;
   x: number; y: number; fontSize: number;
   fontFamily?: string; rotation?: number;
   color: string; align: "left" | "center" | "right"; bold: boolean;
@@ -463,9 +466,11 @@ function PageView({ page, styles, aspect, pageNum }: {
             pointerEvents: "none",
             maxWidth: "90%",
             whiteSpace: "pre-wrap",
-          }}>
-            {block.text}
-          </div>
+          }}
+            // Intro-block text can contain inline <span style="..."> runs
+            // from the Book Editor's selection-level rich text formatting.
+            dangerouslySetInnerHTML={{ __html: block.text }}
+          />
         ))
       ) : (
         <div
