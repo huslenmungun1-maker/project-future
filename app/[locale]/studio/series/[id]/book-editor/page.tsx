@@ -109,6 +109,7 @@ function PageCanvas({
   const [scale, setScale] = useState(1);
 
   const box = PAGE_SIZE_PX[pageSizeKey] ?? PAGE_SIZE_PX.A4;
+  const isIntro = page.page_number === 0;
 
   // Render the page at its true physical px size (same reference used for
   // pagination math) and scale it visually to fit the available width —
@@ -186,6 +187,7 @@ function PageCanvas({
               color: styles.textColor,
               outline: "none",
               boxSizing: "border-box",
+              ...(isIntro ? { display: "flex", flexDirection: "column", justifyContent: "center" } as const : {}),
             }}
           />
           {styles.pageNumbers !== "off" && (
@@ -359,6 +361,12 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// A chapter's intro page (page_number 0) holds only its centered title —
+// see isIntro handling in PageCanvas / the reader's PageView.
+function introPageHtml(title: string): string {
+  return `<div style="text-align:center;font-weight:700;font-size:2em;">${escapeHtml(title)}</div>`;
+}
+
 function parseChapterChunk(raw: string): { title: string | null; paragraphs: string[] } {
   const lines = raw.split("\n");
   let title: string | null = null;
@@ -524,10 +532,24 @@ export default function BookEditorPage() {
 
   async function savePage(pageId: string, html: string) {
     let chapterId: string | null = null;
+    let page: PageRow | undefined;
     for (const [chId, pgs] of Object.entries(pagesMap)) {
-      if (pgs.some(p => p.id === pageId)) { chapterId = chId; break; }
+      const found = pgs.find(p => p.id === pageId);
+      if (found) { chapterId = chId; page = found; break; }
     }
     if (!chapterId) return;
+
+    // The intro page (page_number 0) is a single fixed block, not part of
+    // the flowing content cascade — never reflow overflow out of/into it.
+    if (page?.page_number === 0) {
+      await supabase.from("pages").update({ content: html }).eq("id", pageId);
+      setPagesMap(prev => ({
+        ...prev,
+        [chapterId!]: (prev[chapterId!] || []).map(p => p.id === pageId ? { ...p, content: html } : p),
+      }));
+      return;
+    }
+
     await reflowFromPage(chapterId, pageId, html);
   }
 
@@ -598,13 +620,17 @@ export default function BookEditorPage() {
     if (addingCh) return;
     setAddingCh(true);
     const nextNum = chapters.length > 0 ? Math.max(...chapters.map(c => c.chapter_number)) + 1 : 1;
+    const title = `Chapter ${nextNum}`;
     const { data, error } = await supabase
-      .from("chapters").insert({ series_id: seriesId, chapter_number: nextNum, title: `Chapter ${nextNum}`, content: "", is_published: false })
+      .from("chapters").insert({ series_id: seriesId, chapter_number: nextNum, title, content: "", is_published: false })
       .select("id, chapter_number, title").maybeSingle();
     if (data) {
       const ch = data as ChapterRow;
+      const { data: introPg } = await supabase
+        .from("pages").insert({ chapter_id: ch.id, page_number: 0, content: introPageHtml(title) })
+        .select("id, chapter_id, page_number, content").maybeSingle();
       setChapters(prev => [...prev, ch]);
-      setPagesMap(prev => ({ ...prev, [ch.id]: [] }));
+      setPagesMap(prev => ({ ...prev, [ch.id]: introPg ? [introPg as PageRow] : [] }));
     } else if (error) {
       setSaveMsg("Save failed");
       setTimeout(() => setSaveMsg(null), 2000);
@@ -643,7 +669,10 @@ export default function BookEditorPage() {
 
       const chapterRow = ch as ChapterRow;
       const pagesHtml = paginateParagraphs(chunk.paragraphs, importWpp);
-      const rows = pagesHtml.map((html, idx) => ({ chapter_id: chapterRow.id, page_number: idx + 1, content: html }));
+      const rows = [
+        { chapter_id: chapterRow.id, page_number: 0, content: introPageHtml(title) },
+        ...pagesHtml.map((html, idx) => ({ chapter_id: chapterRow.id, page_number: idx + 1, content: html })),
+      ];
 
       let insertedPages: PageRow[] = [];
       if (rows.length > 0) {
@@ -782,7 +811,7 @@ export default function BookEditorPage() {
                   }}
                   onClick={() => { setView("page"); setSelChId(ch.id); setSelPgId(pg.id); setRightPanel("styles"); }}
                 >
-                  <span>Page {pg.page_number}</span>
+                  <span>{pg.page_number === 0 ? "Intro" : `Page ${pg.page_number}`}</span>
                   <button
                     onClick={e => { e.stopPropagation(); deletePage(ch.id, pg.id); }}
                     style={{ background: "none", border: "none", color: "rgba(201,122,106,0.5)", cursor: "pointer", fontSize: 13, padding: 0, lineHeight: 1 }}

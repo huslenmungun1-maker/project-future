@@ -341,10 +341,6 @@ export default function BookReaderPage() {
             <>
               {spreadPages.map((pg, i) => {
                 const pageNum = (spread - 1) * 2 + i + 1;
-                const chapter = chapters.find(c => c.id === pg.chapter_id);
-                const chapterHeading = pg.page_number === 1
-                  ? (chapter?.title || `Chapter ${chapter?.chapter_number ?? ""}`)
-                  : null;
                 return (
                   <PageView
                     key={pg.id}
@@ -352,7 +348,6 @@ export default function BookReaderPage() {
                     styles={styles}
                     aspect={aspect}
                     pageNum={pageNum}
-                    chapterHeading={chapterHeading}
                   />
                 );
               })}
@@ -403,9 +398,13 @@ export default function BookReaderPage() {
 }
 
 /* ─── single page view ───────────────────────────────────────── */
-function PageView({ page, styles, aspect, pageNum, chapterHeading }: {
-  page: PageRow; styles: BookStyles; aspect: number; pageNum: number; chapterHeading?: string | null;
+// A chapter's intro page (page_number 0 — see book-editor's addChapter/
+// runImport) holds only the centered chapter title, so its content area
+// centers vertically instead of flowing from the top like a normal page.
+function PageView({ page, styles, aspect, pageNum }: {
+  page: PageRow; styles: BookStyles; aspect: number; pageNum: number;
 }) {
+  const isIntro = page.page_number === 0;
   // Match the editor's 520px page width so the same HTML renders identically.
   // 47vw keeps two pages side-by-side on large screens and scales down gracefully;
   // minHeight (not height) ensures content is never clipped even if it wraps more
@@ -420,25 +419,21 @@ function PageView({ page, styles, aspect, pageNum, chapterHeading }: {
       borderRadius: 2,
       position: "relative",
       flexShrink: 0,
+      display: "flex",
+      flexDirection: "column",
     }}>
       <div
         style={{
+          flex: 1,
           padding: `${styles.marginV}px ${styles.marginH}px`,
           fontFamily: styles.fontFamily,
           fontSize: styles.fontSize,
           lineHeight: styles.lineHeight,
           color: styles.textColor,
           boxSizing: "border-box",
+          ...(isIntro ? { display: "flex", flexDirection: "column", justifyContent: "center" } as const : {}),
         }}
       >
-        {chapterHeading && (
-          <div style={{
-            textAlign: "center", fontWeight: 700,
-            fontSize: "1.7em", marginBottom: "1.4em",
-          }}>
-            {chapterHeading}
-          </div>
-        )}
         <div dangerouslySetInnerHTML={{ __html: page.content || "" }} />
       </div>
       {styles.pageNumbers !== "off" && (

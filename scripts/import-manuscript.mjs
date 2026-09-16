@@ -116,6 +116,12 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// A chapter's intro page (page_number 0) holds only its centered title —
+// mirrors introPageHtml() in the Book Editor.
+function introPageHtml(title) {
+  return `<div style="text-align:center;font-weight:700;font-size:2em;">${escapeHtml(title)}</div>`;
+}
+
 function paragraphsFromBody(body) {
   return body
     .split(/\n\s*\n/)
@@ -326,11 +332,10 @@ async function main() {
       }
     }
 
-    const rows = pagesHtml.map((html, idx) => ({
-      chapter_id: chapter.id,
-      page_number: idx + 1,
-      content: html,
-    }));
+    const rows = [
+      { chapter_id: chapter.id, page_number: 0, content: introPageHtml(chapterTitle) },
+      ...pagesHtml.map((html, idx) => ({ chapter_id: chapter.id, page_number: idx + 1, content: html })),
+    ];
 
     const { error: pgErr } = await supabase.from("pages").insert(rows);
     if (pgErr) throw pgErr;
