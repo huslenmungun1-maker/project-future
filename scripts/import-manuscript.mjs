@@ -29,6 +29,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync, readdirSync, existsSync, statSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { smartenPlainText } from "./smart-quotes.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -134,7 +135,7 @@ function defaultIntroContent(title) {
 function paragraphsFromBody(body) {
   return body
     .split(/\n\s*\n/)
-    .map(p => p.replace(/\s+/g, " ").trim())
+    .map(p => smartenPlainText(p.replace(/\s+/g, " ").trim()))
     .filter(Boolean);
 }
 
@@ -144,7 +145,7 @@ function parseChapterFile(raw) {
   let title = null;
   let bodyStart = 0;
   if (lines[0]?.trim().startsWith("# ")) {
-    title = lines[0].trim().slice(2).trim();
+    title = smartenPlainText(lines[0].trim().slice(2).trim());
     bodyStart = 1;
   }
   return { title, paragraphs: paragraphsFromBody(lines.slice(bodyStart).join("\n").trim()) };
@@ -162,7 +163,7 @@ function parseSingleFileChapters(raw) {
     const m = line.trim().match(CHAPTER_HEADER_RE);
     if (m) {
       if (current) chapters.push(current);
-      current = { number: Number(m[1]), title: m[2].trim() || null, bodyLines: [] };
+      current = { number: Number(m[1]), title: m[2].trim() ? smartenPlainText(m[2].trim()) : null, bodyLines: [] };
     } else if (current) {
       current.bodyLines.push(line);
     }

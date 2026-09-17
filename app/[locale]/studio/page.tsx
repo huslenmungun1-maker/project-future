@@ -4,6 +4,16 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { getBrowserClient } from "@/lib/browserClient";
+import CoverThumbnail from "@/components/CoverThumbnail";
+
+type CoverDesign = {
+  backgroundColor: string;
+  useSeriesCover: boolean;
+  blocks: {
+    id: string; text: string; x: number; y: number; fontSize: number;
+    color: string; align: "left" | "center" | "right"; bold: boolean;
+  }[];
+};
 
 type SeriesRow = {
   id: string;
@@ -11,11 +21,20 @@ type SeriesRow = {
   description: string | null;
   created_at: string;
   cover_image_url: string | null;
+  cover_design: CoverDesign | null;
   language: string | null;
   user_id?: string | null;
   views?: number | null;
   published?: boolean | null;
 };
+
+// A series whose Cover Design tab was never touched still has the
+// DEFAULT_COVER placeholder text (see book-editor page.tsx) — don't render
+// that as if it were a real cover.
+function hasCustomCoverDesign(design: CoverDesign | null): boolean {
+  const title = design?.blocks.find(b => b.id === "title");
+  return !!title && title.text.trim() !== "" && title.text !== "Book Title";
+}
 
 const UI_TEXT = {
   en: {
@@ -166,7 +185,7 @@ export default function StudioHomePage() {
     try {
       const { data, error } = await supabase
         .from("series")
-        .select("id, title, description, created_at, cover_image_url, language, user_id, views, published")
+        .select("id, title, description, created_at, cover_image_url, cover_design, language, user_id, views, published")
         .eq("user_id", ownerUserId)
         .order("created_at", { ascending: false });
 
@@ -569,6 +588,12 @@ export default function StudioHomePage() {
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/36 via-transparent to-white/10" />
+                        <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
+                      </>
+                    ) : hasCustomCoverDesign(s.cover_design) ? (
+                      <>
+                        <CoverThumbnail design={s.cover_design!} seriesCoverUrl={null} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/5" />
                         <div className="absolute inset-y-0 right-0 w-[10px] bg-gradient-to-l from-white/30 to-transparent" />
                       </>
                     ) : (

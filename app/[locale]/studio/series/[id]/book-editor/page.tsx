@@ -226,7 +226,15 @@ function PageCanvas({
   useEffect(() => {
     if (!isIntro) return;
     for (const block of introBlocks || []) {
-      if (block.id === focusedBlockId.current) continue;
+      // Also skip the block a toolbar formatting op is mid-flight on
+      // (captureSelection already set savedBlockId before the toolbar's
+      // native focus-steal blurs the block and nulls focusedBlockId) —
+      // otherwise this resync clobbers the DOM with fresh text nodes and
+      // orphans applyToSelection's saved Range, silently no-op'ing the
+      // format (caught via code trace: Font/Size/Color go through a
+      // native <select>/<input> that steals focus; Bold doesn't, which
+      // is why only Font/Size/Color appeared broken).
+      if (block.id === focusedBlockId.current || block.id === savedBlockId.current) continue;
       const el = blockEls.current.get(block.id);
       if (el && el.innerHTML !== block.text) el.innerHTML = block.text;
     }
