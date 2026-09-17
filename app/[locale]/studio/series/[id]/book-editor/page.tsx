@@ -795,6 +795,34 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Downscales a reference image client-side before it's sent to the intro
+// design generator — keeps the request payload (and OpenAI vision token
+// cost) sane regardless of the source photo's resolution.
+function resizeImageFile(file: File, maxDim = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Could not read image."));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas unavailable.")); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // A chapter's intro page (page_number 0) starts as a single centered
 // title block — see isIntro handling in PageCanvas / the reader's
 // PageView. The user can then add/move/restyle blocks freely.
@@ -904,6 +932,12 @@ export default function BookEditorPage() {
   const [selIntroBlockId, setSelIntroBlockId] = useState<string | null>(null);
   const [introTemplates, setIntroTemplates] = useState<IntroTemplate[]>([]);
   const [newTemplateName, setNewTemplateName] = useState("");
+
+  // Phase 5 — AI-generated intro design (prompt + optional reference image).
+  const [genPrompt,  setGenPrompt]  = useState("");
+  const [genImage,   setGenImage]   = useState<string | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError,   setGenError]   = useState<string | null>(null);
 
   const [saving,      setSaving]      = useState(false);
   const [saveMsg,     setSaveMsg]     = useState<string | null>(null);
@@ -1387,6 +1421,57 @@ export default function BookEditorPage() {
     commitIntroDesign({ blocks, strokes: template.design.strokes || [], pageFrame: template.design.pageFrame });
   }
 
+  // Phase 5 — asks /api/generate-intro-design for a fresh layout from
+  // genPrompt (+ optional genImage), then applies it exactly like a
+  // template (see applyIntroTemplate above): local state + one immediate
+  // commit. Generated blocks keep whatever's already drawn on the page
+  // (strokes untouched) since a text/vision model can't sensibly draw.
+  async function generateIntroDesign() {
+    const prompt = genPrompt.trim();
+    if (!prompt || genLoading) return;
+
+    const hasExistingContent =
+      (introDraft && introDraft.some(b => b.text && b.text.replace(/<[^>]*>/g, "").trim())) ||
+      introStrokes.length > 0 ||
+      !!introPageFrame;
+    if (hasExistingContent && !window.confirm("Replace the current intro design with an AI-generated one?")) {
+      return;
+    }
+
+    const chapter = chapters.find(c => c.id === selChId);
+    const chapterTitle = chapter?.title || `Chapter ${chapter?.chapter_number ?? ""}`;
+
+    setGenLoading(true);
+    setGenError(null);
+    try {
+      const res = await fetch("/api/generate-intro-design", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          chapterTitle,
+          bookTitle: series?.title,
+          referenceImage: genImage ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.design) {
+        throw new Error(data.error || "Generation failed.");
+      }
+      const design: IntroDesign = {
+        blocks: (data.design.blocks as TextBlock[]).map(b => ({ ...b, text: escapeHtml(b.text) })),
+        pageFrame: data.design.pageFrame,
+      };
+      setIntroDraft(design.blocks);
+      setIntroPageFrame(design.pageFrame);
+      commitIntroDesign(buildIntroDesign({ blocks: design.blocks, pageFrame: design.pageFrame }));
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : "Generation failed.");
+    } finally {
+      setGenLoading(false);
+    }
+  }
+
   // flat page counter for page numbers
   const flatPageNum = useMemo(() => {
     if (!selChId || !selPgId) return 1;
@@ -1696,6 +1781,50 @@ export default function BookEditorPage() {
                 </p>
 
                 <div style={{ height: 1, background: BORDER }} />
+                <p style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Generate with AI</p>
+                <textarea
+                  value={genPrompt}
+                  onChange={e => setGenPrompt(e.target.value)}
+                  placeholder="Describe the look — mood, colors, style (e.g. &quot;moody dark fantasy, deep red title, thin gold border&quot;)"
+                  rows={3}
+                  style={{ ...inputStyle, width: "100%", resize: "vertical", fontFamily: "inherit" }}
+                />
+                {genImage ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={genImage} alt="Reference" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6, border: `1px solid ${BORDER}` }} />
+                    <span style={{ fontSize: 11, color: MUTED, flex: 1 }}>Reference image attached</span>
+                    <button onClick={() => setGenImage(null)}
+                      style={{ background: "none", border: "none", color: "rgba(201,122,106,0.6)", cursor: "pointer", fontSize: 13, padding: 0, lineHeight: 1 }}
+                      title="Remove reference image">×</button>
+                  </div>
+                ) : (
+                  <label style={{ display: "inline-flex", width: "fit-content", padding: "5px 10px", borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 11, color: MUTED, cursor: "pointer" }}>
+                    + Reference image (optional)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!file) return;
+                        try { setGenImage(await resizeImageFile(file)); }
+                        catch { setGenError("Could not read that image."); }
+                      }}
+                    />
+                  </label>
+                )}
+                <p style={{ fontSize: 10, color: MUTED, margin: 0, lineHeight: 1.5 }}>
+                  Describes a style — mood, palette, composition. It won&apos;t copy an existing book&apos;s exact cover, even if you name one.
+                </p>
+                <button onClick={generateIntroDesign} disabled={!genPrompt.trim() || genLoading}
+                  style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${BORDER}`, background: ACCENT, color: "#0a0a0c", fontSize: 11, fontWeight: 700, cursor: "pointer", opacity: !genPrompt.trim() || genLoading ? 0.5 : 1 }}>
+                  {genLoading ? "Generating…" : "Generate"}
+                </button>
+                {genError && <p style={{ fontSize: 11, color: "#c97a6a", margin: 0 }}>{genError}</p>}
+                <div style={{ height: 1, background: BORDER }} />
+
                 <p style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Page frame</p>
                 <Field label="Style">
                   <select
